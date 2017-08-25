@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Players Map</title>
+    <title>Player Map</title>
     <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.7.1/slick.min.css" />
     <style>
       /* Always set the map height explicitly to define the size of the div
@@ -18,22 +18,6 @@
         margin: 0;
         padding: 0;
       }
-      #floating-panel {
-        position: absolute;
-        top: 10px;
-        left: 25%;
-        z-index: 5;
-        background-color: #fff;
-        padding: 5px;
-        border: 1px solid #999;
-        text-align: center;
-        font-family: 'Roboto','sans-serif';
-        line-height: 30px;
-        padding-left: 10px;
-      }
-      #floating-panel {
-        margin-left: -52px;
-      }
       #nav-panel {
         display: inline-block;
         width: 20%;
@@ -41,9 +25,6 @@
     </style>
   </head>
   <body>
-    <div id="floating-panel">
-      <button id="drop" onclick="drop()">Drop Markers</button>
-    </div>
     <div id="map"></div>
     <div id="nav-panel">
       <div id="carousel">
@@ -55,7 +36,7 @@
 
       var teams = {
         0: {
-          name: "green team",
+          name: "Class of 1997",
           picUrl: "http://via.placeholder.com/150/285739/000000",
           players: [
             {
@@ -81,20 +62,20 @@
           ]
         },
         1: {
-          name: "pink team",
+          name: "Class of 1995",
           picUrl: "http://via.placeholder.com/150/d38ea7/000000",
           players: [
             {
               name: "player11",
-              loc: {lat: 41.7, lng: -90.18}
+              loc: {lat: 38.7, lng: -90.18}
             },
             {
               name: "player12",
-              loc: {lat: 43.07, lng: -85.01}
+              loc: {lat: 41.07, lng: -87.01}
             },
             {
               name: "player13",
-              loc: {lat: 47.59, lng: -99.56}
+              loc: {lat: 49.59, lng: -98.56}
             },
             {
               name: "player14",
@@ -102,7 +83,7 @@
             },
             {
               name: "player15",
-              loc: {lat: 41.3, lng: -97.3}
+              loc: {lat: 45.3, lng: -95.3}
             }
           ]
         }
@@ -112,10 +93,12 @@
         var blob = "<div data-team-name='"+team.name+"'>";
         blob += "<h3>"+team.name+"</h3>";
         blob += "<img src='"+team.picUrl+"'>";
-        blob += "<h4>Players</h3>";
+        blob += "<h4><u>Players</u></h3>";
+        blob += "<ul>";
         $.each(team.players, function(i, player){
-          blob += "<h5>"+player.name+"</h5>";
+          blob += "<li><h5>"+player.name+"</h5></li>";
         });
+        blob += "</ul>";
         blob += "</div>";
 
         return blob;
