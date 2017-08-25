@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Players Map</title>
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.7.1/slick.min.css" />
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        width: 79%;
+        height: 100%;
+        display: inline-block;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #floating-panel {
+        position: absolute;
+        top: 10px;
+        left: 25%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+      #floating-panel {
+        margin-left: -52px;
+      }
+      #nav-panel {
+        display: inline-block;
+        width: 20%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="floating-panel">
+      <button id="drop" onclick="drop()">Drop Markers</button>
+    </div>
+    <div id="map"></div>
+    <div id="nav-panel">
+      <div id="carousel">
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.7.1/slick.min.js"></script>
+    <script>
+
+      var teams = {
+        0: {
+          name: "green team",
+          picUrl: "http://via.placeholder.com/150/285739/000000",
+          players: [
+            {
+              name: "player1",
+              loc: {lat: 41.7, lng: -90.18}
+            },
+            {
+              name: "player2",
+              loc: {lat: 43.07, lng: -85.01}
+            },
+            {
+              name: "player3",
+              loc: {lat: 47.59, lng: -99.56}
+            },
+            {
+              name: "player4",
+              loc: {lat: 40.56, lng: -93.44}
+            },
+            {
+              name: "player5",
+              loc: {lat: 41.3, lng: -97.3}
+            }
+          ]
+        },
+        1: {
+          name: "pink team",
+          picUrl: "http://via.placeholder.com/150/d38ea7/000000",
+          players: [
+            {
+              name: "player11",
+              loc: {lat: 41.7, lng: -90.18}
+            },
+            {
+              name: "player12",
+              loc: {lat: 43.07, lng: -85.01}
+            },
+            {
+              name: "player13",
+              loc: {lat: 47.59, lng: -99.56}
+            },
+            {
+              name: "player14",
+              loc: {lat: 40.56, lng: -93.44}
+            },
+            {
+              name: "player15",
+              loc: {lat: 41.3, lng: -97.3}
+            }
+          ]
+        }
+      };
+
+      function buildTeamCarousel(team) {
+        var blob = "<div data-team-name='"+team.name+"'>";
+        blob += "<h3>"+team.name+"</h3>";
+        blob += "<img src='"+team.picUrl+"'>";
+        blob += "<h4>Players</h3>";
+        $.each(team.players, function(i, player){
+          blob += "<h5>"+player.name+"</h5>";
+        });
+        blob += "</div>";
+
+        return blob;
+      }
+
+      $(document).ready(function() {
+        $('#carousel').slick({
+          arrows: false,
+          pauseOnFocus: false,
+          pauseOnHover: true,
+          autoplay: true,
+          autoplaySpeed: 2000,
+        });
+
+        $('#carousel').on('afterChange', function(event, slick, currentSlide, nextSlide){
+          drop(teams[currentSlide]);
+        });
+
+        $.each(teams, function(i, team) {
+          $('#carousel').slick('slickAdd',"<div>"+buildTeamCarousel(team)+"</div>");
+        });
+      });
+
+      var markers = [];
+      var map;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 5,
+          center: {lat: 41.271030, lng: -96.074617},
+          styles: [
+            {
+              "featureType": "landscape",
+              "elementType": "geometry",
+              "stylers": [
+                { "color": "#580FD1" }
+              ]
+            },
+            {
+              "featureType": "water",
+              "stylers": [
+                { "color": "#c9c9c9" },
+                {"visibility": "simplified"}
+              ]
+            },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#ffffff"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road.arterial",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road.arterial",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#888888"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+            {
+              "featureType": "poi",
+              "stylers": [
+                { "visibility": "off" }
+              ]
+            },
+    {
+    "featureType": "administrative.country",
+    "elementType": "labels",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.locality",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.neighborhood",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.province",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#dddddd"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.province",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+          ]
+        });
+      }
+
+      function drop(team) {
+        clearMarkers();
+        for (var i = 0; i < team.players.length; i++) {
+          addMarkerWithTimeout(team.players[i].loc, i * 200);
+        }
+      }
+
+      function addMarkerWithTimeout(position, timeout) {
+        window.setTimeout(function() {
+          markers.push(new google.maps.Marker({
+            position: position,
+            map: map,
+            animation: google.maps.Animation.DROP,
+            map_icon_label: '<span class="map-icon map-icon-tennis"></span>',
+          }));
+        }, timeout);
+      }
+
+      function clearMarkers() {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(null);
+        }
+        markers = [];
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCmV0HtcK0cUokKKgyuuRc246xXJ8j8leQ&callback=initMap">
+    </script>
+  </body>
+</html>
