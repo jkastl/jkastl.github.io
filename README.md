@@ -1,0 +1,36 @@
+# jkastl.github.io
+
+An index of my GitHub Pages apps, shown as a grid of tiles.
+
+**[jkastl.github.io](https://jkastl.github.io/)**
+
+One file, no build step, no dependencies. The whole site is [`index.html`](index.html),
+served from `main`.
+
+## Adding an app
+
+Copy an existing `<li>` in `index.html` and change its four values:
+
+```html
+<li>
+  <a class="app" href="/repo-name/"><span class="name">App Name</span></a>
+  <span class="desc">One-line description.</span>
+  <a class="repo" href="https://github.com/jkastl/repo-name">Source on GitHub</a>
+</li>
+```
+
+Clicking anywhere on the tile opens the app. The "Source on GitHub" link opens the repo.
+Keep the tiles in alphabetical order by name.
+
+## Versioning
+
+The version and date in the footer are **updated by hand**. Nothing bumps them
+automatically. Change both in the same commit as the change they describe, following
+[semver](https://semver.org/):
+
+- **Patch** (`1.2.0` → `1.2.1`): fixing a typo or tweaking the wording.
+- **Minor** (`1.2.0` → `1.3.0`): adding, removing, or renaming an app, or a small
+  visual change.
+- **Major** (`1.2.0` → `2.0.0`): a redesign or restructure of the page.
+
+The date is the day of the change, in `YYYY-MM-DD` format.
