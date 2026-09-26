@@ -344,8 +344,20 @@
     </details>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v2.2.0 · 2026-09-26
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v2.2.1 · 2026-09-26
     </footer>
   </main>
+  <script>
+    // A link like #learn opens that section (they start closed) and scrolls to it.
+    function openFromHash() {
+      const el = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (el && el.tagName === "DETAILS") {
+        el.open = true;
+        el.scrollIntoView({ block: "start" });
+      }
+    }
+    addEventListener("hashchange", openFromHash);
+    openFromHash();
+  </script>
 </body>
 </html>

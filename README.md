@@ -33,7 +33,8 @@ section's app count in its `<summary>`.
 
 Copy a whole `<details class="group">` block, give it a new `id`, title, count and one-sentence
 description, and put the tiles in its `<ul>`. Leave out the `open` attribute so it starts closed.
-Sections can be linked directly by their `id`, for example `#learn`.
+Sections can be linked directly by their `id`, for example `#learn`; the link opens that section
+and scrolls to it.
 
 For a project that doesn't run on GitHub Pages (a CLI, a native app), drop the
 "Source" link and point the main button at the repo instead, so the whole tile
