@@ -5,7 +5,8 @@ An index of my GitHub Pages apps, shown as a grid of tiles.
 **[jkastl.github.io](https://jkastl.github.io/)**
 
 One file, no build step, no dependencies. The whole site is [`index.html`](index.html),
-served from `main`.
+served from `main`. Commit and push changes directly to `main`; there are no feature branches or
+pull requests.
 
 ## Adding an app
 
