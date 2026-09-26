@@ -25,6 +25,20 @@ Copy an existing `<li>` in `index.html` and change its values (the app name appe
 Clicking anywhere on the tile, or its "Open app" button, opens the app. The "Source" link opens
 the repo. Keep the tiles in alphabetical order by name.
 
+For a project that doesn't run on GitHub Pages (a CLI, a native app), drop the
+"Source" link and point the main button at the repo instead, so the whole tile
+opens the source:
+
+```html
+<li>
+  <h2 class="name">App Name</h2>
+  <p class="desc">One-line description, including where it runs.</p>
+  <div class="actions">
+    <a class="app" href="https://github.com/jkastl/repo-name" aria-label="Source for App Name">View source →</a>
+  </div>
+</li>
+```
+
 ## Versioning
 
 The version and date in the footer are **updated by hand**. Nothing bumps them
