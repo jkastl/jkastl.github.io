@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>jkastl · apps</title>
-  <meta name="description" content="Small single-page apps by jkastl.">
+  <meta name="description" content="Apps and demos created by Jeff Kastl.">
   <style>
     :root {
       color-scheme: dark;
@@ -32,7 +32,78 @@
     }
     h1 {
       font-size: 1.5rem;
+      margin: 0 0 0.5rem;
+    }
+    .lead {
       margin: 0 0 2rem;
+      color: var(--muted);
+    }
+    /* Collapsible sections: native <details>, closed by default. */
+    .group {
+      border-top: 1px solid var(--line);
+    }
+    .group:last-of-type {
+      border-bottom: 1px solid var(--line);
+    }
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 1.1rem 0 1.1rem 1.75rem;
+      position: relative;
+      border-radius: 6px;
+      outline: none;
+    }
+    summary::-webkit-details-marker {
+      display: none;
+    }
+    summary::before {
+      content: "";
+      position: absolute;
+      left: 0.35rem;
+      top: 1.55rem;
+      width: 0.45rem;
+      height: 0.45rem;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: rotate(-45deg);
+      transition: transform 0.15s;
+    }
+    .group[open] > summary::before {
+      transform: rotate(45deg);
+    }
+    summary:hover .group-title, summary:focus-visible .group-title {
+      color: var(--accent);
+    }
+    summary:hover::before, summary:focus-visible::before {
+      border-color: var(--accent);
+    }
+    summary:focus-visible {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .group-head {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.75rem;
+    }
+    .group-title {
+      font-size: 1.15rem;
+      margin: 0;
+    }
+    .count {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .group-desc {
+      margin: 0.25rem 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .group > ul {
+      padding-bottom: 1.5rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      summary::before, li { transition: none; }
     }
     ul {
       list-style: none;
@@ -129,97 +200,151 @@
 <body>
   <main>
     <h1>Apps</h1>
-    <ul>
-      <li>
-        <h2 class="name">Advanced Data Engineering</h2>
-        <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
-        <div class="actions">
-          <a class="app" href="/data-eng-advanced/" aria-label="Open Advanced Data Engineering">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Data Engineering Concepts</h2>
-        <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
-        <div class="actions">
-          <a class="app" href="/data-eng-concepts/" aria-label="Open Data Engineering Concepts">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/data-eng-concepts" aria-label="Source for Data Engineering Concepts">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Emergence</h2>
-        <p class="desc">A field guide to complexity from simple rules: seven live simulations, from boids to sandpiles.</p>
-        <div class="actions">
-          <a class="app" href="/emergence/" aria-label="Open Emergence">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/emergence" aria-label="Source for Emergence">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Intarsia Print</h2>
-        <p class="desc">Python CLI and local web UI that turn a prompt or flat graphic into a printable multi-level relief STL. Runs on your machine, not here.</p>
-        <div class="actions">
-          <a class="app" href="https://github.com/jkastl/intarsia-print" aria-label="Source for Intarsia Print">View source →</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Knee Rehab Timer</h2>
-        <p class="desc">Offline-capable circuit timer for a knee rehab routine.</p>
-        <div class="actions">
-          <a class="app" href="/knee-strength/" aria-label="Open Knee Rehab Timer">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/knee-strength" aria-label="Source for Knee Rehab Timer">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">ML Showcase</h2>
-        <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
-        <div class="actions">
-          <a class="app" href="/ml-showcase/" aria-label="Open ML Showcase">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/ml-showcase" aria-label="Source for ML Showcase">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Ride Report</h2>
-        <p class="desc">Live ride-quality meter for your phone. Lay it flat on a tray table and watch the turbulence.</p>
-        <div class="actions">
-          <a class="app" href="/ride-report/" aria-label="Open Ride Report">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/ride-report" aria-label="Source for Ride Report">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Scatter!</h2>
-        <p class="desc">Pass-the-phone category game: roll a letter, then name something in 10 categories before time runs out.</p>
-        <div class="actions">
-          <a class="app" href="/scatter/" aria-label="Open Scatter!">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/scatter" aria-label="Source for Scatter!">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Scroll Report</h2>
-        <p class="desc">A rolling 3D seismograph of your phone's motion over the last 20 seconds.</p>
-        <div class="actions">
-          <a class="app" href="/scroll-report/" aria-label="Open Scroll Report">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/scroll-report" aria-label="Source for Scroll Report">Source</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Trainer</h2>
-        <p class="desc">SwiftUI circuit timer for iPhone and iPad: randomized body-weight, dumbbell, and yoga routines. Needs iOS 26 and Xcode.</p>
-        <div class="actions">
-          <a class="app" href="https://github.com/jkastl/trainer" aria-label="Source for Trainer">View source →</a>
-        </div>
-      </li>
-      <li>
-        <h2 class="name">Word Flashcards</h2>
-        <p class="desc">Flashcards for beginning readers at a kindergarten (K) reading level: simple 3-letter words, by card count or timer.</p>
-        <div class="actions">
-          <a class="app" href="/k-reader/" aria-label="Open Word Flashcards">Open app →</a>
-          <a class="repo" href="https://github.com/jkastl/k-reader" aria-label="Source for Word Flashcards">Source</a>
-        </div>
-      </li>
-    </ul>
+    <p class="lead">Apps and demos created by Jeff Kastl. Most run right here in your browser; open a section to see what's inside.</p>
+    <details class="group" id="learn">
+      <summary>
+        <span class="group-head">
+          <h2 class="group-title">Learning and explainers</h2>
+          <span class="count">4 apps</span>
+        </span>
+        <p class="group-desc">Interactive walkthroughs of how things work: data engineering, machine learning and emergent systems. Every one runs live in the browser.</p>
+      </summary>
+      <ul>
+        <li>
+          <h3 class="name">Advanced Data Engineering</h3>
+          <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
+          <div class="actions">
+            <a class="app" href="/data-eng-advanced/" aria-label="Open Advanced Data Engineering">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">Data Engineering Concepts</h3>
+          <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
+          <div class="actions">
+            <a class="app" href="/data-eng-concepts/" aria-label="Open Data Engineering Concepts">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/data-eng-concepts" aria-label="Source for Data Engineering Concepts">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">Emergence</h3>
+          <p class="desc">A field guide to complexity from simple rules: seven live simulations, from boids to sandpiles.</p>
+          <div class="actions">
+            <a class="app" href="/emergence/" aria-label="Open Emergence">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/emergence" aria-label="Source for Emergence">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">ML Showcase</h3>
+          <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
+          <div class="actions">
+            <a class="app" href="/ml-showcase/" aria-label="Open ML Showcase">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/ml-showcase" aria-label="Source for ML Showcase">Source</a>
+          </div>
+        </li>
+        </ul>
+    </details>
+    <details class="group" id="sensors">
+      <summary>
+        <span class="group-head">
+          <h2 class="group-title">Phone sensor toys</h2>
+          <span class="count">2 apps</span>
+        </span>
+        <p class="group-desc">Apps that turn your phone's motion sensors into instruments. Best opened on a phone.</p>
+      </summary>
+      <ul>
+        <li>
+          <h3 class="name">Ride Report</h3>
+          <p class="desc">Live ride-quality meter for your phone. Lay it flat on a tray table and watch the turbulence.</p>
+          <div class="actions">
+            <a class="app" href="/ride-report/" aria-label="Open Ride Report">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/ride-report" aria-label="Source for Ride Report">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">Scroll Report</h3>
+          <p class="desc">A rolling 3D seismograph of your phone's motion over the last 20 seconds.</p>
+          <div class="actions">
+            <a class="app" href="/scroll-report/" aria-label="Open Scroll Report">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/scroll-report" aria-label="Source for Scroll Report">Source</a>
+          </div>
+        </li>
+        </ul>
+    </details>
+    <details class="group" id="fitness">
+      <summary>
+        <span class="group-head">
+          <h2 class="group-title">Fitness and health</h2>
+          <span class="count">2 apps</span>
+        </span>
+        <p class="group-desc">Workout and rehab timers for getting through a routine without watching the clock.</p>
+      </summary>
+      <ul>
+        <li>
+          <h3 class="name">Knee Rehab Timer</h3>
+          <p class="desc">Offline-capable circuit timer for a knee rehab routine.</p>
+          <div class="actions">
+            <a class="app" href="/knee-strength/" aria-label="Open Knee Rehab Timer">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/knee-strength" aria-label="Source for Knee Rehab Timer">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">Trainer</h3>
+          <p class="desc">SwiftUI circuit timer for iPhone and iPad: randomized body-weight, dumbbell, and yoga routines. Needs iOS 26 and Xcode.</p>
+          <div class="actions">
+            <a class="app" href="https://github.com/jkastl/trainer" aria-label="Source for Trainer">View source →</a>
+          </div>
+        </li>
+        </ul>
+    </details>
+    <details class="group" id="games">
+      <summary>
+        <span class="group-head">
+          <h2 class="group-title">Games and kids</h2>
+          <span class="count">2 apps</span>
+        </span>
+        <p class="group-desc">Quick games to pass around, and practice for early readers.</p>
+      </summary>
+      <ul>
+        <li>
+          <h3 class="name">Scatter!</h3>
+          <p class="desc">Pass-the-phone category game: roll a letter, then name something in 10 categories before time runs out.</p>
+          <div class="actions">
+            <a class="app" href="/scatter/" aria-label="Open Scatter!">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/scatter" aria-label="Source for Scatter!">Source</a>
+          </div>
+        </li>
+          <li>
+          <h3 class="name">Word Flashcards</h3>
+          <p class="desc">Flashcards for beginning readers at a kindergarten (K) reading level: simple 3-letter words, by card count or timer.</p>
+          <div class="actions">
+            <a class="app" href="/k-reader/" aria-label="Open Word Flashcards">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/k-reader" aria-label="Source for Word Flashcards">Source</a>
+          </div>
+        </li>
+        </ul>
+    </details>
+    <details class="group" id="tools">
+      <summary>
+        <span class="group-head">
+          <h2 class="group-title">Tools</h2>
+          <span class="count">1 app</span>
+        </span>
+        <p class="group-desc">Utilities that run on your own machine rather than on this site.</p>
+      </summary>
+      <ul>
+        <li>
+          <h3 class="name">Intarsia Print</h3>
+          <p class="desc">Python CLI and local web UI that turn a prompt or flat graphic into a printable multi-level relief STL. Runs on your machine, not here.</p>
+          <div class="actions">
+            <a class="app" href="https://github.com/jkastl/intarsia-print" aria-label="Source for Intarsia Print">View source →</a>
+          </div>
+        </li>
+        </ul>
+    </details>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v1.12.0 · 2026-09-26
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v2.0.0 · 2026-09-26
     </footer>
   </main>
 </body>
