@@ -9,18 +9,21 @@ served from `main`.
 
 ## Adding an app
 
-Copy an existing `<li>` in `index.html` and change its four values:
+Copy an existing `<li>` in `index.html` and change its values (the app name appears three times):
 
 ```html
 <li>
-  <a class="app" href="/repo-name/"><span class="name">App Name</span></a>
-  <span class="desc">One-line description.</span>
-  <a class="repo" href="https://github.com/jkastl/repo-name">Source on GitHub</a>
+  <h2 class="name">App Name</h2>
+  <p class="desc">One-line description.</p>
+  <div class="actions">
+    <a class="app" href="/repo-name/" aria-label="Open App Name">Open app →</a>
+    <a class="repo" href="https://github.com/jkastl/repo-name" aria-label="Source for App Name">Source</a>
+  </div>
 </li>
 ```
 
-Clicking anywhere on the tile opens the app. The "Source on GitHub" link opens the repo.
-Keep the tiles in alphabetical order by name.
+Clicking anywhere on the tile, or its "Open app" button, opens the app. The "Source" link opens
+the repo. Keep the tiles in alphabetical order by name.
 
 ## Versioning
 
