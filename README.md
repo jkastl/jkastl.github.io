@@ -36,6 +36,12 @@ description, and put the tiles in its `<ul>`. Leave out the `open` attribute so 
 Sections can be linked directly by their `id`, for example `#learn`; the link opens that section
 and scrolls to it.
 
+A page that lives inside another app (for example the Tolerance exhibits at `/tolerance/vote/`)
+gets its own tile too, in whichever section fits it best. Point "Open app" at the page, point
+"Source" at its folder (`https://github.com/jkastl/tolerance/tree/main/vote`), and end the
+description with "Part of Tolerance." Keep the parent app's own tile as well, since its front page
+ties the pages together.
+
 For a project that doesn't run on GitHub Pages (a CLI, a native app), drop the
 "Source" link and point the main button at the repo instead, so the whole tile
 opens the source:
