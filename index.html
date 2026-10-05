@@ -45,21 +45,6 @@
       margin: 0 0 2rem;
       color: var(--muted);
     }
-    .row-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin: 0 0 0.75rem;
-    }
-    .featured {
-      margin: 0 0 2rem;
-    }
-    /* Four featured tiles fit on one row on a desktop. */
-    #featured {
-      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    }
     button {
       font: inherit;
       color: inherit;
@@ -71,9 +56,7 @@
       padding: 1.25rem 0;
       border-top: 1px solid var(--line);
     }
-    .filters .row-title {
-      margin: 0 0 0.15rem;
-    }
+
     .facet {
       display: flex;
       flex-wrap: wrap;
@@ -129,6 +112,28 @@
       font-size: 0.85rem;
       cursor: pointer;
       text-decoration: underline;
+    }
+    .more {
+      margin: 1.5rem 0 0;
+      text-align: center;
+    }
+    .more button {
+      padding: 0.55rem 1.1rem;
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .more button:hover {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+    .more button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
     }
     .empty {
       padding: 2rem 0;
@@ -263,16 +268,16 @@
     <h1>Apps and demos</h1>
     <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
     <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser; filter by topic or kind, or click any tag on a tile.</p>
-    <!-- Tiles with data-featured are moved here by the script, in that order, while no filter is on. -->
-    <section class="featured" id="featured-wrap" aria-labelledby="featured-title" hidden>
-      <h2 class="row-title" id="featured-title">Featured</h2>
-      <ul id="featured"></ul>
-    </section>
     <div class="filters" id="filters" hidden>
-      <h2 class="row-title">All apps</h2>
+      <!-- Show: the default view is the tiles with data-featured, in that order. -->
+      <div class="facet" role="group" aria-label="Show" data-group="show">
+        <span class="facet-label">Show</span>
+          <button type="button" class="chip" data-tag="featured" aria-pressed="true">Featured <span class="n"></span></button>
+          <button type="button" class="chip" data-tag="all" aria-pressed="false">All apps <span class="n"></span></button>
+      </div>
       <div class="facet" role="group" aria-label="About" data-group="about">
         <span class="facet-label">About</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
           <button type="button" class="chip" data-tag="data" aria-pressed="false">Data &amp; ML <span class="n"></span></button>
           <button type="button" class="chip" data-tag="error" aria-pressed="false">Error Correction <span class="n"></span></button>
           <button type="button" class="chip" data-tag="sensing" aria-pressed="false">Sensing &amp; Signals <span class="n"></span></button>
@@ -285,7 +290,7 @@
       </div>
       <div class="facet" role="group" aria-label="Kind" data-group="kind">
         <span class="facet-label">Kind</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
           <button type="button" class="chip" data-tag="explainer" aria-pressed="false">Explainer <span class="n"></span></button>
           <button type="button" class="chip" data-tag="game" aria-pressed="false">Game <span class="n"></span></button>
           <button type="button" class="chip" data-tag="tool" aria-pressed="false">Tool <span class="n"></span></button>
@@ -293,7 +298,7 @@
       </div>
       <div class="facet" role="group" aria-label="Where" data-group="where">
         <span class="facet-label">Where</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
           <button type="button" class="chip" data-tag="phone" aria-pressed="false">Best on a phone <span class="n"></span></button>
           <button type="button" class="chip" data-tag="local" aria-pressed="false">Runs on your machine <span class="n"></span></button>
       </div>
@@ -569,38 +574,30 @@
         </li>
     </ul>
     <p class="empty" id="empty" hidden>Nothing matches all of those. Try clearing a filter.</p>
+    <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v3.3.0 · 2026-10-05
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v3.4.0 · 2026-10-05
     </footer>
   </main>
   <script>
-    // Filters: one tag per group (About, Kind, Where), and a tile must match every chosen group.
-    // The choice lives in the URL hash, e.g. #about=health&kind=game.
+    // Filters: Show (Featured or All apps) plus one tag per group (About, Kind, Where); a tile must
+    // match every chosen group. With no tag chosen the page shows the featured tiles, in their
+    // data-featured order. The choice lives in the URL hash, e.g. #show=all or #about=health&kind=game.
     const groups = ["about", "kind", "where"];
     const tiles = [...document.querySelectorAll("#apps > li")];
-    const grid = document.getElementById("apps");
-    // Featured tiles move (not copy) into the Featured row while no filter is on, so each app
-    // appears once. With a filter on, they go back into the grid in alphabetical order.
-    const featured = tiles.filter(li => li.dataset.featured)
-      .sort((a, b) => a.dataset.featured - b.dataset.featured);
-    let featuring = null;
-    function place(filtered) {
-      const on = !filtered && featured.length > 0;
-      if (on === featuring) return;
-      featuring = on;
-      document.getElementById("featured-wrap").hidden = !on;
-      for (const li of tiles) if (!(on && li.dataset.featured)) grid.appendChild(li);
-      if (on) for (const li of featured) document.getElementById("featured").appendChild(li);
-    }
+    const featuredCount = tiles.filter(li => li.dataset.featured).length;
     // Links to the old sections (#learn, #sensors, ...) land on the matching filter.
     const legacy = {
       learn: "about=data", systems: "about=error", sensors: "about=motion", privacy: "about=privacy",
-      fitness: "about=health", games: "kind=game", printing: "about=making"
+      fitness: "about=health", games: "kind=game", printing: "about=making", all: "show=all"
     };
     // Retired tags that links may still carry, mapped to the tag that replaced them.
     const renamed = { about: { reliability: "error" } };
     const has = (li, g, t) => (li.dataset[g] || "").split(" ").includes(t);
+    const tagged = f => groups.some(g => f[g]);
+    // The landing view: featured tiles, no tags.
+    const isDefault = f => f.show === "featured" && !tagged(f);
 
     let stale = false; // set by read() when the hash used an old section id or tag, so it gets rewritten
     function read() {
@@ -614,13 +611,20 @@
         if (renamed[g] && renamed[g][t]) { t = renamed[g][t]; stale = true; }
         if (t && document.querySelector(`.facet[data-group="${g}"] .chip[data-tag="${CSS.escape(t)}"]`)) f[g] = t;
       }
+      // A link with tags but no show= searches all apps; a bare link shows the featured ones.
+      const show = p.get("show");
+      if (show !== null && show !== "featured" && show !== "all") stale = true;
+      f.show = show === "featured" || show === "all" ? show : tagged(f) ? "all" : "featured";
       return f;
     }
 
     function apply(f) {
+      const feat = f.show === "featured";
       let shown = 0;
       for (const li of tiles) {
-        li.hidden = !groups.every(g => !f[g] || has(li, g, f[g]));
+        li.hidden = (feat && !li.dataset.featured) || !groups.every(g => !f[g] || has(li, g, f[g]));
+        // Featured tiles keep their data-featured order; otherwise the grid is alphabetical.
+        li.style.order = feat && li.dataset.featured ? li.dataset.featured : "";
         if (!li.hidden) shown++;
       }
       for (const facet of document.querySelectorAll(".facet")) {
@@ -628,32 +632,47 @@
           chip.setAttribute("aria-pressed", String(chip.dataset.tag === (f[facet.dataset.group] || "")));
         }
       }
-      const any = groups.some(g => f[g]);
-      place(any);
-      document.getElementById("shown").textContent = any
-        ? `Showing ${shown} of ${tiles.length} app${tiles.length === 1 ? "" : "s"}`
-        : `Showing all ${tiles.length} apps` + (featured.length ? `, ${featured.length} featured above` : "");
+      const any = tagged(f);
+      document.getElementById("shown").textContent =
+        feat ? (any ? `Showing ${shown} of ${featuredCount} featured apps` : `Showing ${featuredCount} featured apps of ${tiles.length}`)
+             : (any ? `Showing ${shown} of ${tiles.length} apps` : `Showing all ${tiles.length} apps`);
       document.getElementById("clear").hidden = !any;
       document.getElementById("empty").hidden = shown > 0;
+      document.getElementById("more").hidden = !feat;
+      document.getElementById("show-all").textContent = any ? "Show matches from all apps →" : `Show all ${tiles.length} apps →`;
     }
 
     function set(f) {
-      const q = groups.filter(g => f[g]).map(g => `${g}=${encodeURIComponent(f[g])}`).join("&");
+      const any = tagged(f);
+      const q = [
+        ...(f.show === "featured" && any ? ["show=featured"] : []),
+        ...(f.show === "all" && !any ? ["show=all"] : []),
+        ...groups.filter(g => f[g]).map(g => `${g}=${encodeURIComponent(f[g])}`)
+      ].join("&");
       history.replaceState(null, "", q ? `#${q}` : location.pathname + location.search);
       apply(f);
+    }
+
+    // Picking a tag from the landing view searches all apps, not just the featured few.
+    function pick(f, g, t) {
+      const next = { ...f, [g]: t };
+      if (g !== "show" && t && isDefault(f)) next.show = "all";
+      return next;
     }
 
     // Each chip shows how many apps carry its tag; tags nobody uses are hidden.
     for (const facet of document.querySelectorAll(".facet")) {
       const g = facet.dataset.group;
       for (const chip of facet.querySelectorAll(".chip[data-tag]:not([data-tag=''])")) {
-        const n = tiles.filter(li => has(li, g, chip.dataset.tag)).length;
+        const n = g === "show"
+          ? (chip.dataset.tag === "featured" ? featuredCount : tiles.length)
+          : tiles.filter(li => has(li, g, chip.dataset.tag)).length;
         chip.querySelector(".n").textContent = n;
         chip.hidden = n === 0;
       }
       facet.addEventListener("click", e => {
         const chip = e.target.closest(".chip");
-        if (chip) set({ ...read(), [g]: chip.dataset.tag });
+        if (chip) set(pick(read(), g, chip.dataset.tag));
       });
     }
 
@@ -662,12 +681,12 @@
       const tag = e.target.closest(".tag");
       if (!tag) return;
       const f = read(), g = tag.dataset.group;
-      f[g] = f[g] === tag.dataset.tag ? "" : tag.dataset.tag;
-      set(f);
+      set(pick(f, g, f[g] === tag.dataset.tag ? "" : tag.dataset.tag));
       document.getElementById("filters").scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
 
-    document.getElementById("clear").addEventListener("click", () => set({}));
+    document.getElementById("clear").addEventListener("click", () => set({ show: "featured" }));
+    document.getElementById("show-all").addEventListener("click", () => set({ ...read(), show: "all" }));
     addEventListener("hashchange", () => { const f = read(); if (stale) set(f); else apply(f); });
 
     document.getElementById("filters").hidden = false;

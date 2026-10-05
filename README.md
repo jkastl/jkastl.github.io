@@ -53,12 +53,12 @@ opens the source, and tag it `data-where="local"`:
 
 ## Featured
 
-Add `data-featured="N"` to a tile's `<li>` to show it in the Featured row at the top of the page,
-ordered by `N` (1 comes first). The tile stays in its alphabetical place in the markup: the script
-moves it into the Featured row while no filter is on, so it never appears twice, and moves it back
-into the grid when a filter is chosen. With JavaScript off there's no Featured row and every tile
-shows in the grid. To change what's featured, move or renumber the attributes; nothing else needs
-editing.
+The page opens on the featured apps: the tiles with `data-featured="N"` on their `<li>`, ordered
+by `N` (1 comes first). "Featured" is the default choice in the first filter row, Show; the other
+choice, "All apps", shows every tile alphabetically, and so does the "Show all apps" button under
+the featured tiles. Picking any tag from the opening view searches all apps rather than just the
+featured ones. To change what's featured, move or renumber the attributes; nothing else needs
+editing. With JavaScript off there are no filters and every tile shows in alphabetical order.
 
 ## Tags
 
@@ -77,7 +77,9 @@ The counts on the chips are worked out by the page, and a chip with no apps hide
 To add a new tag, add a chip to its group in `<div class="filters">` (copy a neighbour and change
 `data-tag` and the label), then add it to the table above. Prefer reusing an existing tag.
 
-Filters live in the URL hash, so they can be linked: `#about=health`, `#kind=game&where=phone`.
+Filters live in the URL hash, so they can be linked: `#show=all` (or just `#all`), `#about=health`,
+`#kind=game&where=phone`. A link with tags searches all apps unless it also says `show=featured`;
+a link with no hash opens on the featured apps.
 The old section links (`#learn`, `#systems`, `#sensors`, `#privacy`, `#fitness`, `#games`,
 `#printing`) still work and redirect to the matching filter; the map is `legacy` in the script.
 When a tag is retired or renamed, add it to `renamed` in the script so old links still land
