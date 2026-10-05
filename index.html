@@ -49,24 +49,17 @@
       font: inherit;
       color: inherit;
     }
-    /* Filter row: one facet per tag group. Hidden until the script runs. */
+    /* One row of chips; exactly one is selected. Hidden until the script runs. */
     .filters {
-      display: grid;
-      gap: 0.6rem;
-      padding: 1.25rem 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .facet {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
       gap: 0.4rem;
+      padding: 1.25rem 0 1rem;
+      border-top: 1px solid var(--line);
     }
-    .facet-label {
-      width: 3.75rem;
-      font-size: 0.85rem;
-      color: var(--muted);
+    /* A little space between the two views (Featured, All) and the topic tags. */
+    .chip[data-filter="all"] {
+      margin-right: 0.6rem;
     }
     .chip {
       padding: 0.25rem 0.7rem;
@@ -104,15 +97,6 @@
       font-size: 0.85rem;
       color: var(--muted);
     }
-    .clear {
-      padding: 0;
-      background: none;
-      border: 0;
-      color: var(--accent);
-      font-size: 0.85rem;
-      cursor: pointer;
-      text-decoration: underline;
-    }
     .more {
       margin: 1.5rem 0 0;
       text-align: center;
@@ -134,14 +118,6 @@
     .more button:focus-visible {
       outline: none;
       box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-    }
-    .empty {
-      padding: 2rem 0;
-      color: var(--muted);
-      text-align: center;
-    }
-    @media (max-width: 30rem) {
-      .facet-label { width: 100%; }
     }
     @media (prefers-reduced-motion: reduce) {
       li { transition: none; }
@@ -268,304 +244,253 @@
     <h1>Apps and demos</h1>
     <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
     <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser; filter by topic or kind, or click any tag on a tile.</p>
-    <div class="filters" id="filters" hidden>
-      <!-- Show: the default view is the tiles with data-featured, in that order. -->
-      <div class="facet" role="group" aria-label="Show" data-group="show">
-        <span class="facet-label">Show</span>
-          <button type="button" class="chip" data-tag="featured" aria-pressed="true">Featured <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="all" aria-pressed="false">All apps <span class="n"></span></button>
-      </div>
-      <div class="facet" role="group" aria-label="About" data-group="about">
-        <span class="facet-label">About</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
-          <button type="button" class="chip" data-tag="data" aria-pressed="false">Data &amp; ML <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="error" aria-pressed="false">Error Correction <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="sensing" aria-pressed="false">Sensing &amp; Signals <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="complexity" aria-pressed="false">Complexity <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="motion" aria-pressed="false">Motion &amp; Navigation <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="health" aria-pressed="false">Health <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="privacy" aria-pressed="false">Privacy &amp; Security <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="family" aria-pressed="false">Kids &amp; Family <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="making" aria-pressed="false">Making <span class="n"></span></button>
-      </div>
-      <div class="facet" role="group" aria-label="Kind" data-group="kind">
-        <span class="facet-label">Kind</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
-          <button type="button" class="chip" data-tag="explainer" aria-pressed="false">Explainer <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="game" aria-pressed="false">Game <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="tool" aria-pressed="false">Tool <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="instrument" aria-pressed="false">Instrument <span class="n"></span></button>
-      </div>
-      <div class="facet" role="group" aria-label="Where" data-group="where">
-        <span class="facet-label">Where</span>
-          <button type="button" class="chip" data-tag="" aria-pressed="true">Any</button>
-          <button type="button" class="chip" data-tag="phone" aria-pressed="false">Best on a phone <span class="n"></span></button>
-          <button type="button" class="chip" data-tag="local" aria-pressed="false">Runs on your machine <span class="n"></span></button>
-      </div>
+    <!-- Featured (the default, shown with no URL hash) and All are views, not tags; the rest match data-tags. -->
+    <div class="filters" id="filters" role="group" aria-label="Show" hidden>
+      <button type="button" class="chip view" data-filter="featured" aria-pressed="true">Featured <span class="n"></span></button>
+      <button type="button" class="chip view" data-filter="all" aria-pressed="false">All <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="data" aria-pressed="false">Data &amp; ML <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="error" aria-pressed="false">Error Correction <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="sensing" aria-pressed="false">Sensing &amp; Signals <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="motion" aria-pressed="false">Motion &amp; Navigation <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="health" aria-pressed="false">Health <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="privacy" aria-pressed="false">Privacy &amp; Security <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="games" aria-pressed="false">Games <span class="n"></span></button>
+      <button type="button" class="chip" data-filter="phone" aria-pressed="false">On a phone <span class="n"></span></button>
     </div>
-    <p class="status" id="status" hidden><span id="shown">Showing all 21 apps</span> <button type="button" class="clear" id="clear" hidden>Clear filters</button></p>
+    <p class="status" id="status" hidden><span id="shown">Showing all 21 apps</span></p>
     <ul id="apps">
-        <li data-featured="1" data-about="data" data-kind="explainer">
+        <li data-featured="1" data-tags="data">
           <h3 class="name">Advanced Data Engineering</h3>
           <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="data">Data &amp; ML</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
           </div>
           <div class="actions">
             <a class="app" href="/data-eng-advanced/" aria-label="Open Advanced Data Engineering">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
           </div>
         </li>
-        <li data-featured="2" data-about="data" data-kind="explainer">
+        <li data-featured="2" data-tags="data">
           <h3 class="name">Data Engineering Concepts</h3>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="data">Data &amp; ML</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
           </div>
           <div class="actions">
             <a class="app" href="/data-eng-concepts/" aria-label="Open Data Engineering Concepts">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/data-eng-concepts" aria-label="Source for Data Engineering Concepts">Source</a>
           </div>
         </li>
-        <li data-about="sensing" data-kind="explainer">
+        <li data-tags="sensing">
           <h3 class="name">Drop It on Purpose</h3>
           <p class="desc">Why a router that refuses to drop packets ruins your video call, and the fix. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/bufferbloat/" aria-label="Open Drop It on Purpose">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/bufferbloat" aria-label="Source for Drop It on Purpose">Source</a>
           </div>
         </li>
-        <li data-about="complexity" data-kind="explainer">
+        <li>
           <h3 class="name">Emergence</h3>
           <p class="desc">A field guide to complexity from simple rules: seven live simulations, from boids to sandpiles.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="complexity">Complexity</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
-          </div>
           <div class="actions">
             <a class="app" href="/emergence/" aria-label="Open Emergence">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/emergence" aria-label="Source for Emergence">Source</a>
           </div>
         </li>
-        <li data-about="making" data-kind="tool" data-where="local">
+        <li>
           <h3 class="name">Intarsia Print</h3>
           <p class="desc">Python CLI and local web UI that turn a prompt or flat graphic into a printable multi-level relief STL. Runs on your machine, not here.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="making">Making</button>
-            <button type="button" class="tag" data-group="kind" data-tag="tool">Tool</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="local">Runs on your machine</button>
-          </div>
           <div class="actions">
             <a class="app" href="https://github.com/jkastl/intarsia-print" aria-label="Source for Intarsia Print">View source →</a>
           </div>
         </li>
-        <li data-about="health" data-kind="tool" data-where="phone">
+        <li data-tags="health phone">
           <h3 class="name">Knee Rehab Timer</h3>
           <p class="desc">Offline-capable circuit timer for a knee rehab routine.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="health">Health</button>
-            <button type="button" class="tag" data-group="kind" data-tag="tool">Tool</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="health">Health</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/knee-strength/" aria-label="Open Knee Rehab Timer">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/knee-strength" aria-label="Source for Knee Rehab Timer">Source</a>
           </div>
         </li>
-        <li data-about="sensing health" data-kind="explainer" data-where="phone">
+        <li data-tags="sensing health phone">
           <h3 class="name">Light Through a Finger</h3>
           <p class="desc">How a pulse oximeter reads oxygen, what fools it, and your own pulse through the camera. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="about" data-tag="health">Health</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
+            <button type="button" class="tag" data-filter="health">Health</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/pulse-ox/" aria-label="Open Light Through a Finger">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/pulse-ox" aria-label="Source for Light Through a Finger">Source</a>
           </div>
         </li>
-        <li data-featured="3" data-about="data health" data-kind="explainer">
+        <li data-featured="3" data-tags="data health">
           <h3 class="name">ML Showcase</h3>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="data">Data &amp; ML</button>
-            <button type="button" class="tag" data-group="about" data-tag="health">Health</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
+            <button type="button" class="tag" data-filter="health">Health</button>
           </div>
           <div class="actions">
             <a class="app" href="/ml-showcase/" aria-label="Open ML Showcase">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/ml-showcase" aria-label="Source for ML Showcase">Source</a>
           </div>
         </li>
-        <li data-about="motion" data-kind="instrument" data-where="phone">
+        <li data-tags="motion phone">
           <h3 class="name">Ride Report</h3>
           <p class="desc">Live ride-quality meter for your phone. Lay it flat on a tray table and watch the turbulence.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="motion">Motion &amp; Navigation</button>
-            <button type="button" class="tag" data-group="kind" data-tag="instrument">Instrument</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/ride-report/" aria-label="Open Ride Report">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/ride-report" aria-label="Source for Ride Report">Source</a>
           </div>
         </li>
-        <li data-about="family" data-kind="game" data-where="phone">
+        <li data-tags="games phone">
           <h3 class="name">Scatter!</h3>
           <p class="desc">Pass-the-phone category game: roll a letter, then name something in 10 categories before time runs out.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="family">Kids &amp; Family</button>
-            <button type="button" class="tag" data-group="kind" data-tag="game">Game</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="games">Games</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/scatter/" aria-label="Open Scatter!">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/scatter" aria-label="Source for Scatter!">Source</a>
           </div>
         </li>
-        <li data-about="error" data-kind="explainer">
+        <li data-tags="error">
           <h3 class="name">Scratch the Code</h3>
           <p class="desc">A real QR code you can deface, and the Reed–Solomon decoder that repairs it live. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/qr/" aria-label="Open Scratch the Code">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/qr" aria-label="Source for Scratch the Code">Source</a>
           </div>
         </li>
-        <li data-about="motion" data-kind="instrument" data-where="phone">
+        <li data-tags="motion phone">
           <h3 class="name">Scroll Report</h3>
           <p class="desc">A rolling 3D seismograph of your phone's motion over the last 20 seconds.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="motion">Motion &amp; Navigation</button>
-            <button type="button" class="tag" data-group="kind" data-tag="instrument">Instrument</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/scroll-report/" aria-label="Open Scroll Report">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/scroll-report" aria-label="Source for Scroll Report">Source</a>
           </div>
         </li>
-        <li data-about="privacy error" data-kind="tool">
+        <li data-tags="error privacy">
           <h3 class="name">Tear-Proof Secrets</h3>
           <p class="desc">Split a password across printable tags so that any three of five rebuild it, and two reveal nothing. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="privacy">Privacy &amp; Security</button>
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="kind" data-tag="tool">Tool</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
+            <button type="button" class="tag" data-filter="privacy">Privacy &amp; Security</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/tearproof/" aria-label="Open Tear-Proof Secrets">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/tearproof" aria-label="Source for Tear-Proof Secrets">Source</a>
           </div>
         </li>
-        <li data-about="error" data-kind="game">
+        <li data-tags="error games">
           <h3 class="name">The Liar's Game</h3>
           <p class="desc">Twenty questions against an opponent allowed to lie. The math that catches it is error correction with feedback. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="kind" data-tag="game">Game</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
+            <button type="button" class="tag" data-filter="games">Games</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/liar/" aria-label="Open The Liar's Game">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/liar" aria-label="Source for The Liar's Game">Source</a>
           </div>
         </li>
-        <li data-about="error" data-kind="explainer">
+        <li data-tags="error">
           <h3 class="name">The Vote</h3>
           <p class="desc">Majority voting, von Neumann's threshold, and why the spare on Ariane 5 failed too. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/vote/" aria-label="Open The Vote">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/vote" aria-label="Source for The Vote">Source</a>
           </div>
         </li>
-        <li data-featured="4" data-about="error sensing" data-kind="explainer">
+        <li data-featured="4" data-tags="error sensing">
           <h3 class="name">Tolerance</h3>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/" aria-label="Open Tolerance">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance" aria-label="Source for Tolerance">Source</a>
           </div>
         </li>
-        <li data-about="error" data-kind="game" data-where="phone">
+        <li data-tags="error games phone">
           <h3 class="name">Traitors, Pass-the-Phone</h3>
           <p class="desc">A party game that runs the Byzantine Generals protocol. With three players the loyal side can't win reliably; with four it always does. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="error">Error Correction</button>
-            <button type="button" class="tag" data-group="kind" data-tag="game">Game</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="error">Error Correction</button>
+            <button type="button" class="tag" data-filter="games">Games</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/traitors/" aria-label="Open Traitors, Pass-the-Phone">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/traitors" aria-label="Source for Traitors, Pass-the-Phone">Source</a>
           </div>
         </li>
-        <li data-about="sensing motion" data-kind="explainer">
+        <li data-tags="sensing motion">
           <h3 class="name">Two Wrong Answers</h3>
           <p class="desc">A Kalman filter blends noisy GPS with a drifting accelerometer, and learns the drift. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="about" data-tag="motion">Motion &amp; Navigation</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
+            <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/kalman/" aria-label="Open Two Wrong Answers">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/kalman" aria-label="Source for Two Wrong Answers">Source</a>
           </div>
         </li>
-        <li data-about="sensing motion" data-kind="explainer">
+        <li data-tags="sensing motion">
           <h3 class="name">Where Am I</h3>
           <p class="desc">GPS as circles and a bad clock, and why altitude is always the sloppiest number. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="about" data-tag="motion">Motion &amp; Navigation</button>
-            <button type="button" class="tag" data-group="kind" data-tag="explainer">Explainer</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
+            <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/gps/" aria-label="Open Where Am I">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/gps" aria-label="Source for Where Am I">Source</a>
           </div>
         </li>
-        <li data-about="family" data-kind="tool">
+        <li>
           <h3 class="name">Word Flashcards</h3>
           <p class="desc">Flashcards for beginning readers at a kindergarten (K) reading level: simple 3-letter words, by card count or timer.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="family">Kids &amp; Family</button>
-            <button type="button" class="tag" data-group="kind" data-tag="tool">Tool</button>
-          </div>
           <div class="actions">
             <a class="app" href="/k-reader/" aria-label="Open Word Flashcards">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/k-reader" aria-label="Source for Word Flashcards">Source</a>
           </div>
         </li>
-        <li data-about="privacy sensing motion" data-kind="instrument" data-where="phone">
+        <li data-tags="sensing motion privacy phone">
           <h3 class="name">Your Phone's Fingerprint</h3>
           <p class="desc">Factory calibration errors in your phone's motion sensors form a stable ID. See yours, entirely on your device. Part of Tolerance.</p>
           <div class="tags">
-            <button type="button" class="tag" data-group="about" data-tag="privacy">Privacy &amp; Security</button>
-            <button type="button" class="tag" data-group="about" data-tag="sensing">Sensing &amp; Signals</button>
-            <button type="button" class="tag" data-group="about" data-tag="motion">Motion &amp; Navigation</button>
-            <button type="button" class="tag" data-group="kind" data-tag="instrument">Instrument</button>
-            <button type="button" class="tag flag" data-group="where" data-tag="phone">Best on a phone</button>
+            <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
+            <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
+            <button type="button" class="tag" data-filter="privacy">Privacy &amp; Security</button>
+            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
           </div>
           <div class="actions">
             <a class="app" href="/tolerance/fingerprint/" aria-label="Open Your Phone's Fingerprint">Open app →</a>
@@ -573,126 +498,88 @@
           </div>
         </li>
     </ul>
-    <p class="empty" id="empty" hidden>Nothing matches all of those. Try clearing a filter.</p>
     <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v3.4.0 · 2026-10-05
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.0.0 · 2026-10-05
     </footer>
   </main>
   <script>
-    // Filters: Show (Featured or All apps) plus one tag per group (About, Kind, Where); a tile must
-    // match every chosen group. With no tag chosen the page shows the featured tiles, in their
-    // data-featured order. The choice lives in the URL hash, e.g. #show=all or #about=health&kind=game.
-    const groups = ["about", "kind", "where"];
+    // One filter at a time, kept in the URL hash. No hash shows the featured tiles in their
+    // data-featured order; #all shows everything; #<tag> shows tiles whose data-tags include it.
     const tiles = [...document.querySelectorAll("#apps > li")];
+    const chips = [...document.querySelectorAll("#filters .chip")];
+    const valid = new Set(chips.map(c => c.dataset.filter));
+    const tagsOf = li => (li.dataset.tags || "").split(" ");
     const featuredCount = tiles.filter(li => li.dataset.featured).length;
-    // Links to the old sections (#learn, #sensors, ...) land on the matching filter.
-    const legacy = {
-      learn: "about=data", systems: "about=error", sensors: "about=motion", privacy: "about=privacy",
-      fitness: "about=health", games: "kind=game", printing: "about=making", all: "show=all"
-    };
-    // Retired tags that links may still carry, mapped to the tag that replaced them.
-    const renamed = { about: { reliability: "error" } };
-    const has = (li, g, t) => (li.dataset[g] || "").split(" ").includes(t);
-    const tagged = f => groups.some(g => f[g]);
-    // The landing view: featured tiles, no tags.
-    const isDefault = f => f.show === "featured" && !tagged(f);
 
-    let stale = false; // set by read() when the hash used an old section id or tag, so it gets rewritten
-    function read() {
-      const h0 = decodeURIComponent(location.hash.slice(1));
-      const h = legacy[h0] || h0;
+    // Old links keep working: section ids from v2 and the about=/kind=/where=/show= filters from v3.
+    const legacy = { learn: "data", systems: "error", sensors: "motion", fitness: "health", printing: "all" };
+    function fromOld(h) {
+      if (legacy[h]) return legacy[h];
+      if (!h.includes("=")) return "featured";
       const p = new URLSearchParams(h);
-      const f = {};
-      stale = !!legacy[h0];
-      for (const g of groups) {
-        let t = p.get(g);
-        if (renamed[g] && renamed[g][t]) { t = renamed[g][t]; stale = true; }
-        if (t && document.querySelector(`.facet[data-group="${g}"] .chip[data-tag="${CSS.escape(t)}"]`)) f[g] = t;
-      }
-      // A link with tags but no show= searches all apps; a bare link shows the featured ones.
-      const show = p.get("show");
-      if (show !== null && show !== "featured" && show !== "all") stale = true;
-      f.show = show === "featured" || show === "all" ? show : tagged(f) ? "all" : "featured";
-      return f;
+      const about = p.get("about") === "reliability" ? "error" : p.get("about");
+      const pick = [about, p.get("kind") === "game" ? "games" : null, p.get("where"), p.get("show")]
+        .find(t => valid.has(t));
+      return pick || "all";
+    }
+
+    function read() {
+      const h = decodeURIComponent(location.hash.slice(1));
+      if (!h) return { f: "featured", stale: false };
+      if (valid.has(h) && h !== "featured") return { f: h, stale: false };
+      return { f: fromOld(h), stale: true };
     }
 
     function apply(f) {
-      const feat = f.show === "featured";
+      const feat = f === "featured";
       let shown = 0;
       for (const li of tiles) {
-        li.hidden = (feat && !li.dataset.featured) || !groups.every(g => !f[g] || has(li, g, f[g]));
+        li.hidden = feat ? !li.dataset.featured : f !== "all" && !tagsOf(li).includes(f);
         // Featured tiles keep their data-featured order; otherwise the grid is alphabetical.
-        li.style.order = feat && li.dataset.featured ? li.dataset.featured : "";
+        li.style.order = feat ? li.dataset.featured : "";
         if (!li.hidden) shown++;
       }
-      for (const facet of document.querySelectorAll(".facet")) {
-        for (const chip of facet.querySelectorAll(".chip")) {
-          chip.setAttribute("aria-pressed", String(chip.dataset.tag === (f[facet.dataset.group] || "")));
-        }
-      }
-      const any = tagged(f);
+      for (const chip of chips) chip.setAttribute("aria-pressed", String(chip.dataset.filter === f));
       document.getElementById("shown").textContent =
-        feat ? (any ? `Showing ${shown} of ${featuredCount} featured apps` : `Showing ${featuredCount} featured apps of ${tiles.length}`)
-             : (any ? `Showing ${shown} of ${tiles.length} apps` : `Showing all ${tiles.length} apps`);
-      document.getElementById("clear").hidden = !any;
-      document.getElementById("empty").hidden = shown > 0;
+        feat ? `Showing ${featuredCount} featured apps of ${tiles.length}`
+          : f === "all" ? `Showing all ${tiles.length} apps` : `Showing ${shown} of ${tiles.length} apps`;
       document.getElementById("more").hidden = !feat;
-      document.getElementById("show-all").textContent = any ? "Show matches from all apps →" : `Show all ${tiles.length} apps →`;
     }
 
     function set(f) {
-      const any = tagged(f);
-      const q = [
-        ...(f.show === "featured" && any ? ["show=featured"] : []),
-        ...(f.show === "all" && !any ? ["show=all"] : []),
-        ...groups.filter(g => f[g]).map(g => `${g}=${encodeURIComponent(f[g])}`)
-      ].join("&");
-      history.replaceState(null, "", q ? `#${q}` : location.pathname + location.search);
+      const url = f === "featured" ? location.pathname + location.search : `#${f}`;
+      history.replaceState(null, "", url);
       apply(f);
     }
 
-    // Picking a tag from the landing view searches all apps, not just the featured few.
-    function pick(f, g, t) {
-      const next = { ...f, [g]: t };
-      if (g !== "show" && t && isDefault(f)) next.show = "all";
-      return next;
+    // Each chip shows how many apps it would show; a tag nobody carries is hidden.
+    for (const chip of chips) {
+      const t = chip.dataset.filter;
+      const n = t === "featured" ? featuredCount : t === "all" ? tiles.length
+        : tiles.filter(li => tagsOf(li).includes(t)).length;
+      chip.querySelector(".n").textContent = n;
+      chip.hidden = n === 0;
+      chip.addEventListener("click", () => set(t));
     }
 
-    // Each chip shows how many apps carry its tag; tags nobody uses are hidden.
-    for (const facet of document.querySelectorAll(".facet")) {
-      const g = facet.dataset.group;
-      for (const chip of facet.querySelectorAll(".chip[data-tag]:not([data-tag=''])")) {
-        const n = g === "show"
-          ? (chip.dataset.tag === "featured" ? featuredCount : tiles.length)
-          : tiles.filter(li => has(li, g, chip.dataset.tag)).length;
-        chip.querySelector(".n").textContent = n;
-        chip.hidden = n === 0;
-      }
-      facet.addEventListener("click", e => {
-        const chip = e.target.closest(".chip");
-        if (chip) set(pick(read(), g, chip.dataset.tag));
-      });
-    }
-
-    // Clicking a tag on a tile filters by it, or clears that group if it's already chosen.
-    document.querySelector("main").addEventListener("click", e => {
+    // A tag on a tile selects that filter; clicking it again shows everything.
+    document.getElementById("apps").addEventListener("click", e => {
       const tag = e.target.closest(".tag");
       if (!tag) return;
-      const f = read(), g = tag.dataset.group;
-      set(pick(f, g, f[g] === tag.dataset.tag ? "" : tag.dataset.tag));
+      set(read().f === tag.dataset.filter ? "all" : tag.dataset.filter);
       document.getElementById("filters").scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
 
-    document.getElementById("clear").addEventListener("click", () => set({ show: "featured" }));
-    document.getElementById("show-all").addEventListener("click", () => set({ ...read(), show: "all" }));
-    addEventListener("hashchange", () => { const f = read(); if (stale) set(f); else apply(f); });
+    document.getElementById("show-all").textContent = `Show all ${tiles.length} apps →`;
+    document.getElementById("show-all").addEventListener("click", () => set("all"));
+    addEventListener("hashchange", () => { const r = read(); if (r.stale) set(r.f); else apply(r.f); });
 
     document.getElementById("filters").hidden = false;
     document.getElementById("status").hidden = false;
     const initial = read();
-    if (stale) set(initial); else apply(initial);
+    if (initial.stale) set(initial.f); else apply(initial.f);
   </script>
 </body>
 </html>
