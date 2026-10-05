@@ -58,7 +58,7 @@ written out in the HTML, in this order.
 
 | Group | Attribute | Tags |
 |---|---|---|
-| About (the topic) | `data-about` | `data` Data & ML, `reliability` Reliability, `complexity` Complexity, `motion` Motion & Navigation, `health` Health, `privacy` Privacy & Security, `family` Kids & Family, `making` Making |
+| About (the topic) | `data-about` | `data` Data & ML, `error` Error Correction, `sensing` Sensing & Signals, `complexity` Complexity, `motion` Motion & Navigation, `health` Health, `privacy` Privacy & Security, `family` Kids & Family, `making` Making |
 | Kind (what you do with it) | `data-kind` | `explainer` Explainer, `game` Game, `tool` Tool, `instrument` Instrument |
 | Where (optional) | `data-where` | `phone` Best on a phone, `local` Runs on your machine |
 
@@ -71,6 +71,8 @@ To add a new tag, add a chip to its group in `<div class="filters">` (copy a nei
 Filters live in the URL hash, so they can be linked: `#about=health`, `#kind=game&where=phone`.
 The old section links (`#learn`, `#systems`, `#sensors`, `#privacy`, `#fitness`, `#games`,
 `#printing`) still work and redirect to the matching filter; the map is `legacy` in the script.
+When a tag is retired or renamed, add it to `renamed` in the script so old links still land
+somewhere (`#about=reliability` now opens Error Correction).
 
 ## Versioning
 
