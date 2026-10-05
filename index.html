@@ -35,9 +35,30 @@
       font-size: 1.5rem;
       margin: 0 0 0.5rem;
     }
+    .who {
+      margin: 0 0 0.75rem;
+    }
+    .who a, .lead a {
+      color: var(--accent);
+    }
     .lead {
       margin: 0 0 2rem;
       color: var(--muted);
+    }
+    .row-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 0.75rem;
+    }
+    .featured {
+      margin: 0 0 2rem;
+    }
+    /* Four featured tiles fit on one row on a desktop. */
+    #featured {
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
     }
     button {
       font: inherit;
@@ -49,6 +70,9 @@
       gap: 0.6rem;
       padding: 1.25rem 0;
       border-top: 1px solid var(--line);
+    }
+    .filters .row-title {
+      margin: 0 0 0.15rem;
     }
     .facet {
       display: flex;
@@ -237,8 +261,15 @@
 <body>
   <main>
     <h1>Apps and demos</h1>
+    <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
     <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser; filter by topic or kind, or click any tag on a tile.</p>
+    <!-- Tiles with data-featured are moved here by the script, in that order, while no filter is on. -->
+    <section class="featured" id="featured-wrap" aria-labelledby="featured-title" hidden>
+      <h2 class="row-title" id="featured-title">Featured</h2>
+      <ul id="featured"></ul>
+    </section>
     <div class="filters" id="filters" hidden>
+      <h2 class="row-title">All apps</h2>
       <div class="facet" role="group" aria-label="About" data-group="about">
         <span class="facet-label">About</span>
           <button type="button" class="chip" data-tag="" aria-pressed="true">All</button>
@@ -269,7 +300,7 @@
     </div>
     <p class="status" id="status" hidden><span id="shown">Showing all 21 apps</span> <button type="button" class="clear" id="clear" hidden>Clear filters</button></p>
     <ul id="apps">
-        <li data-about="data" data-kind="explainer">
+        <li data-featured="1" data-about="data" data-kind="explainer">
           <h3 class="name">Advanced Data Engineering</h3>
           <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
           <div class="tags">
@@ -281,7 +312,7 @@
             <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
           </div>
         </li>
-        <li data-about="data" data-kind="explainer">
+        <li data-featured="2" data-about="data" data-kind="explainer">
           <h3 class="name">Data Engineering Concepts</h3>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
@@ -356,7 +387,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/pulse-ox" aria-label="Source for Light Through a Finger">Source</a>
           </div>
         </li>
-        <li data-about="data health" data-kind="explainer">
+        <li data-featured="3" data-about="data health" data-kind="explainer">
           <h3 class="name">ML Showcase</h3>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
@@ -457,7 +488,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/vote" aria-label="Source for The Vote">Source</a>
           </div>
         </li>
-        <li data-about="error sensing" data-kind="explainer">
+        <li data-featured="4" data-about="error sensing" data-kind="explainer">
           <h3 class="name">Tolerance</h3>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
@@ -540,7 +571,7 @@
     <p class="empty" id="empty" hidden>Nothing matches all of those. Try clearing a filter.</p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v3.2.0 · 2026-10-05
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v3.3.0 · 2026-10-05
     </footer>
   </main>
   <script>
@@ -548,6 +579,20 @@
     // The choice lives in the URL hash, e.g. #about=health&kind=game.
     const groups = ["about", "kind", "where"];
     const tiles = [...document.querySelectorAll("#apps > li")];
+    const grid = document.getElementById("apps");
+    // Featured tiles move (not copy) into the Featured row while no filter is on, so each app
+    // appears once. With a filter on, they go back into the grid in alphabetical order.
+    const featured = tiles.filter(li => li.dataset.featured)
+      .sort((a, b) => a.dataset.featured - b.dataset.featured);
+    let featuring = null;
+    function place(filtered) {
+      const on = !filtered && featured.length > 0;
+      if (on === featuring) return;
+      featuring = on;
+      document.getElementById("featured-wrap").hidden = !on;
+      for (const li of tiles) if (!(on && li.dataset.featured)) grid.appendChild(li);
+      if (on) for (const li of featured) document.getElementById("featured").appendChild(li);
+    }
     // Links to the old sections (#learn, #sensors, ...) land on the matching filter.
     const legacy = {
       learn: "about=data", systems: "about=error", sensors: "about=motion", privacy: "about=privacy",
@@ -584,9 +629,10 @@
         }
       }
       const any = groups.some(g => f[g]);
+      place(any);
       document.getElementById("shown").textContent = any
         ? `Showing ${shown} of ${tiles.length} app${tiles.length === 1 ? "" : "s"}`
-        : `Showing all ${tiles.length} apps`;
+        : `Showing all ${tiles.length} apps` + (featured.length ? `, ${featured.length} featured above` : "");
       document.getElementById("clear").hidden = !any;
       document.getElementById("empty").hidden = shown > 0;
     }
@@ -612,7 +658,7 @@
     }
 
     // Clicking a tag on a tile filters by it, or clears that group if it's already chosen.
-    document.getElementById("apps").addEventListener("click", e => {
+    document.querySelector("main").addEventListener("click", e => {
       const tag = e.target.closest(".tag");
       if (!tag) return;
       const f = read(), g = tag.dataset.group;

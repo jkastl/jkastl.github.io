@@ -51,6 +51,15 @@ opens the source, and tag it `data-where="local"`:
 <a class="app" href="https://github.com/jkastl/repo-name" aria-label="Source for App Name">View source →</a>
 ```
 
+## Featured
+
+Add `data-featured="N"` to a tile's `<li>` to show it in the Featured row at the top of the page,
+ordered by `N` (1 comes first). The tile stays in its alphabetical place in the markup: the script
+moves it into the Featured row while no filter is on, so it never appears twice, and moves it back
+into the grid when a filter is chosen. With JavaScript off there's no Featured row and every tile
+shows in the grid. To change what's featured, move or renumber the attributes; nothing else needs
+editing.
+
 ## Tags
 
 Tags come from a fixed vocabulary in three groups. The filter chips at the top of the page are
