@@ -15,7 +15,6 @@
       --accent: #7aa7ff;
       --accent-hover: #9dbfff;
       --on-accent: #0e1a33;
-      --tile: #1b1b1b;
       --tile-hover: #212121;
     }
     * { box-sizing: border-box; }
@@ -54,7 +53,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.4rem;
-      padding: 1.25rem 0 1rem;
+      padding: 1.25rem 0 0.75rem;
       border-top: 1px solid var(--line);
     }
     /* A little space between the two views (Featured, All) and the topic tags. */
@@ -122,50 +121,54 @@
     @media (prefers-reduced-motion: reduce) {
       li { transition: none; }
     }
+    /* Apps are a list of rows: name, description and tags on the left, buttons on the right.
+       It's a grid (not a flex column) so the script can reorder rows with the CSS order property. */
     ul {
       list-style: none;
       margin: 0;
       padding: 0;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-      gap: 1rem;
+      border-top: 1px solid var(--line);
     }
     li {
       position: relative;
-      display: flex;
-      flex-direction: column;
-      padding: 1.25rem;
-      background: var(--tile);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      transition: border-color 0.15s, background 0.15s;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas: "name actions" "desc actions" "tags actions";
+      align-content: start;
+      column-gap: 1.5rem;
+      padding: 0.9rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.15s;
     }
     li:hover, li:focus-within {
-      border-color: var(--accent);
       background: var(--tile-hover);
     }
     .name {
+      grid-area: name;
       font-weight: 600;
       font-size: 1.1rem;
-      margin: 0 0 0.4rem;
+      margin: 0 0 0.25rem;
     }
     li:hover .name, li:focus-within .name {
       color: var(--accent);
     }
     .desc {
-      flex: 1;
+      grid-area: desc;
+      max-width: 42rem;
       margin: 0;
       color: var(--muted);
       font-size: 0.95rem;
     }
     /* Tags sit above the stretched app link so they can be clicked to filter. */
     .tags {
+      grid-area: tags;
       position: relative;
       z-index: 1;
       display: flex;
       flex-wrap: wrap;
       gap: 0.35rem;
-      margin-top: 0.9rem;
+      margin-top: 0.5rem;
     }
     .tag {
       padding: 0.05rem 0.5rem;
@@ -184,11 +187,23 @@
       color: var(--accent);
     }
     .actions {
+      grid-area: actions;
+      align-self: center;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 0.75rem 1rem;
-      margin-top: 1rem;
+    }
+    /* On a phone the buttons drop below the description. */
+    @media (max-width: 40rem) {
+      li {
+        grid-template-columns: 1fr;
+        grid-template-areas: "name" "desc" "tags" "actions";
+        padding: 1rem 0.25rem;
+      }
+      .actions {
+        justify-self: start;
+        margin-top: 0.85rem;
+      }
     }
     .app {
       padding: 0.45rem 0.9rem;
@@ -205,14 +220,13 @@
       background: var(--accent-hover);
     }
     .app:focus-visible {
-      box-shadow: 0 0 0 2px var(--tile), 0 0 0 4px var(--accent);
+      box-shadow: 0 0 0 2px var(--tile-hover), 0 0 0 4px var(--accent);
     }
-    /* Stretch the app link over the whole tile so the tile is the primary click target. */
+    /* Stretch the app link over the whole row so the row is the primary click target. */
     .app::after {
       content: "";
       position: absolute;
       inset: 0;
-      border-radius: 10px;
     }
     .repo {
       position: relative;
@@ -501,7 +515,7 @@
     <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.0.0 · 2026-10-05
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.1.0 · 2026-10-05
     </footer>
   </main>
   <script>

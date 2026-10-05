@@ -1,6 +1,7 @@
 # jkastl.github.io
 
-An index of my apps and demos: one grid of tiles, opening on a few featured ones, filtered by tags.
+An index of my apps and demos: a list of rows, one per app, opening on a few featured ones and
+filtered by tags.
 
 **[jkastl.github.io](https://jkastl.github.io/)**
 
