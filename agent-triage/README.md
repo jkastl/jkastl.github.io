@@ -25,7 +25,8 @@ request ──► │ input         │──►│ router    │──►│ da
                    │ blocked          │ < 0.70  └──────────┬───────────┘   search_known_issues, escalate*
                    ▼                  ▼                    │ * writes
                outcome          human review ◄── needs ─── write gate ──► ticketing (ITSM)
-                                (approve/reject)  approval  (re-checks policy)
+                                (reviewer or      approval  (re-checks policy)
+                                 dataset owner)
 ```
 
 - **Input guardrails** run before any agent sees the text. PII (SSN, MRN, date of birth, email, phone)
@@ -39,6 +40,11 @@ request ──► │ input         │──►│ router    │──►│ da
   concluded, and enforces read-only, expiring grants and least-privilege starter datasets.
 - **Human in the loop:** high-risk writes (identified or limited data, onboarding by someone who isn't
   the manager, anything from a flagged request) pause until you click Approve or Reject.
+- **Restricted data goes to its owner.** Each restricted dataset names a human owner, and only that
+  person can approve a grant. The requester still needs an active account and the required training
+  before the owner is asked. The gate checks the recorded approval came from the owner, not just any
+  reviewer. A restricted dataset with no owner on record, or an owner asking for their own access,
+  is denied (fail closed).
 - **Mock tools** have realistic latency, and scenarios can make them time out or return malformed
   JSON. Calls are validated against the fields they must return, retried with exponential backoff
   (200 ms, 400 ms, plus jitter) up to 3 attempts, and escalated to a person if they never recover.
@@ -49,17 +55,18 @@ request ──► │ input         │──►│ router    │──►│ da
 | # | Scenario | What happens |
 |---|---|---|
 | 1 | Clean data access request | Policy allows de-identified claims; ticket created automatically |
-| 2 | Restricted dataset | Rule R1 denies behavioral health notes, with a reason and where to go instead |
-| 3 | Ambiguous request | Router confidence 0.44, so you decide where it goes |
-| 4 | Onboarding a new analyst | lookup_user → provision_workspace → assign_training ×2 |
-| 5 | Incident matching a known issue | Status check, KB search, fix and link for KI-1042 |
-| 6 | Tool timeout | Catalog times out twice, then succeeds on retry 3 |
-| 7 | Prompt injection | "Ignore all previous instructions…" is blocked before the router |
-| 8 | PII in the ticket | Fake SSN, MRN and phone are redacted at intake |
-| 9 | Malformed tool response | Bad JSON from the KB fails validation, then a retry succeeds |
-| 10 | High-risk write | Identified EHR data is allowed only with your approval |
-| 11 | Out of scope | Travel booking is declined politely, with no tools called |
-| 12 | New incident | No known issue and a degraded feed, so it's escalated to on-call as P2 |
+| 2 | Restricted dataset | Behavioral health notes go to their owner, Dr. Ruth Adeyemi; you approve or reject as her |
+| 3 | Ineligible role | A contractor asks for pharmacy data; rule R5 denies it with the reason |
+| 4 | Ambiguous request | Router confidence 0.44, so you decide where it goes |
+| 5 | Onboarding a new analyst | lookup_user → provision_workspace → assign_training ×2 |
+| 6 | Incident matching a known issue | Status check, KB search, fix and link for KI-1042 |
+| 7 | Tool timeout | Catalog times out twice, then succeeds on retry 3 |
+| 8 | Prompt injection | "Ignore all previous instructions…" is blocked before the router |
+| 9 | PII in the ticket | Fake SSN, MRN and phone are redacted at intake |
+| 10 | Malformed tool response | Bad JSON from the KB fails validation, then a retry succeeds |
+| 11 | High-risk write | Identified EHR data is allowed only with your approval |
+| 12 | Out of scope | Travel booking is declined politely, with no tools called |
+| 13 | New incident | No known issue and a degraded feed, so it's escalated to on-call as P2 |
 
 You can also edit the text or requester to make your own request. Typed requests get an occasional
 random timeout or malformed response, seeded by the text so they still replay the same way.
@@ -99,7 +106,7 @@ js/engine/              the simulation; no DOM, loads in the browser and in Node
   tools.js              the mock tools, malformed responses, response validation
   agents.js             the three specialist agents
   runner.js             the pipeline, tool calls with retry, approvals, metrics
-  scenarios.js          the 12 scenarios, as data
+  scenarios.js          the 13 scenarios, as data
 js/diagram.js           the architecture diagram (wide and phone layouts)
 js/ui.js                controls, playback, trace, metrics, approval card
 test/                   node:test suites
@@ -120,7 +127,7 @@ never changes what happens.
 | Tools | In-memory, seeded latency and faults | Real APIs behind per-tool service accounts, with timeouts and circuit breakers |
 | Guardrails | Regexes | A DLP service for PII and a classifier for injection, plus the same deterministic write gate |
 | Policy | Eight rules in JavaScript | A policy engine (for example OPA) fed by the identity provider and catalog tags |
-| Human review | A button | An approval task in the ITSM, with the session resumed on the answer |
+| Human review | A button; for restricted data you click as the dataset owner | An approval task in the ITSM assigned to the right person (the owner comes from the catalog), with the session resumed on the answer |
 | Observability | The trace panel | OpenTelemetry traces, an append-only audit log, cost and latency budgets |
 
 In Google ADK terms: the router is a coordinator `LlmAgent` with the specialists as `sub_agents`;

@@ -26,7 +26,7 @@
     auto_resolved: { label: 'Auto-resolved', level: 'good' },
     human_approved: { label: 'Human-approved', level: 'good' },
     denied: { label: 'Denied by policy', level: 'bad' },
-    rejected: { label: 'Rejected by reviewer', level: 'bad' },
+    rejected: { label: 'Rejected by approver', level: 'bad' },
     escalated: { label: 'Escalated to a person', level: 'warn' },
     blocked: { label: 'Blocked by guardrails', level: 'bad' },
     declined: { label: 'Declined: out of scope', level: 'info' },
@@ -120,34 +120,52 @@
 
     // Every write goes through the gate first. Returns { value } | { blocked, gate } | { rejected }.
     *write(agent, name, args) {
+      let gate = yield* this.gate(name, args);
+      if (!gate.allow) return { blocked: true, gate };
+      if (gate.needsApproval) {
+        const who = gate.approver;
+        const ok = yield* this.ask({
+          title: who ? `Sent to the dataset owner, ${who.name}` : `Approve ${name}?`,
+          question: `${AGENT_NAMES[agent]} wants to run ${name}. Risk: ${gate.risk}. ${gate.reason}`,
+          risk: gate.risk, data: { tool: name, args }, approver: who,
+          approveLabel: who ? `Approve as ${who.name}` : 'Approve', rejectLabel: 'Reject',
+        });
+        if (!ok) return { rejected: true, approver: who };
+        this.humanApproved = true;
+        args = { ...args, approved_by: who ? who.id : 'service_desk_reviewer' };
+        // Check again with the approval recorded: the gate, not the agent, decides it counts.
+        gate = yield* this.gate(name, args);
+        if (!gate.allow || gate.needsApproval) return { blocked: true, gate };
+      }
+      return { value: yield* this.call(agent, name, args), approver: gate.approver };
+    }
+
+    *gate(name, args) {
       const gate = AT.guardrails.writeGate({ tool: name, args, requester: this.requester, suspect: this.suspect });
       this.t += 12;
+      const verdict = !gate.allow ? 'blocked' : gate.needsApproval ? 'needs approval' : args.approved_by ? 'approval verified' : 'passed';
       yield this.ev({
         type: 'gate', actor: 'gate', nodes: ['gate'], intervened: !gate.allow || gate.needsApproval,
         level: !gate.allow ? 'bad' : gate.needsApproval ? 'warn' : 'good',
-        title: `Write gate: ${!gate.allow ? 'blocked' : gate.needsApproval ? 'needs approval' : 'passed'} (${name})`,
-        detail: gate.reason, data: { tool: name, risk: gate.risk, checks: gate.checks },
+        title: `Write gate: ${verdict} (${name})`,
+        detail: gate.reason, data: { tool: name, risk: gate.risk, ...(gate.approver ? { approver: gate.approver } : {}), checks: gate.checks },
       });
-      if (!gate.allow) return { blocked: true, gate };
-      if (gate.needsApproval) {
-        const ok = yield* this.ask({
-          title: `Approve ${name}?`,
-          question: `${AGENT_NAMES[agent]} wants to run ${name}. Risk: ${gate.risk}. ${gate.reason}`,
-          risk: gate.risk, data: { tool: name, args }, approveLabel: 'Approve', rejectLabel: 'Reject',
-        });
-        if (!ok) return { rejected: true };
-        this.humanApproved = true;
-        args = { ...args, approved_by: 'reviewer' };
-      }
-      return { value: yield* this.call(agent, name, args) };
+      return gate;
     }
 
     // Pause for a person. The caller resumes the generator with 'approve' or 'reject'.
-    *ask({ title, question, risk, data, approveLabel, rejectLabel }) {
-      const decision = yield this.ev({ type: 'approval_request', actor: 'human', nodes: ['human'], level: 'warn', title, detail: question, risk, data, approveLabel, rejectLabel });
+    // `approver` names the one person who may answer (a dataset owner); otherwise any reviewer.
+    *ask({ title, question, risk, data, approver, approveLabel, rejectLabel }) {
+      const decision = yield this.ev({ type: 'approval_request', actor: 'human', nodes: ['human'], level: 'warn', title, detail: question, risk, data, approver, approveLabel, rejectLabel });
       if (decision !== 'approve' && decision !== 'reject') throw new Error('approval_request needs next("approve") or next("reject")');
       const ok = decision === 'approve';
-      yield this.ev({ type: 'approval', actor: 'human', nodes: ['human'], level: ok ? 'good' : 'bad', title: ok ? 'Reviewer approved' : 'Reviewer rejected', detail: 'Time spent waiting on the reviewer is not counted in latency.', data: { decision } });
+      const who = approver ? approver.name : 'Reviewer';
+      yield this.ev({
+        type: 'approval', actor: 'human', nodes: ['human'], level: ok ? 'good' : 'bad',
+        title: `${who} ${ok ? 'approved' : 'rejected'}`,
+        detail: 'Time spent waiting on the approver is not counted in latency.',
+        data: { decision, approver: approver ? approver.id : 'service_desk_reviewer' },
+      });
       return ok;
     }
   }

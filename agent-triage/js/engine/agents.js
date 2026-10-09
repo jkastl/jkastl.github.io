@@ -38,13 +38,12 @@
     }
 
     const policy = yield* run.call(A, 'check_policy', { user_id: user.id, dataset_id: ds.dataset_id, purpose: run.subject });
-    yield* run.think(A, `Policy says ${policy.decision}`, `${policy.rule}: ${policy.reason}`, { decision: policy.decision, rule: policy.rule });
+    yield* run.think(A, `Policy says ${policy.decision.replace('_', ' ')}`,
+      `${policy.rule}: ${policy.reason}` + (policy.approver ? ` Route the grant to ${policy.approver.name} for a decision.` : ''),
+      { decision: policy.decision, rule: policy.rule, ...(policy.approver ? { approver: policy.approver } : {}) });
 
     if (policy.decision === 'deny') {
-      const next = policy.rule === 'R1-restricted'
-        ? `Requests for this dataset go to the ${D().datasets[ds.dataset_id].steward}; I've attached the policy reference so you can submit there.`
-        : 'If you think this is wrong, reply to this ticket and a data steward will review it.';
-      return { outcome: 'denied', reply: `Access to ${ds.name} was not granted. ${policy.reason} ${next}` };
+      return { outcome: 'denied', reply: `Access to ${ds.name} was not granted. ${policy.reason} If you think this is wrong, reply to this ticket and a data steward will review it.` };
     }
 
     const w = yield* run.write(A, 'create_ticket', {
@@ -54,8 +53,12 @@
       idempotency_key: `${run.requestId}:${ds.dataset_id}:read`,
     });
     if (w.blocked) return { outcome: 'denied', reply: `Access to ${ds.name} was not granted: ${w.gate.reason}` };
-    if (w.rejected) return { outcome: 'rejected', reply: `A reviewer declined access to ${ds.name}. They'll add a note to this ticket explaining why.` };
-    return { outcome: 'resolved', reply: `Done. ${w.value.number} grants read access to ${ds.name} for 90 days (rule ${policy.rule}). It should show up in your workspace within 15 minutes.` };
+    const by = w.approver ? w.approver.name : 'A reviewer';
+    if (w.rejected) return { outcome: 'rejected', reply: `${by} declined access to ${ds.name}. They'll add a note to this ticket explaining why.` };
+    return {
+      outcome: 'resolved',
+      reply: `Done. ${w.value.number} grants read access to ${ds.name} for 90 days (rule ${policy.rule}${w.approver ? `, approved by ${w.approver.name}` : ''}). It should show up in your workspace within 15 minutes.`,
+    };
   }
 
   // ---------------------------------------------------------------- onboarding

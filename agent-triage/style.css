@@ -322,6 +322,7 @@ textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent);
 .hitl.waiting { border-color: var(--warn-ink); box-shadow: 0 0 0 1px var(--warn-ink); }
 .hitl .q { font-size: 0.9rem; color: var(--ink); margin: 0 0 0.6rem; }
 .hitl .risk { margin-bottom: 0.5rem; }
+.hitl .as { font-size: 0.84rem; color: var(--warn-ink); margin: 0 0 0.5rem; }
 .idle { font-size: 0.86rem; color: var(--muted); margin: 0; }
 .reply { font-size: 0.9rem; color: var(--ink); margin: 0.4rem 0 0; overflow-wrap: anywhere; }
 

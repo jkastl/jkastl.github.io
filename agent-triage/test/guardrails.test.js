@@ -72,10 +72,35 @@ test('gate passes an allowed grant', () => {
 });
 
 test('gate re-checks policy instead of trusting the agent', () => {
-  // An agent that skipped or misread check_policy still can't grant restricted data.
-  const g = G.writeGate({ tool: 'create_ticket', args: grant('priya.raman', 'behavioral_health_notes'), requester: D.people['priya.raman'] });
+  // An agent that skipped or misread check_policy still can't grant data the role isn't eligible for.
+  const g = G.writeGate({ tool: 'create_ticket', args: grant('dana.whitfield', 'pharmacy_fills_deid'), requester: D.people['dana.whitfield'] });
   assert.equal(g.allow, false);
-  assert.match(g.reason, /R1-restricted/);
+  assert.match(g.reason, /R5-role/);
+});
+
+test('restricted grants wait for the dataset owner, and only the owner clears them', () => {
+  const priya = D.people['priya.raman'];
+  const ask = G.writeGate({ tool: 'create_ticket', args: grant('priya.raman', 'behavioral_health_notes'), requester: priya });
+  assert.equal(ask.allow, true);
+  assert.equal(ask.needsApproval, true);
+  assert.equal(ask.approver.id, 'ruth.adeyemi');
+
+  const byOwner = G.writeGate({ tool: 'create_ticket', args: grant('priya.raman', 'behavioral_health_notes', { approved_by: 'ruth.adeyemi' }), requester: priya });
+  assert.equal(byOwner.allow, true);
+  assert.equal(byOwner.needsApproval, false);
+
+  // A general reviewer's approval, or anyone else's, doesn't count for restricted data.
+  for (const who of ['service_desk_reviewer', 'lena.ortiz', 'priya.raman']) {
+    const g = G.writeGate({ tool: 'create_ticket', args: grant('priya.raman', 'behavioral_health_notes', { approved_by: who }), requester: priya });
+    assert.equal(g.allow, false, who);
+  }
+});
+
+test('an owner approval still needs the owner when the request was also flagged', () => {
+  const priya = D.people['priya.raman'];
+  const args = grant('priya.raman', 'behavioral_health_notes', { approved_by: 'ruth.adeyemi' });
+  assert.equal(G.writeGate({ tool: 'create_ticket', args, requester: priya, suspect: true }).needsApproval, false);
+  assert.equal(G.writeGate({ tool: 'create_ticket', args: { ...args, approved_by: undefined }, requester: priya, suspect: true }).needsApproval, true);
 });
 
 test('gate requires approval for high-risk data', () => {

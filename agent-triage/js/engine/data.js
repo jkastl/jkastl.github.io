@@ -29,6 +29,10 @@
         name: 'Lena Ortiz', role: 'manager', team: 'Population Health', status: 'active', manager: null,
         training: ['hipaa_basics', 'data_handling_101'], projects: [], agreements: [],
       },
+      'ruth.adeyemi': {
+        name: 'Dr. Ruth Adeyemi', role: 'data_owner', title: 'Behavioral Health data owner', team: 'Behavioral Health',
+        status: 'active', manager: null, training: ['hipaa_basics', 'data_handling_101'], projects: [], agreements: [],
+      },
       'sam.rivera': {
         name: 'Sam Rivera', role: 'analyst', team: 'Population Health', status: 'pending_start', manager: 'lena.ortiz',
         startDate: '2026-10-19', training: [], projects: [], agreements: [],
@@ -60,7 +64,8 @@
       },
       behavioral_health_notes: {
         name: 'Behavioral health clinical notes', classification: 'restricted', steward: 'Data Governance Board',
-        roles: [], training: [],
+        // Restricted data has a named human owner who approves every grant.
+        owner: 'ruth.adeyemi', roles: [], training: ['hipaa_basics'],
         aliases: ['behavioral health notes', 'therapy notes', 'psychotherapy notes', 'behavioral health'],
       },
       provider_directory: {

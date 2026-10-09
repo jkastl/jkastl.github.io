@@ -20,7 +20,7 @@
     onboard: ['Onboarding agent'],
     triage: ['Triage agent'],
     gate: ['Write gate', 'policy re-check'],
-    human: ['Human review', 'approve / reject'],
+    human: ['Human review', 'reviewer · data owner'],
     itsm: ['Ticketing (ITSM)', 'requests · incidents'],
     done: ['Outcome', 'reply to requester'],
   };

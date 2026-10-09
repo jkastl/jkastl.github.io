@@ -30,7 +30,7 @@
     tool_result: 'Result', tool_error: 'Error', retry: 'Retry', gate: 'Gate', approval_request: 'Needs approval',
     approval: 'Approval', outcome: 'Outcome',
   };
-  const ROLES = { analyst: 'analyst', data_scientist: 'data scientist', data_engineer: 'data engineer', contractor: 'contractor', manager: 'manager' };
+  const ROLES = { analyst: 'analyst', data_scientist: 'data scientist', data_engineer: 'data engineer', contractor: 'contractor', manager: 'manager', data_owner: 'data owner' };
 
   const S = {
     scenario: null, custom: false, speed: 1,
@@ -251,7 +251,7 @@
 
   function idleApproval() {
     $('hitl').classList.remove('waiting');
-    $('hitl-body').replaceChildren(h('p.idle', {}, 'Nothing waiting. Low-confidence routes and high-risk writes stop here for you to decide.'));
+    $('hitl-body').replaceChildren(h('p.idle', {}, 'Nothing waiting. Low-confidence routes, high-risk writes and restricted data stop here for you to decide.'));
   }
 
   function showApproval(ev) {
@@ -261,7 +261,8 @@
     const reject = h('button.btn.danger', { type: 'button', onclick: () => decide('reject') }, ev.rejectLabel || 'Reject');
     $('hitl').classList.add('waiting');
     $('hitl-body').replaceChildren(
-      h('p.q', {}, h('strong', {}, ev.title + ' '), ev.detail),
+      h('p.q', {}, h('strong', {}, ev.title + (/[?.]$/.test(ev.title) ? ' ' : '. ')), ev.detail),
+      ev.approver ? h('p.as', {}, `Only this person can approve. You're deciding as ${ev.approver.name}, ${ev.approver.title}.`) : null,
       h('p.risk', {}, h('span', { class: 'tag ' + (ev.risk === 'high' ? 'bad' : 'warn') }, 'risk: ' + ev.risk)),
       pre,
       h('div.sim-ctl', { style: 'margin-top:.6rem' }, approve, reject));

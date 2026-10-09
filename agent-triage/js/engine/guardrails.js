@@ -60,7 +60,11 @@
 
   /* The write gate. Agents call write tools through this, and it decides on its own evidence:
    * for an access grant it re-runs the policy engine rather than trusting the agent's reading of
-   * check_policy. Returns { allow, needsApproval, risk, reason, checks }.
+   * check_policy. Returns { allow, needsApproval, approver, risk, reason, checks }.
+   *
+   * When policy names a specific approver (a restricted dataset's owner), the gate returns them
+   * as `approver`. The runner calls the gate a second time with `approved_by` set after the
+   * decision, and only that person's approval clears it.
    */
   function writeGate({ tool, args, requester, suspect }) {
     const D = AT.data;
@@ -68,6 +72,7 @@
     let allow = true;
     let needsApproval = false;
     let risk = 'low';
+    let approver = null;
     const fail = (msg) => { allow = false; checks.push({ check: msg, pass: false }); };
     const pass = (msg) => checks.push({ check: msg, pass: true });
 
@@ -79,6 +84,14 @@
       if (p.decision === 'deny') fail(`policy re-check (${p.rule})`);
       else pass(`policy re-check (${p.rule})`);
       if (p.decision === 'approval') needsApproval = true;
+      if (p.decision === 'owner_approval') {
+        approver = p.approver;
+        // Separation of duties: an owner can't approve their own access.
+        if (approver.id === args.user_id) fail('approver is not the requester');
+        else if (!args.approved_by) needsApproval = true;
+        else if (args.approved_by === approver.id) pass(`approved by the dataset owner (${approver.name})`);
+        else fail(`approved by the dataset owner, not ${args.approved_by}`);
+      }
       risk = p.risk;
       if (args.access !== 'read') { fail('access level is read-only'); } else pass('access level is read-only');
       if (!(args.expires_in_days > 0 && args.expires_in_days <= 365)) fail('grant expires within a year');
@@ -103,10 +116,14 @@
       checks.push({ check: 'request text passed injection screening', pass: false, note: 'flagged; needs approval' });
     }
 
+    // A recorded approval clears the need for one, but only from the named approver if there is one.
+    if (args.approved_by && (!approver || args.approved_by === approver.id)) needsApproval = false;
+
     const reason = !allow
       ? 'Blocked: ' + checks.filter((c) => !c.pass && !c.note).map((c) => c.check).join('; ') + ' failed.'
-      : needsApproval ? 'Allowed only with human approval.' : 'All checks passed.';
-    return { allow, needsApproval: allow && needsApproval, risk, reason, checks };
+      : needsApproval ? (approver ? `Allowed only with approval from the dataset owner, ${approver.name}.` : 'Allowed only with human approval.')
+        : 'All checks passed.';
+    return { allow, needsApproval: allow && needsApproval, approver, risk, reason, checks };
   }
 
   AT.guardrails = { redactPII, detectInjection, writeGate, PII_TYPES: PII.map((p) => p.type) };

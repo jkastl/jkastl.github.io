@@ -62,3 +62,21 @@ test('a run waiting on approval cannot continue without a decision', () => {
   while (step.value.type !== 'approval_request') step = it.next();
   assert.throws(() => it.next(), /needs next/);
 });
+
+test('restricted access pauses for the dataset owner by name, then verifies the approval', () => {
+  const s = AT.scenarios.find((x) => x.id === 'restricted-owner');
+  const { events, result } = AT.runAll(AT.requestFor(s));
+  const ask = events.find((e) => e.type === 'approval_request');
+  assert.equal(ask.approver.id, 'ruth.adeyemi');
+  const gates = events.filter((e) => e.type === 'gate').map((e) => e.title);
+  assert.deepEqual(gates, ['Write gate: needs approval (create_ticket)', 'Write gate: approval verified (create_ticket)']);
+  const ticket = events.find((e) => e.type === 'tool_call' && e.data.tool === 'create_ticket');
+  assert.equal(ticket.data.args.approved_by, 'ruth.adeyemi');
+  assert.match(result.reply, /approved by Dr\. Ruth Adeyemi/);
+});
+
+test("when the owner rejects, no ticket is created", () => {
+  const s = AT.scenarios.find((x) => x.id === 'restricted-owner');
+  const { events } = AT.runAll(AT.requestFor(s), { decide: () => 'reject' });
+  assert.ok(!events.some((e) => e.type === 'tool_call' && e.data.tool === 'create_ticket'));
+});

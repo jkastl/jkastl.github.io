@@ -16,10 +16,17 @@
       expect: { outcome: 'auto_resolved' },
     },
     {
-      id: 'restricted-denied', group: 'core', title: 'Restricted dataset, denied',
-      blurb: 'The same analyst asks for behavioral health notes. Policy rule R1 denies it, and the reply says why and where to go.',
+      id: 'restricted-owner', group: 'core', title: 'Restricted dataset, owner approval',
+      blurb: 'The same analyst asks for behavioral health notes. They are restricted, so the request goes to the dataset\'s owner, Dr. Ruth Adeyemi, and you decide as her.',
       from: 'priya.raman', subject: 'Notes data for depression cohort',
       text: 'Could I get access to the behavioral health notes? I want to pull therapy notes for a depression cohort.',
+      expect: { outcome: 'human_approved', rejected: 'rejected' },
+    },
+    {
+      id: 'role-denied', group: 'core', title: 'Ineligible role, denied',
+      blurb: 'A contractor asks for de-identified pharmacy data. Contractors aren\'t on that dataset, so policy rule R5 denies it and the reply says why.',
+      from: 'dana.whitfield', subject: 'Pharmacy fills for cost model',
+      text: 'Hi, I need read access to the pharmacy fills dataset for the Q4 drug cost model.',
       expect: { outcome: 'denied' },
     },
     {
