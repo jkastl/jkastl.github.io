@@ -1,0 +1,19 @@
+name: Agent Triage tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['agent-triage/**', '.github/workflows/agent-triage-tests.yml']
+  pull_request:
+    paths: ['agent-triage/**', '.github/workflows/agent-triage-tests.yml']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Node's built-in test runner; there are no dependencies to install.
+      - run: node --test 'agent-triage/test/*.test.js'

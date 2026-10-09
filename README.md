@@ -5,8 +5,10 @@ filtered by tags.
 
 **[jkastl.github.io](https://jkastl.github.io/)**
 
-One file, no build step, no dependencies. The whole site is [`index.html`](index.html),
-served from `main`. Commit and push changes directly to `main`; there are no feature branches or
+No build step, no dependencies. The index is one file, [`index.html`](index.html), served from
+`main`. The one app that lives in this repo rather than its own is the
+[Agent Triage Simulator](agent-triage/) in `agent-triage/`, which has its own README and a GitHub
+Action that runs its tests. Commit and push changes directly to `main`; there are no feature branches or
 pull requests.
 
 ## Adding an app

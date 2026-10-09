@@ -271,9 +271,21 @@
       <button type="button" class="chip" data-filter="games" aria-pressed="false">Games <span class="n"></span></button>
       <button type="button" class="chip" data-filter="phone" aria-pressed="false">On a phone <span class="n"></span></button>
     </div>
-    <p class="status" id="status" hidden><span id="shown">Showing all 21 apps</span></p>
+    <p class="status" id="status" hidden><span id="shown">Showing all 22 apps</span></p>
     <ul id="apps">
-        <li data-featured="1" data-tags="data">
+        <li data-featured="1" data-tags="data privacy">
+          <h3 class="name">Agent Triage Simulator</h3>
+          <p class="desc">A multi-agent service desk, simulated: a router, tool-using agents, guardrails and a human approval step, with a live trace.</p>
+          <div class="tags">
+            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
+            <button type="button" class="tag" data-filter="privacy">Privacy &amp; Security</button>
+          </div>
+          <div class="actions">
+            <a class="app" href="/agent-triage/" aria-label="Open Agent Triage Simulator">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage" aria-label="Source for Agent Triage Simulator">Source</a>
+          </div>
+        </li>
+        <li data-featured="2" data-tags="data">
           <h3 class="name">Advanced Data Engineering</h3>
           <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
           <div class="tags">
@@ -284,7 +296,7 @@
             <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
           </div>
         </li>
-        <li data-featured="2" data-tags="data">
+        <li data-featured="3" data-tags="data">
           <h3 class="name">Data Engineering Concepts</h3>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
@@ -346,7 +358,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/pulse-ox" aria-label="Source for Light Through a Finger">Source</a>
           </div>
         </li>
-        <li data-featured="3" data-tags="data health">
+        <li data-featured="4" data-tags="data health">
           <h3 class="name">ML Showcase</h3>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
@@ -440,7 +452,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/vote" aria-label="Source for The Vote">Source</a>
           </div>
         </li>
-        <li data-featured="4" data-tags="error sensing">
+        <li data-featured="5" data-tags="error sensing">
           <h3 class="name">Tolerance</h3>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
@@ -515,7 +527,7 @@
     <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.1.0 · 2026-10-05
+      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.2.0 · 2026-10-09
     </footer>
   </main>
   <script>
