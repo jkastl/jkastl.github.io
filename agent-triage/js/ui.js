@@ -234,19 +234,51 @@
     list.scrollTop = list.scrollHeight;
   }
 
+  // Seconds for agent work, days once a person is involved.
+  function duration(ms) {
+    if (ms < 60000) return (ms / 1000).toFixed(2) + ' s';
+    const days = ms / 86400000;
+    return (Number.isInteger(Math.round(days * 10) / 10) ? Math.round(days) : days.toFixed(1)) + (days < 1.05 ? ' day' : ' days');
+  }
+
   function renderMetrics() {
     const m = AT.metrics(S.events);
     const o = m.outcome ? AT.OUTCOMES[m.outcome] : null;
+    const any = S.events.length > 0;
     const stat = (label, value, cls, note) => h('div', { class: 'stat' + (cls ? ' ' + cls : '') },
       h('span.stat-label', {}, label), h('span.stat-value', {}, value), note ? h('span.stat-note', {}, note) : null);
     $('metrics').replaceChildren(
-      stat('Latency', S.events.length ? (m.latencyMs / 1000).toFixed(2) + ' s' : '–', null, 'simulated'),
-      stat('Tool calls', S.events.length ? String(m.toolCalls) : '–'),
-      stat('Retries', S.events.length ? String(m.retries) : '–', m.retries ? 'warn' : null),
-      stat('Guardrail hits', S.events.length ? String(m.interventions) : '–', m.interventions ? 'warn' : null),
-      stat('Tokens', S.events.length ? m.tokens.toLocaleString('en-US') : '–', null, 'estimated'),
+      stat('Agent latency', any ? duration(m.latencyMs) : '–', null, 'simulated'),
+      stat('Time to completion', any ? duration(m.completionMs) : '–', !o ? null : m.humanSteps ? 'warn' : 'good',
+        any ? `${m.humanSteps} human step${m.humanSteps === 1 ? '' : 's'}` : 'incl. human steps'),
+      stat('Tool calls', any ? String(m.toolCalls) : '–'),
+      stat('Retries', any ? String(m.retries) : '–', m.retries ? 'warn' : null),
+      stat('Guardrail hits', any ? String(m.interventions) : '–', m.interventions ? 'warn' : null),
+      stat('Tokens', any ? m.tokens.toLocaleString('en-US') : '–', null, 'estimated'),
       stat('Outcome', o ? o.label : S.waiting ? 'Waiting on you' : S.it ? 'Running…' : '–', 'outcome ' + (o ? o.level : S.waiting ? 'warn' : '')),
     );
+    renderEfficiency(m);
+  }
+
+  // One line that makes the point of automation: seconds when no person is needed, days when one is.
+  function renderEfficiency(m) {
+    const el = $('efficiency');
+    const day = duration(AT.CONFIG.humanStepMs);
+    if (S.waiting) {
+      el.className = 'msg efficiency warn';
+      el.textContent = `Waiting on a person. Each human step counts as ${day} of simulated time to completion.`;
+    } else if (!m.outcome) {
+      el.className = 'msg efficiency';
+      el.textContent = `Time to completion counts each human step (an approval or a handoff to a person) as ${day}. Agent work takes seconds.`;
+    } else if (m.humanSteps === 0) {
+      el.className = 'msg efficiency good';
+      el.textContent = `Closed in ${duration(m.completionMs)} with no human step. If a person had to review it, it would take about ${day}.`;
+    } else {
+      el.className = 'msg efficiency warn';
+      const share = (100 * (1 - m.latencyMs / m.completionMs)).toFixed(m.latencyMs / m.completionMs < 0.001 ? 3 : 1);
+      el.textContent = `${m.humanSteps} human step${m.humanSteps === 1 ? '' : 's'} × ${day} = ${duration(m.humanSteps * AT.CONFIG.humanStepMs)} of waiting. ` +
+        `The agents' own work took ${duration(m.latencyMs)}, so ${share}% of the time to completion is waiting on people.`;
+    }
   }
 
   function idleApproval() {

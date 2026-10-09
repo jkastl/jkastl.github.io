@@ -20,6 +20,9 @@
     // Only typed-in requests get random faults; scenarios declare theirs so they replay exactly.
     randomTimeoutRate: 0.04,
     randomMalformedRate: 0.03,
+    // Wall-clock cost of any step that waits on a person: an approval, or a handoff to a queue
+    // or on-call. Agent latency is seconds; this is what dominates time to completion.
+    humanStepMs: 3 * 24 * 60 * 60 * 1000,
   };
 
   AT.OUTCOMES = {
@@ -259,17 +262,25 @@
     yield run.ev({
       type: 'outcome', actor: 'runner', nodes: ['done'], level: AT.OUTCOMES[outcome].level,
       title: AT.OUTCOMES[outcome].label, detail: result.reply,
-      data: { outcome, reply_to_requester: result.reply },
+      // An escalation hands the request to a person to finish, so it counts as a human step.
+      data: { outcome, reply_to_requester: result.reply, human_handoff: outcome === 'escalated' },
     });
     return { outcome, reply: result.reply };
   };
 
   // Totals for the metrics strip, computed from the events so far.
+  //   latencyMs     time the system itself spent (simulated clock)
+  //   humanSteps    approvals asked for, plus a final handoff to a person
+  //   completionMs  what the requester waits: latency plus humanStepMs per human step
   AT.metrics = function (events) {
     const last = events[events.length - 1];
     const done = events.find((e) => e.type === 'outcome');
+    const latencyMs = last ? last.t + (last.ms && last.type === 'decision' ? last.ms : 0) : 0;
+    const humanSteps = events.filter((e) => e.type === 'approval_request').length + (done?.data.human_handoff ? 1 : 0);
     return {
-      latencyMs: last ? last.t + (last.ms && last.type === 'decision' ? last.ms : 0) : 0,
+      latencyMs,
+      humanSteps,
+      completionMs: latencyMs + humanSteps * AT.CONFIG.humanStepMs,
       toolCalls: events.filter((e) => e.type === 'tool_call').length,
       retries: events.filter((e) => e.type === 'retry').length,
       interventions: events.filter((e) => e.intervened).length,

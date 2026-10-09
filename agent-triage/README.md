@@ -68,6 +68,12 @@ request ──► │ input         │──►│ router    │──►│ da
 | 12 | Out of scope | Travel booking is declined politely, with no tools called |
 | 13 | New incident | No known issue and a degraded feed, so it's escalated to on-call as P2 |
 
+Each run reports **agent latency** (the system's own simulated time, a few seconds) and **time to
+completion**, which adds a flat 3 days for every human step: an approval, or a handoff to a queue or
+on-call. A one-line summary under the metrics shows the gap, for example "Closed in 3.60 s with no
+human step" for an auto-resolved request against "1 human step × 3 days" for one that needed sign-off.
+The 3 days is `AT.CONFIG.humanStepMs` in `runner.js`.
+
 You can also edit the text or requester to make your own request. Typed requests get an occasional
 random timeout or malformed response, seeded by the text so they still replay the same way.
 
@@ -128,6 +134,7 @@ never changes what happens.
 | Guardrails | Regexes | A DLP service for PII and a classifier for injection, plus the same deterministic write gate |
 | Policy | Eight rules in JavaScript | A policy engine (for example OPA) fed by the identity provider and catalog tags |
 | Human review | A button; for restricted data you click as the dataset owner | An approval task in the ITSM assigned to the right person (the owner comes from the catalog), with the session resumed on the answer |
+| Time to completion | Latency plus a flat 3 days per human step | Measured open-to-close in the ITSM, per step |
 | Observability | The trace panel | OpenTelemetry traces, an append-only audit log, cost and latency budgets |
 
 In Google ADK terms: the router is a coordinator `LlmAgent` with the specialists as `sub_agents`;

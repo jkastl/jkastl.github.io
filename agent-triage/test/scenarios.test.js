@@ -80,3 +80,45 @@ test("when the owner rejects, no ticket is created", () => {
   const { events } = AT.runAll(AT.requestFor(s), { decide: () => 'reject' });
   assert.ok(!events.some((e) => e.type === 'tool_call' && e.data.tool === 'create_ticket'));
 });
+
+// ---- time to completion ----
+
+const DAY3 = 3 * 24 * 60 * 60 * 1000;
+const metricsFor = (id, decide) => AT.runAll(AT.requestFor(AT.scenarios.find((x) => x.id === id)), decide ? { decide } : {}).metrics;
+
+test('each human step adds 3 days to time to completion', () => {
+  assert.equal(AT.CONFIG.humanStepMs, DAY3);
+  for (const s of AT.scenarios) {
+    const m = AT.runAll(AT.requestFor(s)).metrics;
+    assert.equal(m.completionMs, m.latencyMs + m.humanSteps * DAY3, s.id);
+  }
+});
+
+test('auto-resolved runs finish in seconds, with no human step', () => {
+  for (const id of ['clean-access', 'onboarding', 'known-issue', 'timeout-retry']) {
+    const m = metricsFor(id);
+    assert.equal(m.humanSteps, 0, id);
+    assert.ok(m.completionMs < 10000, `${id}: ${m.completionMs} ms`);
+  }
+});
+
+test('approvals and handoffs to a person each count as a human step', () => {
+  assert.equal(metricsFor('high-risk').humanSteps, 1);
+  assert.equal(metricsFor('restricted-owner').humanSteps, 1);
+  assert.equal(metricsFor('restricted-owner', () => 'reject').humanSteps, 1);
+  assert.equal(metricsFor('escalate').humanSteps, 1); // handed to on-call
+  // A low-confidence route a person sends to the manual queue: the review, then the queue.
+  assert.equal(metricsFor('ambiguous', () => 'reject').humanSteps, 2);
+});
+
+test('a run paused for approval already counts that step', () => {
+  const it = AT.run(AT.requestFor(AT.scenarios.find((x) => x.id === 'high-risk')));
+  const events = [];
+  let step = it.next();
+  while (step.value.type !== 'approval_request') { events.push(step.value); step = it.next(); }
+  assert.equal(AT.metrics(events).humanSteps, 0);
+  events.push(step.value);
+  const m = AT.metrics(events);
+  assert.equal(m.humanSteps, 1);
+  assert.equal(m.completionMs, m.latencyMs + DAY3);
+});

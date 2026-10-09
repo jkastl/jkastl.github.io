@@ -91,6 +91,7 @@
 
         <div class="sim-col right">
           <div class="metrics" id="metrics" aria-label="Run metrics"></div>
+          <p class="msg efficiency" id="efficiency" aria-live="polite"></p>
 
           <div class="duo">
             <div class="panel hitl" id="hitl" aria-labelledby="hitl-h">
@@ -171,6 +172,7 @@
             <tr><td>Guardrails</td><td>Regex PII redaction and pattern-based injection screening</td><td>A DLP service for PII, a classifier for injection, plus the same deterministic write gate</td></tr>
             <tr><td>Policy</td><td>Eight ordered attribute rules in JavaScript</td><td>A policy engine (for example OPA) fed by the identity provider and the data catalog's tags</td></tr>
             <tr><td>Tokens and latency</td><td>Estimated from text length; a simulated clock</td><td>Measured per call, with budgets and alerts</td></tr>
+            <tr><td>Time to completion</td><td>Agent latency plus a flat 3 days for each human step (an approval or a handoff to a person)</td><td>Measured from ticket open to close in the ITSM, so you can see where requests actually wait</td></tr>
           </tbody>
         </table>
       </div>
@@ -183,7 +185,7 @@
   <footer class="site">
     Simulated data only. Runs entirely in your browser.
     · <a href="/">All apps</a>
-    · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage">Source</a> · v1.1.0 · 2026-10-09
+    · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage">Source</a> · v1.2.0 · 2026-10-09
   </footer>
 
   <script src="js/engine/rng.js"></script>
