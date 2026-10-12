@@ -6,17 +6,16 @@ filtered by tags.
 **[jkastl.github.io](https://jkastl.github.io/)**
 
 No build step, no dependencies. The index is one file, [`index.html`](index.html), served from
-`main`. Most apps live in their own repos. Four live in this one, each in its own folder with its own
-README and tests, run by a GitHub Action:
+`main`. Most apps live in their own repos. Three live in this one, each in its own folder with its own
+README and tests, run by GitHub Actions:
 
 - [Agent Triage Simulator](agent-triage/) in `agent-triage/`
 - [Pyramid Scheme](pyramid-scheme/) in `pyramid-scheme/`
 - [Off Color](off-color/) in `off-color/`
-- [Split Decision](split-decision/) in `split-decision/`
 
-Pyramid Scheme, Off Color and Split Decision share [`shared/base.css`](shared/base.css) (the dark
-theme), and the first two share [`shared/tissue.js`](shared/tissue.js), the procedural slide they both
-render. Change either and run all three apps' tests. Commit and push changes directly to `main`; there are no feature branches or
+Pyramid Scheme and Off Color share [`shared/base.css`](shared/base.css) (the dark theme) and
+[`shared/tissue.js`](shared/tissue.js), the procedural slide they both render. Change either and run
+both apps' tests. Commit and push changes directly to `main`; there are no feature branches or
 pull requests.
 
 ## Adding an app

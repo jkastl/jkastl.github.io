@@ -1,5 +1,5 @@
 /* Base styles for the in-repo demos (dark-only). Copied from agent-triage/style.css's shared part, so
-   pyramid-scheme, off-color and split-decision look like the rest of the site. */
+   pyramid-scheme and off-color look like the rest of the site. */
 :root {
   color-scheme: dark;
   --page: #121212;
