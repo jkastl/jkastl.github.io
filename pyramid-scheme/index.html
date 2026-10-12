@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#121212">
+  <title>Pyramid Scheme</title>
+  <meta name="description" content="A six-gigapixel synthetic microscope slide you can pan in the browser, how image pyramids make that possible, and the pipeline that cuts the slide into a training set.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121212'/%3E%3Cpath d='M16 5L27 26H5z' fill='none' stroke='%237aa7ff' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M10.5 15.5h11M8 21h16' stroke='%237aa7ff' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5L27 26H5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10.5 15.5h11M8 21h16" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Pyramid Scheme</span>
+      </a>
+      <nav class="topnav" aria-label="Sections">
+        <a href="#viewer">Viewer</a>
+        <a href="#training">Training set</a>
+        <a href="#scale">At scale</a>
+        <a href="#real-build">Real build</a>
+        <a href="/">All apps</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <p class="kicker">Gigapixel images, read lazily</p>
+      <h1>A six-gigapixel image that opens instantly, because you never read most of it.</h1>
+      <p>Below is one microscope slide: 24 × 16 mm of glass scanned at a quarter of a micrometre per pixel. That's
+        96,000 × 64,000 pixels. Decoded all at once it would take 18 GB of memory. Instead it's stored as a
+        <strong>pyramid</strong> of small tiles at ten resolutions, and the viewer fetches only the tiles on screen,
+        at the coarsest resolution that still looks sharp. Pan and zoom, and watch how little of the file you touch.</p>
+      <p class="disclaimer"><strong>The slide is synthetic.</strong> Every tile is computed from a seed the moment it's
+        requested, standing in for a read from storage, so the "file" costs nothing to host. Tile sizes are
+        estimates for JPEG at typical quality. Nothing leaves your browser.</p>
+    </div>
+
+    <section id="viewer" aria-labelledby="viewer-h">
+      <h2 class="section-h" id="viewer-h">The viewer</h2>
+      <div class="viewer-wrap">
+        <div class="panel p-view">
+          <div class="view-bar">
+            <div class="seg" role="group" aria-label="Objective" id="objectives">
+              <button type="button" data-fit aria-pressed="true">Fit</button>
+              <button type="button" data-mag="2.5" aria-pressed="false">2.5×</button>
+              <button type="button" data-mag="10" aria-pressed="false">10×</button>
+              <button type="button" data-mag="20" aria-pressed="false">20×</button>
+              <button type="button" data-mag="40" aria-pressed="false">40×</button>
+            </div>
+            <label class="check"><input type="checkbox" id="grid"> Tile grid</label>
+            <button type="button" class="btn ghost mini" id="flush" title="Empty the tile cache">Clear cache</button>
+          </div>
+          <div class="stage" id="stage">
+            <canvas id="view" tabindex="0" aria-label="Slide viewer. Drag to pan, scroll or pinch to zoom, or use the arrow keys and plus and minus."></canvas>
+            <p class="stage-hint" id="hint">Drag to pan · scroll or pinch to zoom · double-click to zoom in</p>
+            <p class="badge" id="badge" hidden></p>
+          </div>
+        </div>
+        <div class="stack side">
+          <div class="panel">
+            <p class="panel-title">Overview</p>
+            <canvas id="mini" class="overview" aria-label="Overview of the whole slide. Click to move the view there."></canvas>
+          </div>
+          <div class="stats" id="vstats" aria-label="Viewer statistics"></div>
+        </div>
+      </div>
+      <p class="msg" id="vmsg" aria-live="polite"></p>
+
+      <h3 class="subhead">The pyramid</h3>
+      <p class="lede">Each level halves the one below. Level 0, full resolution, holds three quarters of all the tiles;
+        every other level together adds only a third on top. The highlighted row is the level the viewer is reading
+        now.</p>
+      <div class="tbl-wrap">
+        <table class="compare pyr" id="pyr">
+          <thead><tr><th scope="col">Level</th><th scope="col">µm per pixel</th><th scope="col">Pixels</th><th scope="col">Tiles</th><th scope="col" class="bar-col">Share of file</th><th scope="col">Est. size</th><th scope="col">You've read</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="training" aria-labelledby="train-h">
+      <h2 class="section-h" id="train-h">From one slide to a training set</h2>
+      <p class="lede">A model can't take six gigapixels in one bite, so the slide gets cut into patches. First, find the
+        tissue: three quarters of the glass is empty, and every empty patch you keep is wasted compute and noise in
+        training. The usual first pass is a threshold on a low-resolution thumbnail, picked automatically with
+        Otsu's method. Then lay a grid over it and keep the patches that are mostly tissue.</p>
+      <div class="train">
+        <div class="panel p-thumb">
+          <div class="view-bar">
+            <div class="seg" role="group" aria-label="Show" id="tshow">
+              <button type="button" data-show="image" aria-pressed="false">Image</button>
+              <button type="button" data-show="mask" aria-pressed="false">Mask</button>
+              <button type="button" data-show="patches" aria-pressed="true">Patches</button>
+            </div>
+          </div>
+          <canvas id="thumb" class="thumb" aria-label="Thumbnail of the slide with the tissue mask and selected patches drawn over it."></canvas>
+          <p class="legend" id="tlegend">
+            <span><i class="sw" style="background: rgba(122,167,255,0.7)"></i>kept patch</span>
+            <span><i class="sw" style="background: #e25555"></i>kept, but it's glass or ink</span>
+          </p>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <div class="field">
+              <span class="lbl" id="meth-l">Score each pixel by</span>
+              <div class="seg" role="group" aria-labelledby="meth-l" id="method">
+                <button type="button" data-method="saturation" aria-pressed="true">Saturation</button>
+                <button type="button" data-method="brightness" aria-pressed="false">Darkness</button>
+              </div>
+            </div>
+            <div class="ctls">
+              <label class="ctl">Threshold <output id="thr-o"></output>
+                <input type="range" id="thr" min="1" max="254" step="1">
+              </label>
+              <label class="ctl">Keep patches with tissue ≥ <output id="min-o"></output>
+                <input type="range" id="minfrac" min="5" max="100" step="5" value="50">
+              </label>
+            </div>
+            <div class="checks" style="margin-top: 0.6rem">
+              <label class="check"><input type="checkbox" id="auto" checked> Otsu picks the threshold</label>
+              <label class="check"><input type="checkbox" id="ink"> Drop marker ink</label>
+            </div>
+            <div class="field" style="margin-top: 0.6rem; margin-bottom: 0">
+              <span class="lbl" id="psz-l">Patch size</span>
+              <div class="seg" role="group" aria-labelledby="psz-l" id="psize">
+                <button type="button" data-um="128" data-level="1" aria-pressed="true">256 px at 20×</button>
+                <button type="button" data-um="256" data-level="1" aria-pressed="false">512 px at 20×</button>
+                <button type="button" data-um="512" data-level="3" aria-pressed="false">256 px at 5×</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <p class="panel-title">Pixel scores</p>
+            <p class="panel-sub" id="hist-sub"></p>
+            <div class="chart" id="hist"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stats tstats" id="tstats" aria-label="Patch statistics"></div>
+      <p class="msg" id="tmsg" aria-live="polite"></p>
+
+      <h3 class="subhead">The output is a table, not a folder of images</h3>
+      <p class="lede">Writing every patch out as a PNG copies the slide again, badly compressed. The better
+        output is a manifest: where each patch is, in the pyramid's own coordinates, plus whatever you need to filter on.
+        The training job reads the pixels straight from the pyramid when it needs them.</p>
+      <div class="grid2">
+        <div class="panel">
+          <div class="trace-head">
+            <p class="panel-title">patches <span class="tok" id="mcount"></span></p>
+            <button type="button" class="btn ghost mini" id="csv">Download CSV</button>
+          </div>
+          <div class="tbl-wrap"><table class="compare mono" id="manifest"><thead></thead><tbody></tbody></table></div>
+          <p class="callout" id="store"></p>
+        </div>
+        <div class="panel">
+          <p class="panel-title">The table it lands in</p>
+          <pre class="code" id="ddl"><span class="kw">CREATE TABLE</span> pathology.patches (
+  slide_id     STRING NOT NULL,
+  patch_id     STRING NOT NULL,
+  level        INT64,     <span class="cm">-- pyramid level to read</span>
+  x            INT64,     <span class="cm">-- level-0 pixel coordinates</span>
+  y            INT64,
+  size_px      INT64,
+  tissue_frac  FLOAT64,
+  mask_version STRING,    <span class="cm">-- which detector made it</span>
+  created_at   TIMESTAMP
+)
+<span class="kw">PARTITION BY</span> DATE(created_at)
+<span class="kw">CLUSTER BY</span> slide_id;
+
+<span class="cm">-- A training split is a query, not a copy:</span>
+<span class="kw">SELECT</span> p.* <span class="kw">FROM</span> pathology.patches p
+<span class="kw">JOIN</span> pathology.slides s <span class="kw">USING</span> (slide_id)
+<span class="kw">WHERE</span> p.tissue_frac &gt;= 0.5
+  <span class="kw">AND</span> s.qc_status = 'pass';</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="scale" aria-labelledby="scale-h">
+      <h2 class="section-h" id="scale-h">Now do that for a whole lab</h2>
+      <p class="lede">One slide is a curiosity. A lab scans every slide it makes, every day, and keeps them for years.
+        Move the sliders to see what that does to storage, ingest bandwidth and patch counts.</p>
+      <div class="grid2 scale">
+        <div class="panel">
+          <div class="ctls one">
+            <label class="ctl">Slides scanned per day <output id="s-n-o"></output>
+              <input type="range" id="s-n" min="100" max="6000" step="100" value="1500">
+            </label>
+            <label class="ctl">Tissue per slide <output id="s-a-o"></output>
+              <input type="range" id="s-a" min="20" max="600" step="10" value="150">
+            </label>
+            <label class="ctl">Glass scanned around it <output id="s-o-o"></output>
+              <input type="range" id="s-o" min="1" max="4" step="0.25" value="2">
+            </label>
+            <label class="ctl">Hours a day the scanners run <output id="s-h-o"></output>
+              <input type="range" id="s-h" min="8" max="24" step="1" value="16">
+            </label>
+            <label class="ctl">Years kept <output id="s-y-o"></output>
+              <input type="range" id="s-y" min="1" max="20" step="1" value="10">
+            </label>
+          </div>
+          <div class="field" style="margin: 0.8rem 0 0">
+            <span class="lbl" id="s-r-l">Scan resolution</span>
+            <div class="seg" role="group" aria-labelledby="s-r-l" id="s-r">
+              <button type="button" data-mpp="0.25" aria-pressed="true">40× (0.25 µm/px)</button>
+              <button type="button" data-mpp="0.5" aria-pressed="false">20× (0.5 µm/px)</button>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="stats" id="sstats" aria-label="Estimates"></div>
+          <p class="msg" id="smsg"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="real-build" aria-labelledby="real-h">
+      <h2 class="section-h" id="real-h">How this maps to a real build</h2>
+      <p class="lede">Here's what each piece on the page would be in a production pipeline on Google Cloud.</p>
+      <ul class="checklist">
+        <li>
+          <h3>The file</h3>
+          <p>Scanners write tiled, pyramidal TIFF variants (SVS, NDPI, MRXS and friends) or DICOM whole-slide images.
+            <code>OpenSlide</code> or <code>tiffslide</code> read tiles by level and position without opening the rest.
+            Converting to DICOM puts every vendor's format behind one standard, and a DICOM store can serve tiles
+            over DICOMweb.</p>
+        </li>
+        <li>
+          <h3>Landing and orchestration</h3>
+          <p>Scanners drop files into a bucket; each new object fires a Pub/Sub message. An Airflow (Cloud Composer)
+            DAG, or an event-driven Cloud Run job, checks the file opens, registers the slide, and fans out the
+            per-slide work.</p>
+        </li>
+        <li>
+          <h3>Tissue detection and patching</h3>
+          <p>An Apache Beam pipeline on Dataflow, one element per slide: read the thumbnail level, build the mask,
+            filter ink and artifacts, emit patch coordinates. It's embarrassingly parallel, so a day's slides finish in
+            minutes with enough workers.</p>
+        </li>
+        <li>
+          <h3>Manifests, not copies</h3>
+          <p>Patch coordinates go to a BigQuery table, partitioned by date and clustered by slide. Training splits,
+            sampling and class balancing become SQL. The data loader reads pixels from the pyramid on the fly, with a
+            local tile cache, instead of from millions of small files.</p>
+        </li>
+        <li>
+          <h3>Viewing</h3>
+          <p>A Deep Zoom or DICOMweb tile endpoint behind a CDN, and a viewer like OpenSeadragon doing exactly what
+            this page does: pick a level, request visible tiles centre-first, draw a coarser level while they arrive,
+            cancel what scrolled away.</p>
+        </li>
+        <li>
+          <h3>What production adds</h3>
+          <p>Lifecycle rules that move old slides to colder storage classes. A versioned mask detector, so every
+            patch can be traced to the code that chose it. QC flags (blur, folds, ink) as columns, not deletions.
+            Checksums on landing.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="simulated" aria-labelledby="simd-h">
+      <h2 class="section-h" id="simd-h">What's simulated</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <thead><tr><th scope="col">Piece</th><th scope="col">On this page</th><th scope="col">In a real system</th></tr></thead>
+          <tbody>
+            <tr><td>The slide</td><td>Procedural noise shaped like H&amp;E-stained tissue, colored with the Beer-Lambert law</td><td>A scanned glass slide, 0.5 to 3 GB on disk</td></tr>
+            <tr><td>Reading a tile</td><td>Computing it, which takes about as long as a fast network fetch</td><td>A ranged read from object storage or a tile server, then a JPEG decode</td></tr>
+            <tr><td>File size</td><td>Estimated per tile: about 2 KB of glass, about 23 KB of tissue</td><td>Whatever the scanner's encoder produced; measured, not estimated</td></tr>
+            <tr><td>Tissue detection</td><td>Otsu on saturation or darkness, plus a color rule for blue-green ink</td><td>The same first pass, often followed by a small segmentation model that also catches folds, bubbles and blur</td></tr>
+            <tr><td>"Junk" and "missed"</td><td>Known exactly, because the slide is generated from known fields</td><td>Unknown without annotation, which is why a sample of masks gets reviewed by eye</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="callout">The engine is separate from the page and has its own tests. Read it in
+        <a href="https://github.com/jkastl/jkastl.github.io/tree/main/pyramid-scheme">pyramid-scheme/</a>, and the tissue
+        generator in <a href="https://github.com/jkastl/jkastl.github.io/tree/main/shared">shared/</a>.</p>
+    </section>
+  </main>
+
+  <!-- Version and date are bumped by hand; see README.md. -->
+  <footer class="site">
+    Synthetic data only. Runs entirely in your browser.
+    · <a href="/">All apps</a>
+    · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/pyramid-scheme">Source</a> · v1.0.0 · 2026-10-12
+  </footer>
+
+  <div class="tip" id="tip" hidden></div>
+  <script src="../shared/tissue.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>

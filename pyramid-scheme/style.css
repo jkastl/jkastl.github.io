@@ -1,0 +1,82 @@
+/* Pyramid Scheme: the viewer, the training-set panel and the scale estimates. Base styles are
+   in ../shared/base.css. */
+.view-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 0.6rem; }
+.viewer-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; align-items: start; }
+.stage {
+  position: relative;
+  height: min(68vh, 36rem);
+  min-height: 20rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b0b0b;
+  touch-action: none;
+}
+.stage canvas { width: 100%; height: 100%; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.stage canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.stage-hint {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.5rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: #e8e8e8;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  pointer-events: none;
+}
+.badge {
+  position: absolute;
+  right: 0.6rem;
+  top: 0.5rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--warn-ink);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  pointer-events: none;
+}
+.side .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.side .stat { background: var(--surface); border: 1px solid var(--line); }
+.side .stat-value { font-size: 1.05rem; }
+.overview { width: 100%; height: auto; border-radius: 6px; cursor: crosshair; background: #0b0b0b; }
+#vmsg { margin-top: 1rem; }
+
+.pyr td, .pyr th { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pyr tr.on td { background: var(--new-bg); color: var(--ink); }
+.pyr .bar-col { width: 32%; }
+.pyr .bar { display: flex; align-items: center; gap: 0.5rem; }
+.pyr .bar i { display: block; height: 10px; border-radius: 0 4px 4px 0; background: var(--s1); min-width: 2px; }
+.pyr .bar span { color: var(--muted); font-size: 0.8rem; }
+
+.train { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.thumb { width: 100%; height: auto; border-radius: 6px; background: #0b0b0b; image-rendering: pixelated; }
+.p-thumb .legend { margin: 0.6rem 0 0; }
+.tstats { margin-top: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tstats .stat, .scale .stat { background: var(--surface); border: 1px solid var(--line); }
+#tmsg { margin-top: 0.75rem; }
+.trace-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.tok { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
+.compare.mono td, .compare.mono th { font-family: var(--mono); font-size: 0.76rem; white-space: nowrap; }
+.compare.mono td:first-child { font-weight: 400; color: var(--ink-2); }
+.ctls.one { grid-template-columns: minmax(0, 1fr); }
+.scale .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.chart .bin { fill: var(--s1); }
+.chart .bin.on { fill: var(--accent-hover); }
+.chart .thr { stroke: var(--ink); stroke-width: 1.5; }
+.chart .thr-auto { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+
+@media (max-width: 900px) {
+  .viewer-wrap, .train { grid-template-columns: minmax(0, 1fr); }
+  .side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .tstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .side { grid-template-columns: minmax(0, 1fr); }
+  .stage { height: 60vh; }
+}
+.chart .bin.hl { fill: var(--ink); }

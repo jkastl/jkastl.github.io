@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#121212">
+  <title>Off Color</title>
+  <meta name="description" content="Same tissue, three labs, three shades of pink: color deconvolution, stain normalization, and a streaming monitor that catches a dye lot change before the model does.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121212'/%3E%3Ccircle cx='12' cy='13' r='7' fill='%23d55181' fill-opacity='.85'/%3E%3Ccircle cx='20' cy='19' r='7' fill='%238a6cf0' fill-opacity='.85'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="13" r="7" fill="#d55181" fill-opacity=".85"/><circle cx="20" cy="19" r="7" fill="#8a6cf0" fill-opacity=".85"/></svg>
+        <span>Off Color</span>
+      </a>
+      <nav class="topnav" aria-label="Sections">
+        <a href="#unmix">Unmix</a>
+        <a href="#stream">Stream</a>
+        <a href="#real-build">Real build</a>
+        <a href="/">All apps</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <p class="kicker">Color is data too</p>
+      <h1>Same tissue, three labs, three shades of pink.</h1>
+      <p>Stained tissue gets its color from two dyes: hematoxylin turns cell nuclei purple, eosin turns most everything
+        else pink. No two labs apply them alike. Dye lots, staining times and scanner lamps all differ. A person adapts
+        without noticing. A model trained at one site doesn't, and a stain that drifts at one scanner can quietly break
+        it. This page pulls the two dyes apart, puts them back in a standard color, then watches three days of scans
+        stream in for drift.</p>
+      <p class="disclaimer"><strong>Everything here is synthetic.</strong> The tissue is procedural and the stains are
+        applied with the same light-absorption physics a scanner sees, so the true dye amounts are known exactly. The
+        estimation, normalization and monitoring code only ever sees the pixels. Nothing leaves your browser.</p>
+    </div>
+
+    <section id="unmix" aria-labelledby="unmix-h">
+      <h2 class="section-h" id="unmix-h">Pull the colors apart, then put them back</h2>
+      <p class="lede">One spot of tissue, scanned at four sites. The top row is what each scanner saw. The bottom row is
+        after <strong>Macenko normalization</strong>: estimate each patch's two dye colors from its own pixels, work out
+        how much of each dye every pixel holds, and repaint with a reference pair. ΔE is the average color difference
+        from Scanner A; about 2.3 is the smallest difference a person can see.</p>
+      <div class="scanners" id="scanners"></div>
+
+      <div class="panel yours">
+        <p class="panel-title"><i class="sw" style="background: var(--s4)"></i> Make your own scanner</p>
+        <div class="ctls">
+          <label class="ctl">Hematoxylin strength <output id="y-h-o"></output><input type="range" id="y-h" min="0.5" max="1.8" step="0.05" value="1.25"></label>
+          <label class="ctl">Eosin strength <output id="y-e-o"></output><input type="range" id="y-e" min="0.4" max="1.8" step="0.05" value="0.7"></label>
+          <label class="ctl">Hematoxylin runs blue <output id="y-b-o"></output><input type="range" id="y-b" min="0" max="1" step="0.05" value="0.6"></label>
+          <label class="ctl">Lamp warmth <output id="y-w-o"></output><input type="range" id="y-w" min="0" max="2" step="0.1" value="0.4"></label>
+          <label class="ctl">Lamp brightness <output id="y-l-o"></output><input type="range" id="y-l" min="0.7" max="1" step="0.01" value="1"></label>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-top: 1rem">
+        <div class="panel">
+          <p class="panel-title">Every pixel is a mix of two dye colors</p>
+          <p class="panel-sub">Each dot is a pixel in optical density, the log of how much light it absorbs, projected onto
+            the plane the two reference dyes span. Pixels fan out between two edges: pure hematoxylin and pure eosin. The
+            lines are each scanner's estimated dyes. A different lab is a different fan.</p>
+          <p class="legend" id="od-legend"></p>
+          <div class="chart" id="od"></div>
+        </div>
+        <div class="panel">
+          <div class="trace-head">
+            <p class="panel-title">One dye at a time</p>
+            <div class="seg" role="group" aria-label="Scanner" id="unmix-pick"></div>
+          </div>
+          <p class="panel-sub">The same patch split into its two dyes using that scanner's estimated colors (color
+            deconvolution). Hematoxylin alone is the nuclei; eosin alone is everything else.</p>
+          <div class="channels">
+            <figure><canvas id="ch-h" width="160" height="160"></canvas><figcaption>Hematoxylin</figcaption></figure>
+            <figure><canvas id="ch-e" width="160" height="160"></canvas><figcaption>Eosin</figcaption></figure>
+          </div>
+          <pre class="code" id="vecs"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="stream" aria-labelledby="stream-h">
+      <h2 class="section-h" id="stream-h">Watch three days of scans stream in</h2>
+      <p class="lede">Three scanners, five slides an hour each. Every scan becomes an event. The pipeline checks focus,
+        estimates the dyes, normalizes, and hands a patch to a model trained at Site A that flags <em>atypical
+        nuclei</em> by how darkly they stain. A monitor groups events into 4-hour windows per scanner, learns what normal
+        looks like on day one, then runs a CUSUM (cumulative sum) test on every metric to catch both sudden jumps and slow
+        creep. It has no idea what's coming. The dashed lines mark what actually happened, as each moment arrives.</p>
+
+      <div class="panel stream-bar">
+        <div class="sim-ctl">
+          <button type="button" class="btn primary" id="play">▶ Play</button>
+          <div class="seg" role="group" aria-label="Speed" id="speed">
+            <button type="button" data-speed="1" aria-pressed="false">1×</button>
+            <button type="button" data-speed="4" aria-pressed="true">4×</button>
+            <button type="button" data-speed="16" aria-pressed="false">16×</button>
+          </div>
+          <button type="button" class="btn" id="skip">Run to the end</button>
+          <button type="button" class="btn ghost" id="reset">Reset</button>
+          <span class="clock" id="clock" aria-live="off"></span>
+        </div>
+        <label class="check norm"><input type="checkbox" id="norm"> Normalize at ingest</label>
+      </div>
+
+      <div class="stats sstats" id="sstats" aria-label="Stream statistics"></div>
+
+      <div class="stream">
+        <div class="stack">
+          <div class="panel">
+            <p class="panel-title">Latest events</p>
+            <ol class="feed" id="feed" aria-label="Latest events"></ol>
+          </div>
+          <div class="panel">
+            <p class="panel-title">The last event, as the topic carries it</p>
+            <pre class="code ev-json" id="evjson">Nothing yet. Press Play.</pre>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <p class="legend" id="s-legend"></p>
+            <div class="chart" id="c-maxH"></div>
+            <div class="chart" id="c-white"></div>
+            <div class="chart" id="c-acc"></div>
+            <div class="sr-only"><table id="c-table"></table></div>
+          </div>
+          <div class="panel">
+            <p class="panel-title">Alerts</p>
+            <ol class="alerts" id="alerts"></ol>
+          </div>
+        </div>
+      </div>
+      <p class="msg" id="smsg" aria-live="polite"></p>
+    </section>
+
+    <section class="section" id="real-build" aria-labelledby="real-h">
+      <h2 class="section-h" id="real-h">How this maps to a real build</h2>
+      <p class="lede">What each piece on the page would be in production, on Google Cloud with open-source equivalents
+        alongside.</p>
+      <ul class="checklist">
+        <li>
+          <h3>The topic</h3>
+          <p>Each finished scan publishes a small event to Pub/Sub (or Kafka): slide id, scanner, timestamp, storage path.
+            Pixels stay in the bucket. Failed QC goes to a separate rescan topic, so it's a work queue for the lab
+            rather than a silent drop.</p>
+        </li>
+        <li>
+          <h3>Streaming job</h3>
+          <p>An Apache Beam pipeline on Dataflow (or Spark Structured Streaming): read the event, read a few tiles,
+            compute focus and stain estimates, key by scanner, window into fixed 4-hour windows, aggregate, and keep the
+            CUSUM in per-key state. Event time, not arrival time, with a watermark for scanners that upload late.</p>
+        </li>
+        <li>
+          <h3>Normalization as a versioned transform</h3>
+          <p>The reference dyes and the running per-scanner estimate are inputs with a version, not constants in code.
+            Training data and live data go through the same transform, or the model learns one color and is served
+            another.</p>
+        </li>
+        <li>
+          <h3>Same code, batch and stream</h3>
+          <p>Beam runs the identical pipeline in batch over BigQuery history, so a new metric or a fixed bug can be
+            backfilled across a year of scans, and the baselines rebuilt, without a second implementation.</p>
+        </li>
+        <li>
+          <h3>Metrics and alerting</h3>
+          <p>Window aggregates land in BigQuery for dashboards (Looker, Tableau, Power BI). Alerts go to Cloud
+            Monitoring and on to the lab's on-call, with the scanner, metric, z-score and a link to example patches.</p>
+        </li>
+        <li>
+          <h3>What production adds</h3>
+          <p>Accuracy needs labels, so a small audited sample per scanner per day gets read by a pathologist. Baselines
+            per scanner and per stain protocol. Known events, like a scheduled dye lot change, annotated so they don't
+            page anyone at 3 a.m.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section" id="simulated" aria-labelledby="simd-h">
+      <h2 class="section-h" id="simd-h">What's simulated</h2>
+      <div class="tbl-wrap">
+        <table class="compare">
+          <thead><tr><th scope="col">Piece</th><th scope="col">On this page</th><th scope="col">In a real system</th></tr></thead>
+          <tbody>
+            <tr><td>Tissue and dyes</td><td>Procedural tissue; dye amounts turned into color with the Beer-Lambert law</td><td>Real slides, with real chemistry: dyes aren't perfectly linear, and fading, thickness and folds all change color</td></tr>
+            <tr><td>Stain estimation</td><td>Macenko on one 80 × 80 patch, with white measured on bare glass</td><td>The same method on many tiles per slide, or a learned method; white from the slide's background</td></tr>
+            <tr><td>The model</td><td>One threshold on how dark the nuclei are, learned on Site A</td><td>A deep network, which fails the same way for the same reason, just less visibly</td></tr>
+            <tr><td>Accuracy</td><td>Against every patch's true label, known because the tissue is generated</td><td>Against an audited, labelled sample, so it lags and is noisier</td></tr>
+            <tr><td>The stream</td><td>A loop in your browser, 1,080 events over 72 simulated hours</td><td>A managed streaming job, with late data, retries and exactly-once sinks</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="callout">The engine is separate from the page and has its own tests. Read it in
+        <a href="https://github.com/jkastl/jkastl.github.io/tree/main/off-color">off-color/</a>, and the tissue generator in
+        <a href="https://github.com/jkastl/jkastl.github.io/tree/main/shared">shared/</a>.</p>
+    </section>
+  </main>
+
+  <!-- Version and date are bumped by hand; see README.md. -->
+  <footer class="site">
+    Synthetic data only. Runs entirely in your browser.
+    · <a href="/">All apps</a>
+    · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/off-color">Source</a> · v1.0.0 · 2026-10-12
+  </footer>
+
+  <div class="tip" id="tip" hidden></div>
+  <script src="../shared/tissue.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
