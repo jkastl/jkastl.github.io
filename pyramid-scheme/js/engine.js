@@ -45,11 +45,20 @@
     return pick;
   };
 
+  // Column and row range of the tiles of `lv` that overlap [x0, x1) × [y0, y1) in µm, clipped to
+  // the slide. Empty when c1 < c0 or r1 < r0.
+  PS.tileRange = function (lv, x0, y0, x1, y1) {
+    const span = PS.CONFIG.tile * lv.ps;
+    return {
+      c0: Math.max(0, Math.floor(x0 / span)), c1: Math.min(lv.cols - 1, Math.floor((x1 - 1e-9) / span)),
+      r0: Math.max(0, Math.floor(y0 / span)), r1: Math.min(lv.rows - 1, Math.floor((y1 - 1e-9) / span)),
+    };
+  };
+
   // Tiles of `lv` that overlap the rectangle [x0, x1) × [y0, y1) in µm, nearest the centre first.
   PS.tilesInView = function (lv, x0, y0, x1, y1) {
     const span = PS.CONFIG.tile * lv.ps;
-    const c0 = Math.max(0, Math.floor(x0 / span)), c1 = Math.min(lv.cols - 1, Math.floor((x1 - 1e-9) / span));
-    const r0 = Math.max(0, Math.floor(y0 / span)), r1 = Math.min(lv.rows - 1, Math.floor((y1 - 1e-9) / span));
+    const { c0, c1, r0, r1 } = PS.tileRange(lv, x0, y0, x1, y1);
     const cx = (x0 + x1) / 2 / span - 0.5, cy = (y0 + y1) / 2 / span - 0.5;
     const out = [];
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) out.push({ level: lv.level, col: c, row: r });
@@ -206,9 +215,12 @@
 
   /* Lay a grid of square patches over the slide and keep the ones whose tissue fraction (from
    * the mask, at the mask's resolution) reaches minFrac. Each patch also gets the truth from the
-   * synthetic slide, so the page can show which kept patches are really glass or ink. */
+   * synthetic slide, so the page can show which kept patches are really glass or ink. Squares the
+   * mask doesn't touch are left out, except solid tissue the mask missed entirely, which still
+   * counts as dropped. */
   PS.patches = function (slide, mask, mw, mh, maskPs, patchUm, minFrac) {
-    const cols = Math.floor(slide.widthUm / patchUm), rows = Math.floor(slide.heightUm / patchUm);
+    const truth = PS.truthGrid(slide, patchUm);
+    const { cols, rows } = truth;
     const out = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -218,12 +230,30 @@
         let on = 0, n = 0;
         for (let j = j0; j < Math.min(j1, mh); j++) for (let i = i0; i < Math.min(i1, mw); i++) { on += mask[j * mw + i]; n++; }
         const frac = n ? on / n : 0;
-        if (frac === 0 && minFrac > 0) continue; // nothing there; skip the truth check too
-        out.push({ col: c, row: r, x: x0, y: y0, frac, kept: frac >= minFrac && frac > 0 });
+        const k = r * cols + c, trueTissue = truth.tissue[k], trueInk = truth.ink[k];
+        if (frac === 0 && minFrac > 0 && trueTissue < 0.8) continue;
+        out.push({ col: c, row: r, x: x0, y: y0, frac, kept: frac >= minFrac && frac > 0, trueTissue, trueInk });
       }
     }
-    for (const p of out) Object.assign(p, PS.truth(slide, p.x, p.y, patchUm));
     return out;
+  };
+
+  // truth() for every square of the patch grid. It depends only on the slide and the patch size,
+  // not on the mask, so it's worked out once per size and kept on the slide.
+  PS.truthGrid = function (slide, patchUm) {
+    const all = slide._truth || (slide._truth = {});
+    if (all[patchUm]) return all[patchUm];
+    const cols = Math.floor(slide.widthUm / patchUm), rows = Math.floor(slide.heightUm / patchUm);
+    const tissue = new Float32Array(cols * rows), ink = new Float32Array(cols * rows);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const t = PS.truth(slide, c * patchUm, r * patchUm, patchUm);
+        tissue[r * cols + c] = t.trueTissue;
+        ink[r * cols + c] = t.trueInk;
+      }
+    }
+    all[patchUm] = { cols, rows, tissue, ink };
+    return all[patchUm];
   };
 
   // What's really in a patch: a 5×5 sample of the synthetic slide's own fields.
@@ -240,15 +270,17 @@
   };
 
   // A kept patch that's mostly glass or ink is junk; a dropped patch that's solid tissue was missed.
+  // Candidates are the squares the mask touches at all.
   PS.patchStats = function (patches) {
-    let kept = 0, junk = 0, inkJunk = 0, missed = 0;
+    let candidates = 0, kept = 0, junk = 0, inkJunk = 0, missed = 0;
     for (const p of patches) {
+      if (p.frac > 0) candidates++;
       if (p.kept) {
         kept++;
         if (p.trueTissue < 0.3) { junk++; if (p.trueInk >= 0.3) inkJunk++; }
       } else if (p.trueTissue >= 0.8) missed++;
     }
-    return { candidates: patches.length, kept, junk, inkJunk, missed };
+    return { candidates, kept, junk, inkJunk, missed };
   };
 
   // Manifest rows as they'd land in a table: coordinates into the pyramid, not pixels.

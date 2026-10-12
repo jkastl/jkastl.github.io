@@ -212,8 +212,9 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
   }
 
   const clockText = (h) => {
+    if (h >= C.hours) return 'Day 3 · 24:00';
     const d = Math.floor(h / 24) + 1, hh = Math.floor(h % 24), mm = Math.floor((h % 1) * 60);
-    return `Day ${Math.min(3, d)} · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    return `Day ${d} · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   };
   const when = (h) => (h >= C.hours ? 'end' : clockText(h).replace(' · ', ', '));
 
@@ -279,7 +280,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
     toCanvas(cv, ev.px, C.patch, C.patch);
     const pred = normOn ? ev.predNorm : ev.predRaw;
     let status;
-    if (ev.quarantined) status = '<span class="tag warn">out of focus → rescan</span>';
+    if (ev.quarantined) status = `<span class="tag warn">${ev.reason || 'out of focus'} → rescan</span>`;
     else status = `<span class="tag ${pred === ev.dense ? '' : 'bad'}">${pred ? 'atypical' : 'typical'}${pred === ev.dense ? '' : ' ✗'}</span>`;
     li.innerHTML = `<span></span><span><span class="id">${esc(ev.slide)}</span><span class="meta"><i class="sw" style="background:${COLORS[ev.scanner]}"></i>Scanner ${ev.scanner} · ${clockText(ev.hour).split(' · ')[1]}</span></span>${status}`;
     li.firstChild.replaceWith(cv);
@@ -334,7 +335,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
     for (const v of ch.ticks) s += `<line class="gridline" x1="${pad.l}" x2="${W - pad.r}" y1="${Y(v)}" y2="${Y(v)}"/><text class="axis-t" x="${pad.l - 6}" y="${Y(v) + 4}" text-anchor="end">${ch.fmt(v)}</text>`;
     for (const d of [0, 1, 2]) s += `<text class="axis-t" x="${X(d * 24 + 12)}" y="${H - 5}" text-anchor="middle">day ${d + 1}</text>`;
     for (const d of [24, 48]) s += `<line class="gridline" x1="${X(d)}" x2="${X(d)}" y1="${pad.t + ih}" y2="${pad.t + ih + 5}"/>`;
-    const nowH = Math.min(C.hours, mon.done ? C.hours : simHour);
+    const nowH = shownHour();
     for (const inc of OC.INCIDENTS) {
       if (nowH < inc.at) continue;
       s += `<line class="incident" x1="${X(inc.at)}" x2="${X(inc.at)}" y1="${pad.t}" y2="${pad.t + ih}"/>`;
@@ -397,14 +398,17 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
     return evs.filter((e) => (norm ? e.predNorm : e.predRaw) === e.dense).length / evs.length;
   }
   const simHourNow = () => (mon.events.length ? mon.events[mon.events.length - 1].hour : 0);
+  // The hour on the clock and charts. Running to the end sets simHour past the end to let every
+  // scan through, so follow the scans processed so far instead.
+  const shownHour = () => (mon.done ? C.hours : skipping ? simHourNow() : Math.min(C.hours, simHour));
 
   function drawStream(force) {
     for (const ch of CHARTS) { $(ch.el).innerHTML = chartSvg(ch); wireHover(ch); }
-    $('clock').textContent = mon.done ? 'Day 3 · 24:00 · done' : clockText(Math.min(C.hours, simHour));
+    $('clock').textContent = mon.done ? 'Day 3 · 24:00 · done' : clockText(shownHour());
     const a = recentAcc(12, normOn), b = recentAcc(12, !normOn);
     $('sstats').innerHTML = [
       stat('Scans processed', fmtInt(mon.events.length), `of ${fmtInt(TOTAL)}`),
-      stat('Sent to rescan', fmtInt(mon.quarantined), 'failed the focus check'),
+      stat('Sent to rescan', fmtInt(mon.quarantined), 'failed focus or stain QC'),
       stat('Alerts', mon.alerts.length, mon.alerts.length ? `latest: Scanner ${mon.alerts[mon.alerts.length - 1].scanner}` : 'quiet so far'),
       stat('Accuracy, last 12 h', a == null ? '–' : Math.round(a * 100) + '%', normOn ? 'with normalization' : 'raw pixels'),
       stat(normOn ? 'If served raw' : 'If normalized', b == null ? '–' : Math.round(b * 100) + '%', 'same scans, last 12 h'),
@@ -447,7 +451,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
       el.innerHTML = last
         ? `<strong>Scanner ${last.scanner} alerted at ${when(last.at)}.</strong> The monitor only saw pixels: ${last.label.toLowerCase()} moved
           ${Math.abs(last.z).toFixed(1)} standard deviations from that scanner's own baseline, and the CUSUM crossed its limit.`
-        : simHour < 24 ? 'Learning the baseline: each scanner\'s normal range of stain strength, hue and glass brightness.' : 'Monitoring. Nothing has moved beyond normal variation yet.';
+        : shownHour() < 24 ? 'Learning the baseline: each scanner\'s normal range of stain strength, hue and glass brightness.' : 'Monitoring. Nothing has moved beyond normal variation yet.';
       return;
     }
     const bBefore = accIn('B', 24, 30, false), bAfter = accIn('B', 36, 72, false), bNorm = accIn('B', 36, 72, true);

@@ -258,12 +258,14 @@
       tr.querySelector('.rd').textContent = fmtB(readPerLevel[i]);
     });
 
-    // Compare with reading the same view from level 0.
+    // Compare with reading the same view from level 0. Zoomed out that's up to every one of its
+    // tiles, so count them from the range rather than listing them.
     const l0 = levels[0];
-    const t0 = P.tilesInView(l0, Math.max(0, x0), Math.max(0, y0), Math.min(slide.widthUm, x1), Math.min(slide.heightUm, y1));
+    const g = P.tileRange(l0, x0, y0, x1, y1);
+    const n0 = Math.max(0, g.c1 - g.c0 + 1) * Math.max(0, g.r1 - g.r0 + 1);
     let b0 = 0;
-    if (t0.length < 20000) for (const t of t0) b0 += P.tileBytes(slide, l0, t.col, t.row);
-    else b0 = size.perLevel[0] * (t0.length / l0.tiles);
+    if (n0 < 20000) for (let r = g.r0; r <= g.r1; r++) for (let c = g.c0; c <= g.c1; c++) b0 += P.tileBytes(slide, l0, c, r);
+    else b0 = size.perLevel[0] * (n0 / l0.tiles);
     let msg;
     if (view.ps / dpr < T.MPP0 * 0.7) {
       msg = `<strong>You're past the scanner's resolution.</strong> Each image pixel now covers several screen pixels, so
@@ -273,7 +275,7 @@
         zoom a quarter of a micrometre is one pixel: the dots in the purple are cell nuclei, the pink is everything else.`;
     } else {
       msg = `This view needs <strong>${want.length} tile${want.length === 1 ? '' : 's'}</strong> from level ${L}. Drawing the
-        same view from full resolution would mean ${fmtInt(t0.length)} tiles and about <strong>${fmtB(b0)}</strong>, then
+        same view from full resolution would mean ${fmtInt(n0)} tiles and about <strong>${fmtB(b0)}</strong>, then
         throwing most of the pixels away to shrink them.`;
     }
     $('vmsg').innerHTML = msg;

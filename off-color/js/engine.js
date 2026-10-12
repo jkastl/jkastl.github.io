@@ -339,7 +339,8 @@
     const c = OC.CONFIG, n = c.patch * c.patch;
     const evs = [], focus = [], ests = [];
     for (let i = 0; i < 60; i++) {
-      const meta = OC.eventMeta(i * 3 + 100000); // scanner A, outside the stream's range
+      // Event numbers outside the stream's range pick fresh slides and spots; the profile is A's.
+      const meta = OC.eventMeta(i * 3 + 100000);
       meta.blurred = false;
       const ev = OC.renderEvent(meta, OC.SCANNERS[0].profile);
       focus.push(OC.focus(ev.px, c.patch, c.patch));

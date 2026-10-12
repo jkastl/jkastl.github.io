@@ -45,8 +45,8 @@ node --test 'pyramid-scheme/test/*.test.js'
 
 They cover tile determinism, that zoomed-out renders match averaged full-resolution pixels, the
 pyramid arithmetic, level choice, visible-tile selection, the LRU cache, the file size estimate, Otsu,
-the ink rule, that the pen circle gets into the training set until ink is dropped, the manifest
-format, and the scale estimates.
+the ink rule, that the pen circle gets into the training set until ink is dropped, that solid tissue
+the mask misses entirely still counts as dropped, the manifest format, and the scale estimates.
 
 ## Layout
 

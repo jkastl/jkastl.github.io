@@ -58,6 +58,7 @@ test('tilesInView covers the view, stays on the slide and starts in the middle',
   assert.equal(t[0].row, 4);
   const edge = PS.tilesInView(lv, -500, -500, 100, 100);
   assert.ok(edge.every((x) => x.col >= 0 && x.row >= 0));
+  assert.deepEqual(PS.tileRange(lv, 1000, 1000, 2000, 1500), { c0: 3, c1: 7, r0: 3, r1: 5 });
 });
 
 test('the LRU cache evicts the least recently used tile', () => {
@@ -109,6 +110,15 @@ test('patching: the pen circle gets in until ink is dropped', () => {
     const grid = Math.floor(slide.widthUm / 256) * Math.floor(slide.heightUm / 256);
     assert.ok(clean.kept / grid < 0.5);
   }
+});
+
+test('solid tissue the mask misses entirely still counts as dropped', () => {
+  const ps = 64;
+  const w = Math.round(slide.widthUm / ps), h = Math.round(slide.heightUm / ps);
+  const none = PS.patchStats(PS.patches(slide, new Uint8Array(w * h), w, h, ps, 256, 0.5));
+  const solid = PS.truthGrid(slide, 256).tissue.filter((t) => t >= 0.8).length;
+  assert.ok(solid > 500);
+  assert.deepEqual(none, { candidates: 0, kept: 0, junk: 0, inkJunk: 0, missed: solid });
 });
 
 test('manifest rows point into level-0 coordinates', () => {
