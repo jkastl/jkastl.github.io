@@ -1,4 +1,4 @@
-/* Pyramid Scheme: the viewer, the training-set panel and the scale estimates. Base styles are
+/* Slide Pyramid: the viewer, the training-set panel and the scale estimates. Base styles are
    in ../shared/base.css. */
 .view-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; margin-bottom: 0.6rem; }
 .viewer-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; align-items: start; }

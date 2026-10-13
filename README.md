@@ -10,10 +10,10 @@ No build step, no dependencies. The index is one file, [`index.html`](index.html
 README and tests, run by GitHub Actions:
 
 - [Agent Triage Simulator](agent-triage/) in `agent-triage/`
-- [Pyramid Scheme](pyramid-scheme/) in `pyramid-scheme/`
-- [Off Color](off-color/) in `off-color/`
+- [Slide Pyramid](slide-pyramid/) in `slide-pyramid/`
+- [Stain Drift](stain-drift/) in `stain-drift/`
 
-Pyramid Scheme and Off Color share [`shared/base.css`](shared/base.css) (the dark theme) and
+Slide Pyramid and Stain Drift share [`shared/base.css`](shared/base.css) (the dark theme) and
 [`shared/tissue.js`](shared/tissue.js), the procedural slide they both render. Change either and run
 both apps' tests. Commit and push changes directly to `main`; there are no feature branches or
 pull requests.

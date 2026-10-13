@@ -1,14 +1,14 @@
-/* Off Color's page: the four scanner panels, the OD scatter, one-dye views, and the stream. */
+/* Stain Drift's page: the four scanner panels, the OD scatter, one-dye views, and the stream. */
 (function () {
   'use strict';
-  const T = globalThis.Tissue, OC = globalThis.OC;
+  const T = globalThis.Tissue, SD = globalThis.SD;
   const $ = (id) => document.getElementById(id);
   const fmtInt = (n) => Math.round(n).toLocaleString('en-US');
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const stat = (label, value, note) =>
     `<div class="stat"><span class="stat-label">${label}</span><span class="stat-value">${value}</span>${note ? `<span class="stat-note">${note}</span>` : ''}</div>`;
   const COLORS = { A: '#3987e5', B: '#d95926', C: '#199e70', Y: '#c98500' };
-  const cal = OC.calibrate();
+  const cal = SD.calibrate();
 
   const tip = $('tip');
   function showTip(html, x, y) {
@@ -33,7 +33,7 @@
   const spotSlide = T.makeSlide(1187);
   const spot = { x: 18161, y: 4915 }; // a crowded patch of tissue, clear of the pen mark
   const scanners = [
-    ...OC.SCANNERS.map((s) => ({ id: s.id, name: s.profile.name, sub: s.site, color: COLORS[s.id], profile: s.profile })),
+    ...SD.SCANNERS.map((s) => ({ id: s.id, name: s.profile.name, sub: s.site, color: COLORS[s.id], profile: s.profile })),
     { id: 'Y', name: 'Your scanner', sub: 'the sliders below', color: COLORS.Y, profile: null },
   ];
   $('scanners').innerHTML = scanners.map((s) => `
@@ -49,7 +49,7 @@
   let pick = 'B';
 
   function yourProfile() {
-    return OC.adjust(T.STAIN_REF, {
+    return SD.adjust(T.STAIN_REF, {
       name: 'Your scanner',
       hStrength: +$('y-h').value,
       eStrength: +$('y-e').value,
@@ -62,9 +62,9 @@
   function computeScanner(s) {
     const prof = s.id === 'Y' ? yourProfile() : s.profile;
     const px = T.render(spotSlide, spot.x - (SZ * PS) / 2, spot.y - (SZ * PS) / 2, SZ, SZ, PS, prof);
-    const white = OC.glassWhite(spotSlide, prof);
-    const est = OC.macenko(px, N, { white });
-    const nrm = est ? OC.normalize(px, N, est, cal.target) : px;
+    const white = SD.glassWhite(spotSlide, prof);
+    const est = SD.macenko(px, N, { white });
+    const nrm = est ? SD.normalize(px, N, est, cal.target) : px;
     results[s.id] = { px, nrm, est, white };
   }
 
@@ -75,8 +75,8 @@
       const el = $('sc-' + s.id);
       toCanvas(el.querySelector('.raw'), r.px, SZ, SZ);
       toCanvas(el.querySelector('.nrm'), r.nrm, SZ, SZ);
-      el.querySelector('.de-raw').textContent = s.id === 'A' ? '0' : OC.deltaE(r.px, a.px, N).toFixed(1);
-      el.querySelector('.de-nrm').textContent = s.id === 'A' ? '0' : OC.deltaE(r.nrm, a.nrm, N).toFixed(1);
+      el.querySelector('.de-raw').textContent = s.id === 'A' ? '0' : SD.deltaE(r.px, a.px, N).toFixed(1);
+      el.querySelector('.de-nrm').textContent = s.id === 'A' ? '0' : SD.deltaE(r.nrm, a.nrm, N).toFixed(1);
     }
     renderOD();
     renderUnmix();
@@ -153,7 +153,7 @@
     const od = [0, 0, 0], c2 = [0, 0];
     for (let i = 0; i < N; i++) {
       for (let c = 0; c < 3; c++) od[c] = -Math.log10(Math.max(1, r.px[i * 4 + c]) / r.white[c]);
-      OC.unmix(od, est.h, est.e, c2);
+      SD.unmix(od, est.h, est.e, c2);
       for (let c = 0; c < 3; c++) {
         hpx[i * 4 + c] = 255 * Math.pow(10, -Math.max(0, c2[0]) * cal.target.h[c]);
         epx[i * 4 + c] = 255 * Math.pow(10, -Math.max(0, c2[1]) * cal.target.e[c]);
@@ -194,13 +194,13 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
   // ======================================================================
   // The stream
   // ======================================================================
-  const C = OC.CONFIG;
-  const TOTAL = OC.totalEvents();
+  const C = SD.CONFIG;
+  const TOTAL = SD.totalEvents();
   const START = Date.UTC(2026, 9, 5, 0, 0, 0); // the simulated Monday the stream starts
   let mon, next, simHour, playing, speed = 4, normOn = false, lastT = 0, raf = 0, skipping = false, lastDraw = 0;
 
   function reset() {
-    mon = new OC.Monitor();
+    mon = new SD.Monitor();
     next = 0;
     simHour = 0;
     playing = false;
@@ -221,7 +221,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
   function step(budgetMs) {
     const t0 = performance.now();
     let added = 0;
-    while (next < TOTAL && OC.eventMeta(next).hour <= simHour && performance.now() - t0 < budgetMs) {
+    while (next < TOTAL && SD.eventMeta(next).hour <= simHour && performance.now() - t0 < budgetMs) {
       addFeed(mon.process(next));
       next++;
       added++;
@@ -244,7 +244,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
       step(45);
     } else if (playing) {
       // Don't let the clock run ahead of what's been processed.
-      const behind = next < TOTAL && OC.eventMeta(next).hour < simHour - 1;
+      const behind = next < TOTAL && SD.eventMeta(next).hour < simHour - 1;
       if (!behind) simHour = Math.min(C.hours, simHour + dt * speed);
       step(30);
       if (simHour >= C.hours && next < TOTAL) simHour = C.hours + 1;
@@ -336,14 +336,14 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
     for (const d of [0, 1, 2]) s += `<text class="axis-t" x="${X(d * 24 + 12)}" y="${H - 5}" text-anchor="middle">day ${d + 1}</text>`;
     for (const d of [24, 48]) s += `<line class="gridline" x1="${X(d)}" x2="${X(d)}" y1="${pad.t + ih}" y2="${pad.t + ih + 5}"/>`;
     const nowH = shownHour();
-    for (const inc of OC.INCIDENTS) {
+    for (const inc of SD.INCIDENTS) {
       if (nowH < inc.at) continue;
       s += `<line class="incident" x1="${X(inc.at)}" x2="${X(inc.at)}" y1="${pad.t}" y2="${pad.t + ih}"/>`;
       if (ch.metric === 'maxH' || !ch.metric) s += `<text class="incident-l" x="${X(inc.at) + 4}" y="${labY}">${inc.scanner}: ${inc.kind === 'step' ? 'new dye lot' : 'lamp dimming'}</text>`;
       else s += `<text class="incident-l" x="${X(inc.at) + 4}" y="${labY}">${inc.scanner}</text>`;
     }
     const ends = [];
-    for (const sc of OC.SCANNERS) {
+    for (const sc of SD.SCANNERS) {
       const ws = mon.windows[sc.id];
       if (!ws.length) continue;
       const pts = ws.map((w) => [X(xMid(w)), Y(Math.max(ch.dom[0], Math.min(ch.dom[1], ch.get(w))))]);
@@ -374,7 +374,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
       const r = svg.getBoundingClientRect();
       const h = (((e.clientX - r.left) / r.width) * W - pad.l) / iw * C.hours;
       const idx = Math.floor(h / C.windowHours);
-      const rows = OC.SCANNERS.map((sc) => ({ sc, w: mon.windows[sc.id].find((w) => w.index === idx) })).filter((x) => x.w);
+      const rows = SD.SCANNERS.map((sc) => ({ sc, w: mon.windows[sc.id].find((w) => w.index === idx) })).filter((x) => x.w);
       if (h < 0 || h > C.hours || !rows.length) { xh.setAttribute('visibility', 'hidden'); return hideTip(); }
       const xm = X(idx * C.windowHours + C.windowHours / 2);
       xh.setAttribute('x1', xm);
@@ -387,7 +387,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
     svg.addEventListener('pointerleave', () => { xh.setAttribute('visibility', 'hidden'); hideTip(); });
   }
 
-  $('s-legend').innerHTML = OC.SCANNERS.map((s) => `<span><i class="sw" style="background:${COLORS[s.id]}"></i>Scanner ${s.id}</span>`).join('') +
+  $('s-legend').innerHTML = SD.SCANNERS.map((s) => `<span><i class="sw" style="background:${COLORS[s.id]}"></i>Scanner ${s.id}</span>`).join('') +
     '<span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--ink-2)"/></svg>alert raised</span>' +
     '<span><svg width="14" height="12" aria-hidden="true"><line x1="7" x2="7" y1="0" y2="12" stroke="var(--ink-2)" stroke-dasharray="3 3"/></svg>what actually happened</span>';
 
@@ -422,7 +422,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
   function renderAlerts() {
     const el = $('alerts');
     el.innerHTML = mon.alerts.map((al) => {
-      const inc = OC.INCIDENTS.find((x) => x.scanner === al.scanner && x.at <= al.at);
+      const inc = SD.INCIDENTS.find((x) => x.scanner === al.scanner && x.at <= al.at);
       const fmt = al.metric === 'white' ? (v) => Math.round(v) : al.metric === 'hAngle' ? (v) => v.toFixed(1) + '°' : (v) => v.toFixed(2);
       const lag = inc ? `${Math.round(al.at - inc.at)} h after the real cause: ${inc.label[0].toLowerCase() + inc.label.slice(1)}` : 'no known cause: a false alarm';
       return `<li><span class="when">${when(al.at)}</span><span><strong>Scanner ${al.scanner}: ${al.label.toLowerCase()} ${al.dir}</strong>,
@@ -471,7 +471,7 @@ reference H  ${v(cal.target.h)}  strength ${cal.target.maxH.toFixed(2)}`;
 
   function renderTable() {
     const rows = [];
-    for (const sc of OC.SCANNERS) for (const w of mon.windows[sc.id]) rows.push(`<tr><td>${sc.id}</td><td>${w.start}–${w.end} h</td><td>${w.medians.maxH.toFixed(2)}</td><td>${Math.round(w.medians.white)}</td><td>${Math.round(w.accRaw * 100)}%</td><td>${Math.round(w.accNorm * 100)}%</td></tr>`);
+    for (const sc of SD.SCANNERS) for (const w of mon.windows[sc.id]) rows.push(`<tr><td>${sc.id}</td><td>${w.start}–${w.end} h</td><td>${w.medians.maxH.toFixed(2)}</td><td>${Math.round(w.medians.white)}</td><td>${Math.round(w.accRaw * 100)}%</td><td>${Math.round(w.accNorm * 100)}%</td></tr>`);
     $('c-table').innerHTML = `<caption>Window means per scanner</caption><thead><tr><th>Scanner</th><th>Window</th><th>Hematoxylin strength</th><th>Glass brightness</th><th>Accuracy, raw</th><th>Accuracy, normalized</th></tr></thead><tbody>${rows.join('')}</tbody>`;
   }
 

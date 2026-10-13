@@ -1,8 +1,8 @@
-/* Off Color's engine: stain profiles, color deconvolution, Macenko stain estimation and
+/* Stain Drift's engine: stain profiles, color deconvolution, Macenko stain estimation and
  * normalization, a focus check, and the streaming monitor. No DOM; the page and the Node tests
- * load the same file. Attaches to globalThis.OC; needs shared/tissue.js (globalThis.Tissue).
+ * load the same file. Attaches to globalThis.SD; needs shared/tissue.js (globalThis.Tissue).
  */
-(function (OC) {
+(function (SD) {
   'use strict';
   const T = globalThis.Tissue;
   const norm3 = T.norm3;
@@ -15,7 +15,7 @@
   /* Three scanners at three sites. Same tissue, same protocol on paper; different stain lots,
    * different staining times, different lamps. Scanner A matches the reference the model was
    * trained on. */
-  OC.SCANNERS = [
+  SD.SCANNERS = [
     { id: 'A', site: 'Site A', profile: profile('Scanner A', T.STAIN_REF.h, T.STAIN_REF.e, 1, 1) },
     { id: 'B', site: 'Site B', profile: profile('Scanner B', [0.6, 0.71, 0.37], [0.19, 0.84, 0.5], 0.97, 0.85) },
     { id: 'C', site: 'Site C', profile: profile('Scanner C', [0.545, 0.725, 0.42], [0.18, 0.84, 0.52], 1.0, 1.2, [1, 0.99, 0.96]) },
@@ -23,7 +23,7 @@
 
   // Mix a profile from a base plus adjustments: hematoxylin/eosin strength, how blue the
   // hematoxylin runs (0 = as is, 1 = much bluer), and white balance warmth.
-  OC.adjust = function (base, o) {
+  SD.adjust = function (base, o) {
     const blue = o.hBlue || 0;
     const h = norm3([base.h[0] + 0.25 * blue, base.h[1] - 0.05 * blue, base.h[2] - 0.2 * blue].map((v) => Math.max(0.02, v)));
     const warm = o.warm || 0;
@@ -43,7 +43,7 @@
 
   // Eigen-decomposition of a symmetric 3×3 matrix by Jacobi rotations. Returns eigenvalues
   // and column eigenvectors, sorted largest first.
-  OC.eig3 = function (A) {
+  SD.eig3 = function (A) {
     const a = A.map((r) => r.slice());
     const v = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     for (let sweep = 0; sweep < 50; sweep++) {
@@ -84,7 +84,7 @@
     const i = Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))));
     return s[i];
   }
-  OC.percentile = percentile;
+  SD.percentile = percentile;
 
   // Least-squares stain amounts for one OD triple, given two stain vectors.
   function unmix(od, h, e, out) {
@@ -95,7 +95,7 @@
     out[1] = (hh * be - he * bh) / det;
     return out;
   }
-  OC.unmix = unmix;
+  SD.unmix = unmix;
 
   // ---------- Macenko ----------
 
@@ -108,7 +108,7 @@
    *     purest stains. The one that absorbs more red is hematoxylin.
    *  5. Unmix every pixel and take the 99th percentile amount of each stain as its strength.
    */
-  OC.macenko = function (rgba, n, opts) {
+  SD.macenko = function (rgba, n, opts) {
     const beta = (opts && opts.beta) || 0.15, alpha = (opts && opts.alpha) || 1;
     // The white of the glass: passed in when it was measured elsewhere on the slide, otherwise
     // the brightest pixels of the patch (which only works if the patch has some glass in it).
@@ -131,7 +131,7 @@
     for (const o of ods) for (let c = 0; c < 3; c++) m[c] += o[c] / ods.length;
     const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     for (const o of ods) for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) C[a][b] += (o[a] - m[a]) * (o[b] - m[b]);
-    const { vectors } = OC.eig3(C);
+    const { vectors } = SD.eig3(C);
     let [v1, v2] = vectors;
     if (v1[0] + v1[1] + v1[2] < 0) v1 = v1.map((x) => -x);
     if (v2[0] + v2[1] + v2[2] < 0) v2 = v2.map((x) => -x);
@@ -150,7 +150,7 @@
   /* Re-express a patch in the target's stains: unmix with the patch's own estimate, rescale
    * each stain's amount to the target's strength, and recombine with the target's vectors on
    * a pure-white background. */
-  OC.normalize = function (rgba, n, est, target, out) {
+  SD.normalize = function (rgba, n, est, target, out) {
     const res = out || new Uint8ClampedArray(n * 4);
     const kH = target.maxH / est.maxH, kE = target.maxE / est.maxE;
     const od = [0, 0, 0], c2 = [0, 0];
@@ -175,10 +175,10 @@
     const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
     return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
   }
-  OC.toLab = toLab;
+  SD.toLab = toLab;
 
   // Mean CIE76 ΔE between two images of the same tissue. About 2.3 is a just-noticeable difference.
-  OC.deltaE = function (a, b, n) {
+  SD.deltaE = function (a, b, n) {
     let s = 0;
     for (let i = 0; i < n; i++) {
       const p = toLab(a[i * 4], a[i * 4 + 1], a[i * 4 + 2]), q = toLab(b[i * 4], b[i * 4 + 1], b[i * 4 + 2]);
@@ -190,7 +190,7 @@
   // ---------- focus ----------
 
   // Variance of the Laplacian of the grey image: sharp edges score high, blur scores low.
-  OC.focus = function (rgba, w, h) {
+  SD.focus = function (rgba, w, h) {
     const g = new Float32Array(w * h);
     for (let i = 0; i < w * h; i++) g[i] = 0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2];
     let s = 0, s2 = 0, n = 0;
@@ -205,7 +205,7 @@
   };
 
   // Box blur, applied twice: a stand-in for a patch scanned out of focus.
-  OC.blur = function (rgba, w, h, r) {
+  SD.blur = function (rgba, w, h, r) {
     let src = rgba;
     for (let pass = 0; pass < 2; pass++) {
       const dst = new Uint8ClampedArray(src.length);
@@ -237,8 +237,8 @@
    * breaks under a color shift: it unmixes with the FIXED reference stain vectors and white,
    * takes the median hematoxylin of the nuclear pixels, and compares it to a cut-off learned on
    * Scanner A. */
-  OC.NUC_PIXEL = 0.3;
-  OC.nucDark = function (rgba, n) {
+  SD.NUC_PIXEL = 0.3;
+  SD.nucDark = function (rgba, n) {
     const od = [0, 0, 0], c2 = [0, 0];
     const hs = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -248,7 +248,7 @@
     }
     hs.sort();
     let k = n;
-    while (k > 0 && hs[k - 1] > OC.NUC_PIXEL) k--;
+    while (k > 0 && hs[k - 1] > SD.NUC_PIXEL) k--;
     // Fewer than 20 nuclear pixels: use the darkest 20 anyway.
     const from = Math.min(k, n - 20);
     return hs[Math.floor((from + n - 1) / 2)];
@@ -256,7 +256,7 @@
 
   // ---------- the stream ----------
 
-  OC.CONFIG = {
+  SD.CONFIG = {
     patch: 80, // px
     ps: 1, // µm per px (10×)
     perHour: 5, // slides per scanner per hour
@@ -271,33 +271,33 @@
 
   /* What happens to the scanners over three days. The monitor never sees this; it only sees
    * pixels. */
-  OC.INCIDENTS = [
-    { scanner: 'B', at: 30, kind: 'step', label: 'New hematoxylin lot at Site B', apply: (p) => OC.adjust(p, { hStrength: 1.4, hBlue: 0.5 }) },
-    { scanner: 'C', at: 44, kind: 'ramp', label: 'Scanner C lamp starts to dim', apply: (p, hrs) => OC.adjust(p, { bright: 1 - Math.min(0.3, 0.0115 * hrs), warm: Math.min(1.5, 0.05 * hrs) }) },
+  SD.INCIDENTS = [
+    { scanner: 'B', at: 30, kind: 'step', label: 'New hematoxylin lot at Site B', apply: (p) => SD.adjust(p, { hStrength: 1.4, hBlue: 0.5 }) },
+    { scanner: 'C', at: 44, kind: 'ramp', label: 'Scanner C lamp starts to dim', apply: (p, hrs) => SD.adjust(p, { bright: 1 - Math.min(0.3, 0.0115 * hrs), warm: Math.min(1.5, 0.05 * hrs) }) },
   ];
 
-  OC.profileAt = function (scannerId, hour) {
-    let p = OC.SCANNERS.find((s) => s.id === scannerId).profile;
-    for (const inc of OC.INCIDENTS) {
+  SD.profileAt = function (scannerId, hour) {
+    let p = SD.SCANNERS.find((s) => s.id === scannerId).profile;
+    for (const inc of SD.INCIDENTS) {
       if (inc.scanner === scannerId && hour >= inc.at) p = inc.apply(p, hour - inc.at);
     }
     return p;
   };
 
   // Event i: which scanner, when, which slide, where on it. All from i, so it replays exactly.
-  OC.eventMeta = function (i) {
-    const nS = OC.SCANNERS.length;
-    const sc = OC.SCANNERS[i % nS];
+  SD.eventMeta = function (i) {
+    const nS = SD.SCANNERS.length;
+    const sc = SD.SCANNERS[i % nS];
     const k = Math.floor(i / nS);
     const r = T.rng(T.hash(i, 77, 3));
-    const hour = (k + r()) / OC.CONFIG.perHour;
+    const hour = (k + r()) / SD.CONFIG.perHour;
     const slideSeed = T.hash(i, 5, 11) % 100000;
     const wantDense = r() < 0.5;
-    return { i, scanner: sc.id, hour, slideSeed, wantDense, blurred: r() < OC.CONFIG.blurRate, r };
+    return { i, scanner: sc.id, hour, slideSeed, wantDense, blurred: r() < SD.CONFIG.blurRate, r };
   };
 
   // Find a spot on the slide of the wanted kind (crowded or not), well inside the tissue.
-  OC.pickSpot = function (slide, wantDense, r) {
+  SD.pickSpot = function (slide, wantDense, r) {
     let best = null;
     for (let tries = 0; tries < 40; tries++) {
       const f = slide.fragments[Math.floor(r() * slide.fragments.length)];
@@ -311,19 +311,19 @@
     return best;
   };
 
-  OC.renderEvent = function (meta, profile) {
-    const c = OC.CONFIG;
+  SD.renderEvent = function (meta, profile) {
+    const c = SD.CONFIG;
     const slide = T.makeSlide(meta.slideSeed);
-    const spot = OC.pickSpot(slide, meta.wantDense, meta.r);
+    const spot = SD.pickSpot(slide, meta.wantDense, meta.r);
     const half = (c.patch * c.ps) / 2;
     let px = T.render(slide, spot.x - half, spot.y - half, c.patch, c.patch, c.ps, profile);
-    if (meta.blurred) px = OC.blur(px, c.patch, c.patch, 2);
-    return { px, dense: spot.tumor > 0.5, slide, white: OC.glassWhite(slide, profile) };
+    if (meta.blurred) px = SD.blur(px, c.patch, c.patch, 2);
+    return { px, dense: spot.tumor > 0.5, slide, white: SD.glassWhite(slide, profile) };
   };
 
   /* The slide's white, measured where a pipeline would: on bare glass near the label end,
    * from the low-resolution level. Median of a small patch, per channel. */
-  OC.glassWhite = function (slide, profile) {
+  SD.glassWhite = function (slide, profile) {
     const g = T.render(slide, 300, 300, 8, 8, 16, profile);
     return [0, 1, 2].map((c) => {
       const ch = [];
@@ -334,17 +334,17 @@
 
   // Reference target for normalization, and the model's cut-off and the focus floor, all
   // learned from Scanner A patches before the stream starts.
-  OC.calibrate = function () {
-    if (OC._cal) return OC._cal;
-    const c = OC.CONFIG, n = c.patch * c.patch;
+  SD.calibrate = function () {
+    if (SD._cal) return SD._cal;
+    const c = SD.CONFIG, n = c.patch * c.patch;
     const evs = [], focus = [], ests = [];
     for (let i = 0; i < 60; i++) {
       // Event numbers outside the stream's range pick fresh slides and spots; the profile is A's.
-      const meta = OC.eventMeta(i * 3 + 100000);
+      const meta = SD.eventMeta(i * 3 + 100000);
       meta.blurred = false;
-      const ev = OC.renderEvent(meta, OC.SCANNERS[0].profile);
-      focus.push(OC.focus(ev.px, c.patch, c.patch));
-      const e = OC.macenko(ev.px, n, { white: ev.white });
+      const ev = SD.renderEvent(meta, SD.SCANNERS[0].profile);
+      focus.push(SD.focus(ev.px, c.patch, c.patch));
+      const e = SD.macenko(ev.px, n, { white: ev.white });
       if (!e) continue;
       evs.push({ ev, e });
       ests.push(e);
@@ -354,12 +354,12 @@
     const target = { h: T.STAIN_REF.h, e: T.STAIN_REF.e, maxH: med((e) => e.maxH), maxE: med((e) => e.maxE) };
     // Two versions of the model: one trained on raw pixels, one on normalized pixels. If you
     // normalize at ingest, you normalize the training data too.
-    const raw = evs.map(({ ev }) => ({ s: OC.nucDark(ev.px, n), dense: ev.dense }));
-    const run = new OC.StainState();
-    const nrm = evs.map(({ ev, e }) => ({ s: OC.nucDark(OC.normalize(ev.px, n, run.update('A', e), target), n), dense: ev.dense }));
-    const cr = OC.bestCut(raw), cn = OC.bestCut(nrm);
-    OC._cal = { cutRaw: cr.cut, cutNorm: cn.cut, accRaw: cr.acc, accNorm: cn.acc, focusMin: percentile(focus, 5) * 0.25, target };
-    return OC._cal;
+    const raw = evs.map(({ ev }) => ({ s: SD.nucDark(ev.px, n), dense: ev.dense }));
+    const run = new SD.StainState();
+    const nrm = evs.map(({ ev, e }) => ({ s: SD.nucDark(SD.normalize(ev.px, n, run.update('A', e), target), n), dense: ev.dense }));
+    const cr = SD.bestCut(raw), cn = SD.bestCut(nrm);
+    SD._cal = { cutRaw: cr.cut, cutNorm: cn.cut, accRaw: cr.acc, accNorm: cn.acc, focusMin: percentile(focus, 5) * 0.25, target };
+    return SD._cal;
   };
 
   /* Per-scanner running stain estimate: an exponentially weighted average of each patch's
@@ -367,7 +367,7 @@
    * differences between patches (darker nuclei would be scaled back down, which is the very
    * thing the model looks for). A scanner's stains change by lot and by day, not by patch, so
    * the estimate lives in keyed state, one per scanner, the way a streaming job keeps it. */
-  OC.StainState = class {
+  SD.StainState = class {
     constructor(alpha) { this.alpha = alpha || 0.1; this.by = {}; }
     update(key, est) {
       const cur = this.by[key];
@@ -387,7 +387,7 @@
   };
 
   // The cut-off on the model's score that classifies a labelled set best.
-  OC.bestCut = function (xs) {
+  SD.bestCut = function (xs) {
     const cand = xs.map((x) => x.s).sort((a, b) => a - b);
     let cut = 0.5, best = -1;
     for (let k = 0; k < cand.length - 1; k++) {
@@ -399,21 +399,21 @@
   };
 
   // Everything the pipeline computes for one event, with and without normalization.
-  OC.processEvent = function (i, stain) {
-    const cal = OC.calibrate();
-    const c = OC.CONFIG, n = c.patch * c.patch;
-    const meta = OC.eventMeta(i);
-    const prof = OC.profileAt(meta.scanner, meta.hour);
-    const ev = OC.renderEvent(meta, prof);
-    const focus = OC.focus(ev.px, c.patch, c.patch);
+  SD.processEvent = function (i, stain) {
+    const cal = SD.calibrate();
+    const c = SD.CONFIG, n = c.patch * c.patch;
+    const meta = SD.eventMeta(i);
+    const prof = SD.profileAt(meta.scanner, meta.hour);
+    const ev = SD.renderEvent(meta, prof);
+    const focus = SD.focus(ev.px, c.patch, c.patch);
     const base = { i, scanner: meta.scanner, hour: meta.hour, slide: `${meta.scanner}${String(meta.slideSeed).padStart(5, '0')}`, dense: ev.dense, focus, px: ev.px };
     if (focus < cal.focusMin) return Object.assign(base, { quarantined: true });
-    const est = OC.macenko(ev.px, n, { white: ev.white });
+    const est = SD.macenko(ev.px, n, { white: ev.white });
     if (!est) return Object.assign(base, { quarantined: true, reason: 'too little stain' });
-    const rawShare = OC.nucDark(ev.px, n);
+    const rawShare = SD.nucDark(ev.px, n);
     const run = stain.update(meta.scanner, est);
-    const normPx = OC.normalize(ev.px, n, run, cal.target);
-    const normShare = OC.nucDark(normPx, n);
+    const normPx = SD.normalize(ev.px, n, run, cal.target);
+    const normShare = SD.nucDark(normPx, n);
     base.normPx = normPx;
     return Object.assign(base, {
       quarantined: false,
@@ -430,28 +430,28 @@
 
   /* The monitor: tumbling windows per scanner, a baseline from the first day, and a
    * two-sided CUSUM on each metric's window mean, standardized against the baseline. */
-  OC.METRICS = [
+  SD.METRICS = [
     { key: 'maxH', label: 'Hematoxylin strength', get: (e) => e.est.maxH },
     { key: 'white', label: 'Background brightness', get: (e) => e.white },
     { key: 'hAngle', label: 'Hematoxylin hue shift', get: (e) => e.hAngle },
   ];
 
-  OC.Monitor = class {
+  SD.Monitor = class {
     constructor() {
       this.events = [];
-      this.stain = new OC.StainState();
+      this.stain = new SD.StainState();
       this.quarantined = 0;
       this.windows = {}; // scanner -> [{start, end, n, medians, accRaw, accNorm, z, alerts}]
       this.state = {}; // scanner -> metric -> {base, sd, sHi, sLo, alerting}
       this.alerts = [];
-      for (const s of OC.SCANNERS) { this.windows[s.id] = []; this.state[s.id] = {}; }
+      for (const s of SD.SCANNERS) { this.windows[s.id] = []; this.state[s.id] = {}; }
       this.open = {}; // scanner -> events in the current window
       this.windowIndex = {};
     }
 
     // Process event i and add it. Events must arrive in order: the stain state depends on it.
     process(i) {
-      const ev = OC.processEvent(i, this.stain);
+      const ev = SD.processEvent(i, this.stain);
       this.add(ev);
       return ev;
     }
@@ -459,7 +459,7 @@
     add(ev) {
       this.events.push(ev);
       if (ev.quarantined) { this.quarantined++; return; }
-      const wh = OC.CONFIG.windowHours;
+      const wh = SD.CONFIG.windowHours;
       const w = Math.floor(ev.hour / wh);
       const cur = this.windowIndex[ev.scanner];
       if (cur != null && w !== cur) this.close(ev.scanner);
@@ -468,24 +468,24 @@
     }
 
     // Close every open window (end of stream, or before reading the latest state).
-    flush() { for (const s of OC.SCANNERS) if (this.open[s.id] && this.open[s.id].length) this.close(s.id); }
+    flush() { for (const s of SD.SCANNERS) if (this.open[s.id] && this.open[s.id].length) this.close(s.id); }
 
     close(sid) {
       const evs = this.open[sid];
       this.open[sid] = [];
       if (!evs || !evs.length) return;
-      const wh = OC.CONFIG.windowHours;
+      const wh = SD.CONFIG.windowHours;
       const idx = this.windowIndex[sid];
       const list = this.windows[sid];
       const win = { index: idx, start: idx * wh, end: (idx + 1) * wh, n: evs.length, medians: {}, z: {}, alert: {} };
       win.accRaw = evs.filter((e) => e.predRaw === e.dense).length / evs.length;
       win.accNorm = evs.filter((e) => e.predNorm === e.dense).length / evs.length;
-      for (const m of OC.METRICS) win.medians[m.key] = mean(evs.map(m.get));
+      for (const m of SD.METRICS) win.medians[m.key] = mean(evs.map(m.get));
       list.push(win);
-      const nb = OC.CONFIG.baselineWindows;
+      const nb = SD.CONFIG.baselineWindows;
       const st = this.state[sid];
       if (list.length === nb) {
-        for (const m of OC.METRICS) {
+        for (const m of SD.METRICS) {
           const xs = list.map((x) => x.medians[m.key]);
           const mu = xs.reduce((a, b) => a + b, 0) / xs.length;
           const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mu) ** 2, 0) / (xs.length - 1));
@@ -494,8 +494,8 @@
           st[m.key] = { base: mu, sd: Math.max(sd, floor), sHi: 0, sLo: 0, alerting: false };
         }
       } else if (list.length > nb) {
-        const { cusumK: k, cusumH: H } = OC.CONFIG;
-        for (const m of OC.METRICS) {
+        const { cusumK: k, cusumH: H } = SD.CONFIG;
+        for (const m of SD.METRICS) {
           const s = st[m.key];
           const z = (win.medians[m.key] - s.base) / s.sd;
           win.z[m.key] = z;
@@ -512,5 +512,5 @@
     }
   };
 
-  OC.totalEvents = () => OC.CONFIG.hours * OC.CONFIG.perHour * OC.SCANNERS.length;
-})(globalThis.OC = globalThis.OC || {});
+  SD.totalEvents = () => SD.CONFIG.hours * SD.CONFIG.perHour * SD.SCANNERS.length;
+})(globalThis.SD = globalThis.SD || {});

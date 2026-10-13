@@ -1,12 +1,12 @@
 name: Slide demos tests
 
-# Pyramid Scheme and Off Color, which share shared/tissue.js.
+# Slide Pyramid and Stain Drift, which share shared/tissue.js.
 on:
   push:
     branches: [main]
-    paths: ['shared/**', 'pyramid-scheme/**', 'off-color/**', '.github/workflows/slide-demos-tests.yml']
+    paths: ['shared/**', 'slide-pyramid/**', 'stain-drift/**', '.github/workflows/slide-demos-tests.yml']
   pull_request:
-    paths: ['shared/**', 'pyramid-scheme/**', 'off-color/**', '.github/workflows/slide-demos-tests.yml']
+    paths: ['shared/**', 'slide-pyramid/**', 'stain-drift/**', '.github/workflows/slide-demos-tests.yml']
 
 jobs:
   test:
@@ -17,4 +17,4 @@ jobs:
         with:
           node-version: 22
       # Node's built-in test runner; there are no dependencies to install.
-      - run: node --test 'pyramid-scheme/test/*.test.js' 'off-color/test/*.test.js'
+      - run: node --test 'slide-pyramid/test/*.test.js' 'stain-drift/test/*.test.js'

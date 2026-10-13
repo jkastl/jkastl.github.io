@@ -1,4 +1,4 @@
-/* Off Color: scanner panels, the OD scatter, and the stream monitor. Base styles are in
+/* Stain Drift: scanner panels, the OD scatter, and the stream monitor. Base styles are in
    ../shared/base.css. */
 :root { --s4: #c98500; }
 .scanners { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }

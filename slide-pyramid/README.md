@@ -1,9 +1,9 @@
-# Pyramid Scheme
+# Slide Pyramid
 
 A six-gigapixel microscope slide you can pan and zoom in the browser, how an image pyramid makes
 that possible, and the pipeline that cuts the slide into a training set.
 
-**[jkastl.github.io/pyramid-scheme](https://jkastl.github.io/pyramid-scheme/)**
+**[jkastl.github.io/slide-pyramid](https://jkastl.github.io/slide-pyramid/)**
 
 [![Slide demos tests](https://github.com/jkastl/jkastl.github.io/actions/workflows/slide-demos-tests.yml/badge.svg)](https://github.com/jkastl/jkastl.github.io/actions/workflows/slide-demos-tests.yml)
 
@@ -30,7 +30,7 @@ sent anywhere.
 
 ## Running it
 
-No build step and no dependencies. Serve the repo root and go to `/pyramid-scheme/` (the page loads
+No build step and no dependencies. Serve the repo root and go to `/slide-pyramid/` (the page loads
 `../shared/tissue.js`):
 
 ```sh
@@ -40,7 +40,7 @@ python3 -m http.server
 Tests use Node's built-in runner (Node 20 or later):
 
 ```sh
-node --test 'pyramid-scheme/test/*.test.js'
+node --test 'slide-pyramid/test/*.test.js'
 ```
 
 They cover tile determinism, that zoomed-out renders match averaged full-resolution pixels, the

@@ -1,9 +1,9 @@
-# Off Color
+# Stain Drift
 
 Same tissue, three labs, three shades of pink. Color deconvolution, stain normalization, and a
 streaming monitor that catches a dye lot change before the model does.
 
-**[jkastl.github.io/off-color](https://jkastl.github.io/off-color/)**
+**[jkastl.github.io/stain-drift](https://jkastl.github.io/stain-drift/)**
 
 [![Slide demos tests](https://github.com/jkastl/jkastl.github.io/actions/workflows/slide-demos-tests.yml/badge.svg)](https://github.com/jkastl/jkastl.github.io/actions/workflows/slide-demos-tests.yml)
 
@@ -41,7 +41,7 @@ change by lot and by day, not by patch, so the estimate lives per scanner.
 
 ## Running it
 
-No build step and no dependencies. Serve the repo root and go to `/off-color/`:
+No build step and no dependencies. Serve the repo root and go to `/stain-drift/`:
 
 ```sh
 python3 -m http.server
@@ -50,7 +50,7 @@ python3 -m http.server
 Tests use Node's built-in runner (Node 20 or later):
 
 ```sh
-node --test 'off-color/test/*.test.js'
+node --test 'stain-drift/test/*.test.js'
 ```
 
 They cover the eigen-decomposition and unmixing, that Macenko recovers each scanner's true dye

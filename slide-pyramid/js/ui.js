@@ -1,7 +1,7 @@
-/* Pyramid Scheme's page: the tiled viewer, the training-set panel and the scale estimates. */
+/* Slide Pyramid's page: the tiled viewer, the training-set panel and the scale estimates. */
 (function () {
   'use strict';
-  const T = globalThis.Tissue, P = globalThis.PS;
+  const T = globalThis.Tissue, P = globalThis.SP;
   const $ = (id) => document.getElementById(id);
   const fmtInt = (n) => Math.round(n).toLocaleString('en-US');
   const fmtB = P.fmtBytes;

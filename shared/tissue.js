@@ -4,7 +4,7 @@
  * seed, so a 6-gigapixel scan costs no memory and any tile at any zoom level comes out the same
  * every time. The look is H&E-ish: hematoxylin (purple, nuclei) and eosin (pink, everything
  * else) are computed as stain amounts, then turned into color with the Beer-Lambert law, the
- * same physics a brightfield scanner sees. That's what lets Off Color change the stains and
+ * same physics a brightfield scanner sees. That's what lets Stain Drift change the stains and
  * then try to undo the change.
  *
  * Coordinates are micrometres (µm) from the slide's top-left corner. `ps` is the pixel size in
