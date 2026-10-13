@@ -25,7 +25,7 @@ times). Keep the tiles in alphabetical order by name.
 
 ```html
 <li data-tags="sensing health phone">
-  <h3 class="name">App Name</h3>
+  <h2 class="name">App Name</h2>
   <p class="desc">One-line description.</p>
   <div class="tags">
     <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>

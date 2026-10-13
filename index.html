@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Apps and demos</title>
   <meta name="description" content="Apps and demos: experiments and musings, most running right in the browser.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121212'/%3E%3Cg fill='%237aa7ff'%3E%3Crect x='7' y='7' width='8' height='8' rx='2'/%3E%3Crect x='17' y='7' width='8' height='8' rx='2'/%3E%3Crect x='7' y='17' width='8' height='8' rx='2'/%3E%3Crect x='17' y='17' width='8' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     :root {
       color-scheme: dark;
@@ -273,8 +274,19 @@
     </div>
     <p class="status" id="status" hidden><span id="shown">Showing all 24 apps</span></p>
     <ul id="apps">
+        <li data-featured="4" data-tags="data">
+          <h2 class="name">Advanced Data Engineering</h2>
+          <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
+          <div class="tags">
+            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
+          </div>
+          <div class="actions">
+            <a class="app" href="/data-eng-advanced/" aria-label="Open Advanced Data Engineering">Open app →</a>
+            <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
+          </div>
+        </li>
         <li data-featured="1" data-tags="data privacy">
-          <h3 class="name">Agent Triage Simulator</h3>
+          <h2 class="name">Agent Triage Simulator</h2>
           <p class="desc">A multi-agent service desk, simulated: a router, tool-using agents, guardrails and a human approval step, with a live trace.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
@@ -285,19 +297,8 @@
             <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage" aria-label="Source for Agent Triage Simulator">Source</a>
           </div>
         </li>
-        <li data-featured="4" data-tags="data">
-          <h3 class="name">Advanced Data Engineering</h3>
-          <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
-          </div>
-          <div class="actions">
-            <a class="app" href="/data-eng-advanced/" aria-label="Open Advanced Data Engineering">Open app →</a>
-            <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
-          </div>
-        </li>
         <li data-featured="5" data-tags="data">
-          <h3 class="name">Data Engineering Concepts</h3>
+          <h2 class="name">Data Engineering Concepts</h2>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
@@ -308,7 +309,7 @@
           </div>
         </li>
         <li data-tags="sensing">
-          <h3 class="name">Drop It on Purpose</h3>
+          <h2 class="name">Drop It on Purpose</h2>
           <p class="desc">Why a router that refuses to drop packets ruins your video call, and the fix. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
@@ -319,7 +320,7 @@
           </div>
         </li>
         <li>
-          <h3 class="name">Emergence</h3>
+          <h2 class="name">Emergence</h2>
           <p class="desc">A field guide to complexity from simple rules: seven live simulations, from boids to sandpiles.</p>
           <div class="actions">
             <a class="app" href="/emergence/" aria-label="Open Emergence">Open app →</a>
@@ -327,14 +328,14 @@
           </div>
         </li>
         <li>
-          <h3 class="name">Intarsia Print</h3>
+          <h2 class="name">Intarsia Print</h2>
           <p class="desc">Python CLI and local web UI that turn a prompt or flat graphic into a printable multi-level relief STL. Runs on your machine, not here.</p>
           <div class="actions">
             <a class="app" href="https://github.com/jkastl/intarsia-print" aria-label="Source for Intarsia Print">View source →</a>
           </div>
         </li>
         <li data-tags="health phone">
-          <h3 class="name">Knee Rehab Timer</h3>
+          <h2 class="name">Knee Rehab Timer</h2>
           <p class="desc">Offline-capable circuit timer for a knee rehab routine.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="health">Health</button>
@@ -346,7 +347,7 @@
           </div>
         </li>
         <li data-tags="sensing health phone">
-          <h3 class="name">Light Through a Finger</h3>
+          <h2 class="name">Light Through a Finger</h2>
           <p class="desc">How a pulse oximeter reads oxygen, what fools it, and your own pulse through the camera. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
@@ -359,7 +360,7 @@
           </div>
         </li>
         <li data-featured="6" data-tags="data health">
-          <h3 class="name">ML Showcase</h3>
+          <h2 class="name">ML Showcase</h2>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
@@ -371,7 +372,7 @@
           </div>
         </li>
         <li data-tags="motion phone">
-          <h3 class="name">Ride Report</h3>
+          <h2 class="name">Ride Report</h2>
           <p class="desc">Live ride-quality meter for your phone. Lay it flat on a tray table and watch the turbulence.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
@@ -383,7 +384,7 @@
           </div>
         </li>
         <li data-tags="games phone">
-          <h3 class="name">Scatter!</h3>
+          <h2 class="name">Scatter!</h2>
           <p class="desc">Pass-the-phone category game: roll a letter, then name something in 10 categories before time runs out.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="games">Games</button>
@@ -395,7 +396,7 @@
           </div>
         </li>
         <li data-tags="error">
-          <h3 class="name">Scratch the Code</h3>
+          <h2 class="name">Scratch the Code</h2>
           <p class="desc">A real QR code you can deface, and the Reed–Solomon decoder that repairs it live. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -406,7 +407,7 @@
           </div>
         </li>
         <li data-tags="motion phone">
-          <h3 class="name">Scroll Report</h3>
+          <h2 class="name">Scroll Report</h2>
           <p class="desc">A rolling 3D seismograph of your phone's motion over the last 20 seconds.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="motion">Motion &amp; Navigation</button>
@@ -418,7 +419,7 @@
           </div>
         </li>
         <li data-featured="2" data-tags="data health">
-          <h3 class="name">Slide Pyramid</h3>
+          <h2 class="name">Slide Pyramid</h2>
           <p class="desc">A six-gigapixel microscope scan that opens instantly in the browser, and the pipeline that cuts it into a training set.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
@@ -430,7 +431,7 @@
           </div>
         </li>
         <li data-featured="3" data-tags="data health">
-          <h3 class="name">Stain Drift</h3>
+          <h2 class="name">Stain Drift</h2>
           <p class="desc">Same tissue, three labs, three shades of pink. Unmix the stains, normalize them, and stream three days of scans past a drift monitor.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="data">Data &amp; ML</button>
@@ -442,7 +443,7 @@
           </div>
         </li>
         <li data-tags="error privacy">
-          <h3 class="name">Tear-Proof Secrets</h3>
+          <h2 class="name">Tear-Proof Secrets</h2>
           <p class="desc">Split a password across printable tags so that any three of five rebuild it, and two reveal nothing. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -454,7 +455,7 @@
           </div>
         </li>
         <li data-tags="error games">
-          <h3 class="name">The Liar's Game</h3>
+          <h2 class="name">The Liar's Game</h2>
           <p class="desc">Twenty questions against an opponent allowed to lie. The math that catches it is error correction with feedback. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -466,7 +467,7 @@
           </div>
         </li>
         <li data-tags="error">
-          <h3 class="name">The Vote</h3>
+          <h2 class="name">The Vote</h2>
           <p class="desc">Majority voting, von Neumann's threshold, and why the spare on Ariane 5 failed too. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -477,7 +478,7 @@
           </div>
         </li>
         <li data-featured="7" data-tags="error sensing">
-          <h3 class="name">Tolerance</h3>
+          <h2 class="name">Tolerance</h2>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -489,7 +490,7 @@
           </div>
         </li>
         <li data-tags="error games phone">
-          <h3 class="name">Traitors, Pass-the-Phone</h3>
+          <h2 class="name">Traitors, Pass-the-Phone</h2>
           <p class="desc">A party game that runs the Byzantine Generals protocol. With three players the loyal side can't win reliably; with four it always does. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="error">Error Correction</button>
@@ -502,7 +503,7 @@
           </div>
         </li>
         <li data-tags="sensing motion">
-          <h3 class="name">Two Wrong Answers</h3>
+          <h2 class="name">Two Wrong Answers</h2>
           <p class="desc">A Kalman filter blends noisy GPS with a drifting accelerometer, and learns the drift. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
@@ -514,7 +515,7 @@
           </div>
         </li>
         <li data-tags="sensing motion">
-          <h3 class="name">Where Am I</h3>
+          <h2 class="name">Where Am I</h2>
           <p class="desc">GPS as circles and a bad clock, and why altitude is always the sloppiest number. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
@@ -526,7 +527,7 @@
           </div>
         </li>
         <li>
-          <h3 class="name">Word Flashcards</h3>
+          <h2 class="name">Word Flashcards</h2>
           <p class="desc">Flashcards for beginning readers at a kindergarten (K) reading level: simple 3-letter words, by card count or timer.</p>
           <div class="actions">
             <a class="app" href="/k-reader/" aria-label="Open Word Flashcards">Open app →</a>
@@ -534,7 +535,7 @@
           </div>
         </li>
         <li data-tags="sensing motion privacy phone">
-          <h3 class="name">Your Phone's Fingerprint</h3>
+          <h2 class="name">Your Phone's Fingerprint</h2>
           <p class="desc">Factory calibration errors in your phone's motion sensors form a stable ID. See yours, entirely on your device. Part of Tolerance.</p>
           <div class="tags">
             <button type="button" class="tag" data-filter="sensing">Sensing &amp; Signals</button>
@@ -551,7 +552,7 @@
     <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      Source on <a href="https://github.com/jkastl">GitHub</a> · v4.4.0 · 2026-10-13
+      <a href="https://github.com/jkastl/jkastl.github.io">Source</a> · v4.4.1 · 2026-10-13
     </footer>
   </main>
   <script>

@@ -42,7 +42,7 @@
     { id: 'role-hijack', weight: 0.6, re: /\b(you are now|act as|pretend to be|from now on you)\b[^.?!\n]{0,30}\b(admin|administrator|root|superuser|unrestricted|developer)\b/i },
     { id: 'privilege-grab', weight: 0.6, re: /\bgrant\b[^.?!\n]{0,25}\b(admin|root|superuser|owner|full)\b[^.?!\n]{0,20}\b(access|rights|privileges|role)\b/i },
     { id: 'skip-approval', weight: 0.5, re: /\b(skip|bypass|without)\b[^.?!\n]{0,20}\b(approval|review|policy|checks?)\b/i },
-    { id: 'hidden-text', weight: 0.5, re: /[​-‏⁠﻿]|<!--[\s\S]*?-->/ },
+    { id: 'hidden-text', weight: 0.5, re: /[\u200B-\u200F\u2060\uFEFF]|<!--[\s\S]*?-->/ },
   ];
   const BLOCK_AT = 1;
   const FLAG_AT = 0.5;

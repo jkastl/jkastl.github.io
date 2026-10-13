@@ -38,7 +38,7 @@
   const STOP = new Set(('a an and are as at be been but by can could do does for from get got has have hi ' +
     'hello i i\'m if in into is it it\'s its just me my need needs of on or our please since so ' +
     'some still thanks that the their them then there this to up us was we were what when with ' +
-    'would you your keeps keep any all also been being').split(' '));
+    'would you your keeps keep any all also being').split(' '));
 
   // Lowercased content words, used by the router and the known-issue search.
   AT.words = function (text) {
