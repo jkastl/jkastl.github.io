@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jkastl.github.io/sitemap.xml
+Sitemap: https://jkastl.github.io/tidepool/sitemap.xml

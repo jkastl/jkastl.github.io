@@ -60,6 +60,22 @@ point the main button at the repo instead, so the whole tile opens the source:
 <a class="app" href="https://github.com/jkastl/repo-name" aria-label="Source for App Name">View source →</a>
 ```
 
+Then add the app's URL to [`sitemap.xml`](sitemap.xml), one `<url>` line, kept alphabetical. A
+link to GitHub instead of a Pages site gets no line.
+
+## Page counts and search
+
+Visits are counted with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data)
+at <https://jkastl.goatcounter.com/>. Every page here loads [`shared/stats.js`](shared/stats.js),
+the only file that knows the site code; it does nothing off `github.io`, so local testing never
+counts. An app in its own repo needs its own copy of that file (or the plain GoatCounter
+`<script>` tag) in each page's `<head>`, since it is served from that repo, not this one.
+
+Each page's `<head>` also carries a canonical link and Open Graph tags for link previews, next to
+its description. [`robots.txt`](robots.txt) points crawlers at this site's sitemap and at
+tidepool's (`/tidepool/sitemap.xml`), which tidepool's own tools keep up to date. Crawlers read
+`robots.txt` only at the domain root, so this repo is the one place that can name them.
+
 ## Filters
 
 There's one row of filter chips, and exactly one is selected at a time:
