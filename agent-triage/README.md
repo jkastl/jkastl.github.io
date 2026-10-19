@@ -11,7 +11,8 @@ shows up in a trace.
 
 This is a simulation of the architecture, not a live LLM. Routing and agent "reasoning" are
 rule-based, and latency and failures come from a seeded generator, so each scenario plays out the
-same way every time. All people, datasets and tickets are made up. Nothing is fetched or sent anywhere.
+same way every time. All people, datasets and tickets are made up. Nothing is fetched or sent anywhere: there's no
+backend. The page loads the site's anonymous visit counter and works without it.
 
 ## Architecture
 

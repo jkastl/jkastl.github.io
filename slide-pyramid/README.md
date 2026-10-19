@@ -9,8 +9,8 @@ that possible, and the pipeline that cuts the slide into a training set.
 
 The slide is synthetic: 24 × 16 mm of glass at 0.25 µm per pixel (96,000 × 64,000 pixels), computed
 on demand from a seed by [`shared/tissue.js`](../shared/tissue.js). Nothing is stored, so every tile
-"read" is really a render, which takes about as long as a fast network fetch. Nothing is fetched or
-sent anywhere.
+"read" is really a render, which takes about as long as a fast network fetch. Nothing is fetched or sent
+anywhere: there's no backend. The page loads the site's anonymous visit counter and works without it.
 
 ## What's on the page
 
