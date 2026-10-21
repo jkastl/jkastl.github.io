@@ -72,8 +72,9 @@ counts. An app in its own repo needs its own copy of that file (or the plain Goa
 `<script>` tag) in each page's `<head>`, since it is served from that repo, not this one.
 
 Each page's `<head>` also carries a canonical link and Open Graph tags for link previews, next to
-its description. [`robots.txt`](robots.txt) points crawlers at this site's sitemap and at
-tidepool's (`/tidepool/sitemap.xml`), which tidepool's own tools keep up to date. Crawlers read
+its description. [`robots.txt`](robots.txt) points crawlers at this site's sitemap, at
+tidepool's (`/tidepool/sitemap.xml`), which tidepool's own tools keep up to date, and at
+school-m1's (`/school-m1/sitemap.xml`), which that repo keeps up to date. Crawlers read
 `robots.txt` only at the domain root, so this repo is the one place that can name them.
 
 ## Filters
