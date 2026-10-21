@@ -77,6 +77,9 @@ tidepool's (`/tidepool/sitemap.xml`), which tidepool's own tools keep up to date
 school-m1's (`/school-m1/sitemap.xml`), which that repo keeps up to date. Crawlers read
 `robots.txt` only at the domain root, so this repo is the one place that can name them.
 
+[`googleeb7e184a9f37a02b.html`](googleeb7e184a9f37a02b.html) verifies the site in Google Search Console.
+Leave it in place: Google re-checks it, and removing it unverifies the property.
+
 ## Filters
 
 There's one row of filter chips, and exactly one is selected at a time:
