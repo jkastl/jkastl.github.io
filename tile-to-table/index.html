@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#121212">
+  <title>Tile to Table</title>
+  <meta name="description" content="A self-study deck for data engineering where the source data is whole-slide images: SQL, batch and streaming, orchestration, analytics and ML, and the imaging plumbing around a slide scanner.">
+  <meta name="robots" content="noindex">
+  <script src="../shared/stats.js" defer></script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121212'/%3E%3Crect x='6' y='6' width='9' height='9' rx='2' fill='%237aa7ff'/%3E%3Crect x='17' y='6' width='9' height='9' rx='2' fill='%237aa7ff' fill-opacity='.45'/%3E%3Crect x='6' y='17' width='9' height='9' rx='2' fill='%237aa7ff' fill-opacity='.45'/%3E%3Cpath d='M17 18.5h9M17 22h9M17 25.5h9' stroke='%23c3c2b7' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#overview">
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="2.5" fill="currentColor"/><rect x="17" y="4" width="11" height="11" rx="2.5" fill="currentColor" fill-opacity=".45"/><rect x="4" y="17" width="11" height="11" rx="2.5" fill="currentColor" fill-opacity=".45"/><path d="M17 19h11M17 23h11M17 27h11" stroke="#c3c2b7" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Tile to Table</span>
+      </a>
+      <nav class="topnav" aria-label="Views">
+        <a href="#overview" data-view="overview">Overview</a>
+        <a href="#drill" data-view="drill">Drill</a>
+        <a href="#round" data-view="round">Round</a>
+        <a href="#design" data-view="design">Design</a>
+        <a href="#stories" data-view="stories">Stories</a>
+        <a href="#glossary" data-view="glossary">Glossary</a>
+        <a href="/">All apps</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <p class="msg warn" id="no-store" hidden>This browser isn't letting the page save anything, so progress lasts only
+      until you close the tab. Export it from the overview if you want to keep it.</p>
+    <p class="msg bad" id="no-content" hidden>No practice content loaded. The deck files in <code>js/content/</code>
+      are missing or failed to load.</p>
+
+    <!-- ======================= Overview ======================= -->
+    <section class="view" id="v-overview" aria-labelledby="overview-h">
+      <div class="hero">
+        <p class="kicker">Practice deck</p>
+        <h1 id="overview-h" tabindex="-1">From glass slide to warehouse table, out loud.</h1>
+        <p>Data engineering where the source data is whole-slide images: SQL over cases and scans, batch and
+          streaming pipelines, orchestration and delivery, analytics and ML, and the lab and imaging plumbing around a
+          slide scanner. Each card asks you to explain, compare, write or debug something, then shows a model answer
+          to check yourself against.</p>
+        <p class="howto"><strong>How to use it:</strong> answer out loud before you reveal, grade yourself honestly,
+          and come back when cards are due. Ten minutes most days beats an hour once a week.</p>
+      </div>
+
+      <div class="stats ov-stats" id="ov-stats" aria-label="Totals"></div>
+
+      <div class="ov-head">
+        <h2 class="section-h">Decks</h2>
+        <p class="legend" id="ov-legend" aria-hidden="true"></p>
+      </div>
+      <div class="decks" id="ov-decks"></div>
+
+      <div class="ov-more">
+        <a class="panel more" href="#round">
+          <span class="more-t">Timed round</span>
+          <span class="more-s">A mixed set from every deck, with a clock on each card.</span>
+        </a>
+        <a class="panel more" href="#design">
+          <span class="more-t">System design</span>
+          <span class="more-s" id="ov-design-s">Whiteboard problems with a reference flow and a rubric.</span>
+        </a>
+        <a class="panel more" href="#stories">
+          <span class="more-t">Stories</span>
+          <span class="more-s" id="ov-stories-s">Prompts about past work, with Situation, Task, Action, Result notes.</span>
+        </a>
+      </div>
+
+      <div class="panel data">
+        <p class="panel-title">Your progress</p>
+        <p class="panel-sub">Kept in this browser only. Export a copy to move it to another device or keep a backup.</p>
+        <div class="controls">
+          <button type="button" class="btn" id="export">Export progress</button>
+          <input type="file" id="import-file" class="file-in" accept="application/json,.json">
+          <label class="btn" for="import-file">Import…</label>
+          <button type="button" class="btn danger" id="reset">Reset…</button>
+        </div>
+        <p class="msg" id="data-msg" role="status" hidden></p>
+      </div>
+    </section>
+
+    <!-- ======================= Drill ======================= -->
+    <section class="view" id="v-drill" aria-labelledby="drill-h" hidden>
+      <div class="view-head">
+        <h2 class="section-h" id="drill-h" tabindex="-1">Drill</h2>
+        <p class="session" id="drill-session"></p>
+      </div>
+      <div class="panel filters" id="drill-filters">
+        <div class="frow">
+          <span class="lbl" id="f-decks-l">Decks</span>
+          <div class="chips" id="f-decks" role="group" aria-labelledby="f-decks-l"></div>
+        </div>
+        <div class="frow frow-2">
+          <div class="fcell">
+            <span class="lbl" id="f-level-l">Level</span>
+            <div class="seg" id="f-level" role="group" aria-labelledby="f-level-l">
+              <button type="button" data-level="0" aria-pressed="true">All</button>
+              <button type="button" data-level="1" aria-pressed="false">1 · Basics</button>
+              <button type="button" data-level="2" aria-pressed="false">2 · Working</button>
+              <button type="button" data-level="3" aria-pressed="false">3 · Senior</button>
+            </div>
+          </div>
+          <div class="fcell">
+            <label class="lbl" for="f-topic">Topic</label>
+            <select id="f-topic"></select>
+          </div>
+        </div>
+        <p class="fsum" id="f-sum"></p>
+      </div>
+      <div id="drill-card"></div>
+      <p class="sr-only" id="drill-live" aria-live="polite"></p>
+    </section>
+
+    <!-- ======================= Round ======================= -->
+    <section class="view" id="v-round" aria-labelledby="round-h" hidden>
+      <div class="view-head">
+        <h2 class="section-h" id="round-h" tabindex="-1">Timed round</h2>
+      </div>
+      <p class="lede">A mixed set drawn evenly from every deck, with a clock on each card. Talk through your answer
+        before time runs out, reveal, and grade it. Grades count toward the same progress as the drill.</p>
+      <div id="round-body"></div>
+      <p class="sr-only" id="round-live" aria-live="polite"></p>
+    </section>
+
+    <!-- ======================= Design ======================= -->
+    <section class="view" id="v-design" aria-labelledby="design-h" hidden>
+      <div id="design-list">
+        <div class="view-head">
+          <h2 class="section-h" id="design-h" tabindex="-1">System design</h2>
+        </div>
+        <p class="lede">Open-ended problems with a clock. Ask your clarifying questions, state your numbers, sketch the
+          flow, then reveal the reference one section at a time and score yourself against the rubric.</p>
+        <ol class="scen-list" id="scen-list"></ol>
+
+        <section class="panel bote" aria-labelledby="bote-h">
+          <h3 class="bote-h" id="bote-h">Back-of-envelope</h3>
+          <p class="panel-sub">The numbers worth saying out loud for a slide-imaging system. Decimal units: 1 TB is
+            1,000 GB.</p>
+          <form class="bote-in" id="bote-form" autocomplete="off"></form>
+          <div class="stats bote-out" id="bote-out"></div>
+          <details class="levels">
+            <summary>Pyramid levels for one slide</summary>
+            <div class="tbl-wrap"><table class="compare num" id="bote-levels"></table></div>
+          </details>
+        </section>
+      </div>
+      <div id="design-one" hidden></div>
+      <p class="sr-only" id="design-live" aria-live="polite"></p>
+    </section>
+
+    <!-- ======================= Stories ======================= -->
+    <section class="view" id="v-stories" aria-labelledby="stories-h" hidden>
+      <div id="stories-list">
+        <div class="view-head">
+          <h2 class="section-h" id="stories-h" tabindex="-1">Stories</h2>
+          <button type="button" class="btn" data-export-notes>Export notes</button>
+        </div>
+        <p class="lede">Prompts about things you have actually done. Pick one, jot the Situation, Task, Action and
+          Result as a few words each, then tell it in two minutes against the clock. Notes stay in this browser.</p>
+        <ol class="story-list" id="story-list"></ol>
+      </div>
+      <div id="story-one" hidden></div>
+      <p class="sr-only" id="stories-live" aria-live="polite"></p>
+    </section>
+
+    <!-- ======================= Glossary ======================= -->
+    <section class="view" id="v-glossary" aria-labelledby="glossary-h" hidden>
+      <div class="view-head">
+        <h2 class="section-h" id="glossary-h" tabindex="-1">Glossary</h2>
+      </div>
+      <div class="gsearch">
+        <label class="lbl" for="g-q">Search terms and definitions</label>
+        <input type="search" id="g-q" class="input" placeholder="e.g. pyramid, watermark, DICOM" autocomplete="off" spellcheck="false">
+        <p class="fsum" id="g-count" aria-live="polite"></p>
+      </div>
+      <dl class="gloss" id="g-list"></dl>
+    </section>
+  </main>
+
+  <!-- Version and date are bumped by hand; see README.md. -->
+  <footer class="site">
+    Runs entirely in your browser. Progress stays on this device.
+    · <a href="/">All apps</a>
+    · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/tile-to-table">Source</a> · v1.0.0 · 2026-10-26
+  </footer>
+
+  <div class="tip" id="tip" hidden></div>
+  <script src="js/content/sql.js"></script>
+  <script src="js/content/pipelines.js"></script>
+  <script src="js/content/platform.js"></script>
+  <script src="js/content/pathology.js"></script>
+  <script src="js/content/analytics.js"></script>
+  <script src="js/content/design.js"></script>
+  <script src="js/content/stories.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
