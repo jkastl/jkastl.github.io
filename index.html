@@ -25,8 +25,6 @@
       --accent-hover: #9dbfff;
       --on-accent: #0e1a33;
       --tile-hover: #212121;
-      --warn: #e6b450;
-      --warn-line: #5c4a1f;
     }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
@@ -41,25 +39,9 @@
       margin: 0 auto;
       padding: 3rem 1rem;
     }
-    /* The title and its caveat share a row, and wrap on a narrow screen. */
-    .head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.35rem 0.75rem;
-      margin: 0 0 0.5rem;
-    }
     h1 {
       font-size: 1.5rem;
-      margin: 0;
-    }
-    .slop {
-      margin: 0;
-      padding: 0.1rem 0.6rem;
-      border: 1px solid var(--warn-line);
-      border-radius: 999px;
-      color: var(--warn);
-      font-size: 0.8rem;
+      margin: 0 0 0.5rem;
     }
     .who {
       margin: 0 0 0.75rem;
@@ -282,12 +264,9 @@
 </head>
 <body>
   <main>
-    <div class="head">
-      <h1>Apps and demos</h1>
-      <p class="slop">Fair warning: mostly AI slop</p>
-    </div>
+    <h1>Apps and demos</h1>
     <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
-    <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser.</p>
+    <p class="lead">Part experiments, part musings, mostly AI slop: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser.</p>
     <!-- Featured (the default, shown with no URL hash) and All are views, not tags; the rest match data-tags. -->
     <div class="filters" id="filters" role="group" aria-label="Show" hidden>
       <button type="button" class="chip view" data-filter="featured" aria-pressed="true">Featured <span class="n"></span></button>
