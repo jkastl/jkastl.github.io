@@ -25,6 +25,8 @@
       --accent-hover: #9dbfff;
       --on-accent: #0e1a33;
       --tile-hover: #212121;
+      --warn: #e6b450;
+      --warn-line: #5c4a1f;
     }
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
@@ -39,9 +41,25 @@
       margin: 0 auto;
       padding: 3rem 1rem;
     }
+    /* The title and its caveat share a row, and wrap on a narrow screen. */
+    .head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.75rem;
+      margin: 0 0 0.5rem;
+    }
     h1 {
       font-size: 1.5rem;
-      margin: 0 0 0.5rem;
+      margin: 0;
+    }
+    .slop {
+      margin: 0;
+      padding: 0.1rem 0.6rem;
+      border: 1px solid var(--warn-line);
+      border-radius: 999px;
+      color: var(--warn);
+      font-size: 0.8rem;
     }
     .who {
       margin: 0 0 0.75rem;
@@ -264,7 +282,10 @@
 </head>
 <body>
   <main>
-    <h1>Apps and demos</h1>
+    <div class="head">
+      <h1>Apps and demos</h1>
+      <p class="slop">Fair warning: mostly AI slop</p>
+    </div>
     <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
     <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser.</p>
     <!-- Featured (the default, shown with no URL hash) and All are views, not tags; the rest match data-tags. -->
@@ -282,7 +303,7 @@
     </div>
     <p class="status" id="status" hidden><span id="shown">Showing all 20 apps</span></p>
     <ul id="apps">
-        <li data-featured="4" data-tags="data">
+        <li data-featured="3" data-tags="data">
           <h2 class="name">Advanced Data Engineering</h2>
           <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
           <div class="tags">
@@ -293,7 +314,7 @@
             <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
           </div>
         </li>
-        <li data-featured="1" data-tags="data privacy">
+        <li data-tags="data privacy">
           <h2 class="name">Agent Triage Simulator</h2>
           <p class="desc">A multi-agent service desk, simulated: a router, tool-using agents, guardrails and a human approval step, with a live trace.</p>
           <div class="tags">
@@ -305,7 +326,7 @@
             <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage" aria-label="Source for Agent Triage Simulator">Source</a>
           </div>
         </li>
-        <li data-featured="5" data-tags="data">
+        <li data-featured="4" data-tags="data">
           <h2 class="name">Data Engineering Concepts</h2>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
@@ -348,7 +369,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/pulse-ox" aria-label="Source for Light Through a Finger">Source</a>
           </div>
         </li>
-        <li data-featured="6" data-tags="data health">
+        <li data-featured="5" data-tags="data health">
           <h2 class="name">ML Showcase</h2>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
@@ -395,7 +416,7 @@
             <a class="repo" href="https://github.com/jkastl/scroll-report" aria-label="Source for Scroll Report">Source</a>
           </div>
         </li>
-        <li data-featured="2" data-tags="data health">
+        <li data-featured="1" data-tags="data health">
           <h2 class="name">Slide Pyramid</h2>
           <p class="desc">A six-gigapixel microscope scan that opens instantly in the browser, and the pipeline that cuts it into a training set.</p>
           <div class="tags">
@@ -407,7 +428,7 @@
             <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/slide-pyramid" aria-label="Source for Slide Pyramid">Source</a>
           </div>
         </li>
-        <li data-featured="3" data-tags="data health">
+        <li data-featured="2" data-tags="data health">
           <h2 class="name">Stain Drift</h2>
           <p class="desc">Same tissue, three labs, three shades of pink. Unmix the stains, normalize them, and stream three days of scans past a drift monitor.</p>
           <div class="tags">
@@ -454,7 +475,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/vote" aria-label="Source for The Vote">Source</a>
           </div>
         </li>
-        <li data-featured="7" data-tags="error sensing">
+        <li data-featured="6" data-tags="error sensing">
           <h2 class="name">Tolerance</h2>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
