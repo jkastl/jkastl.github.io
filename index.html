@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Apps and demos</title>
-  <meta name="description" content="Apps and demos: experiments and musings, most running right in the browser.">
+  <meta name="description" content="Apps and demos: experiments and musings, all running right in the browser.">
   <link rel="canonical" href="https://jkastl.github.io/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Apps and demos">
   <meta property="og:title" content="Apps and demos">
-  <meta property="og:description" content="Apps and demos: experiments and musings, most running right in the browser.">
+  <meta property="og:description" content="Apps and demos: experiments and musings, all running right in the browser.">
   <meta property="og:url" content="https://jkastl.github.io/">
   <meta name="twitter:card" content="summary">
   <script src="shared/stats.js" defer></script>
@@ -266,7 +266,7 @@
   <main>
     <h1>Apps and demos</h1>
     <p class="who"><strong>Jeff Kastl</strong>, software engineer working in data and AI on Google Cloud. Google Cloud Certified Professional Data Engineer. <a href="https://github.com/jkastl">GitHub</a> · <a href="https://www.credly.com/users/jeff-kastl/badges/credly">Google Cloud certifications</a></p>
-    <p class="lead">Part experiments, part musings: things built to learn how something works, test an idea, or scratch an itch. Most run right here in your browser.</p>
+    <p class="lead">Part experiments, part musings, mostly AI slop: things built to learn how something works, test an idea, or scratch an itch. They all run right here in your browser.</p>
     <!-- Featured (the default, shown with no URL hash) and All are views, not tags; the rest match data-tags. -->
     <div class="filters" id="filters" role="group" aria-label="Show" hidden>
       <button type="button" class="chip view" data-filter="featured" aria-pressed="true">Featured <span class="n"></span></button>
@@ -280,9 +280,9 @@
       <button type="button" class="chip" data-filter="games" aria-pressed="false">Games <span class="n"></span></button>
       <button type="button" class="chip" data-filter="phone" aria-pressed="false">On a phone <span class="n"></span></button>
     </div>
-    <p class="status" id="status" hidden><span id="shown">Showing all 24 apps</span></p>
+    <p class="status" id="status" hidden><span id="shown">Showing all 20 apps</span></p>
     <ul id="apps">
-        <li data-featured="4" data-tags="data">
+        <li data-featured="3" data-tags="data">
           <h2 class="name">Advanced Data Engineering</h2>
           <p class="desc">Seven advanced data engineering topics as hands-on demos: watermarks, exactly-once, CDC, Iceberg-style tables, skew, lineage.</p>
           <div class="tags">
@@ -293,7 +293,7 @@
             <a class="repo" href="https://github.com/jkastl/data-eng-advanced" aria-label="Source for Advanced Data Engineering">Source</a>
           </div>
         </li>
-        <li data-featured="1" data-tags="data privacy">
+        <li data-tags="data privacy">
           <h2 class="name">Agent Triage Simulator</h2>
           <p class="desc">A multi-agent service desk, simulated: a router, tool-using agents, guardrails and a human approval step, with a live trace.</p>
           <div class="tags">
@@ -305,7 +305,7 @@
             <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/agent-triage" aria-label="Source for Agent Triage Simulator">Source</a>
           </div>
         </li>
-        <li data-featured="5" data-tags="data">
+        <li data-featured="4" data-tags="data">
           <h2 class="name">Data Engineering Concepts</h2>
           <p class="desc">Nine core data engineering ideas as hands-on demos: ETL vs ELT, idempotent loads, SCDs, partitioning, DAGs and more.</p>
           <div class="tags">
@@ -335,25 +335,6 @@
             <a class="repo" href="https://github.com/jkastl/emergence" aria-label="Source for Emergence">Source</a>
           </div>
         </li>
-        <li>
-          <h2 class="name">Intarsia Print</h2>
-          <p class="desc">Python CLI and local web UI that turn a prompt or flat graphic into a printable multi-level relief STL. Runs on your machine, not here.</p>
-          <div class="actions">
-            <a class="app" href="https://github.com/jkastl/intarsia-print" aria-label="Source for Intarsia Print">View source →</a>
-          </div>
-        </li>
-        <li data-tags="health phone">
-          <h2 class="name">Knee Rehab Timer</h2>
-          <p class="desc">Offline-capable circuit timer for a knee rehab routine.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-filter="health">Health</button>
-            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
-          </div>
-          <div class="actions">
-            <a class="app" href="/knee-strength/" aria-label="Open Knee Rehab Timer">Open app →</a>
-            <a class="repo" href="https://github.com/jkastl/knee-strength" aria-label="Source for Knee Rehab Timer">Source</a>
-          </div>
-        </li>
         <li data-tags="sensing health phone">
           <h2 class="name">Light Through a Finger</h2>
           <p class="desc">How a pulse oximeter reads oxygen, what fools it, and your own pulse through the camera. Part of Tolerance.</p>
@@ -367,7 +348,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/pulse-ox" aria-label="Source for Light Through a Finger">Source</a>
           </div>
         </li>
-        <li data-featured="6" data-tags="data health">
+        <li data-featured="5" data-tags="data health">
           <h2 class="name">ML Showcase</h2>
           <p class="desc">Machine learning step by step on simulated clinical problems: four models you train and poke, live in the browser.</p>
           <div class="tags">
@@ -389,18 +370,6 @@
           <div class="actions">
             <a class="app" href="/ride-report/" aria-label="Open Ride Report">Open app →</a>
             <a class="repo" href="https://github.com/jkastl/ride-report" aria-label="Source for Ride Report">Source</a>
-          </div>
-        </li>
-        <li data-tags="games phone">
-          <h2 class="name">Scatter!</h2>
-          <p class="desc">Pass-the-phone category game: roll a letter, then name something in 10 categories before time runs out.</p>
-          <div class="tags">
-            <button type="button" class="tag" data-filter="games">Games</button>
-            <button type="button" class="tag flag" data-filter="phone">On a phone</button>
-          </div>
-          <div class="actions">
-            <a class="app" href="/scatter/" aria-label="Open Scatter!">Open app →</a>
-            <a class="repo" href="https://github.com/jkastl/scatter" aria-label="Source for Scatter!">Source</a>
           </div>
         </li>
         <li data-tags="error">
@@ -426,7 +395,7 @@
             <a class="repo" href="https://github.com/jkastl/scroll-report" aria-label="Source for Scroll Report">Source</a>
           </div>
         </li>
-        <li data-featured="2" data-tags="data health">
+        <li data-featured="1" data-tags="data health">
           <h2 class="name">Slide Pyramid</h2>
           <p class="desc">A six-gigapixel microscope scan that opens instantly in the browser, and the pipeline that cuts it into a training set.</p>
           <div class="tags">
@@ -438,7 +407,7 @@
             <a class="repo" href="https://github.com/jkastl/jkastl.github.io/tree/main/slide-pyramid" aria-label="Source for Slide Pyramid">Source</a>
           </div>
         </li>
-        <li data-featured="3" data-tags="data health">
+        <li data-featured="2" data-tags="data health">
           <h2 class="name">Stain Drift</h2>
           <p class="desc">Same tissue, three labs, three shades of pink. Unmix the stains, normalize them, and stream three days of scans past a drift monitor.</p>
           <div class="tags">
@@ -485,7 +454,7 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/vote" aria-label="Source for The Vote">Source</a>
           </div>
         </li>
-        <li data-featured="7" data-tags="error sensing">
+        <li data-featured="6" data-tags="error sensing">
           <h2 class="name">Tolerance</h2>
           <p class="desc">Right answers from wrong parts: the front page for six exhibits and four Lab experiments, each also listed on its own here.</p>
           <div class="tags">
@@ -534,14 +503,6 @@
             <a class="repo" href="https://github.com/jkastl/tolerance/tree/main/gps" aria-label="Source for Where Am I">Source</a>
           </div>
         </li>
-        <li>
-          <h2 class="name">Word Flashcards</h2>
-          <p class="desc">Flashcards for beginning readers at a kindergarten (K) reading level: simple 3-letter words, by card count or timer.</p>
-          <div class="actions">
-            <a class="app" href="/k-reader/" aria-label="Open Word Flashcards">Open app →</a>
-            <a class="repo" href="https://github.com/jkastl/k-reader" aria-label="Source for Word Flashcards">Source</a>
-          </div>
-        </li>
         <li data-tags="sensing motion privacy phone">
           <h2 class="name">Your Phone's Fingerprint</h2>
           <p class="desc">Factory calibration errors in your phone's motion sensors form a stable ID. See yours, entirely on your device. Part of Tolerance.</p>
@@ -560,7 +521,7 @@
     <p class="more" id="more" hidden><button type="button" id="show-all"></button></p>
     <!-- Version and date are bumped by hand; see README.md. -->
     <footer>
-      <a href="https://github.com/jkastl/jkastl.github.io">Source</a> · v4.4.2 · 2026-10-13
+      <a href="https://github.com/jkastl/jkastl.github.io">Source</a> · v4.5.0 · 2026-11-14
     </footer>
   </main>
   <script>
