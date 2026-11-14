@@ -52,9 +52,9 @@ sync, in the same order as the filter chips (the `flag` class is only for "On a 
 can have no tags at all: leave out `data-tags` and the `<div class="tags">`, and it shows under
 All.
 
-A page that lives inside another app (for example the Tolerance exhibits at `/tolerance/vote/`)
+A page that lives inside another app (for example the Tolerance exhibits at `/tolerance/qr/`)
 gets its own tile too. Point "Open app" at the page, point "Source" at its folder
-(`https://github.com/jkastl/tolerance/tree/main/vote`), and end the description with
+(`https://github.com/jkastl/tolerance/tree/main/qr`), and end the description with
 "Part of Tolerance." Keep the parent app's own tile as well, since its front page ties the pages
 together.
 
