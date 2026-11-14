@@ -214,7 +214,6 @@
     <p class="caveat">Made-up timings: the nightly job starts at 02:00 and takes 30 minutes, and a failed run is retried every 30 minutes; the stream shows an event about 2 minutes after it happens and refreshes its copy of the LIS stain list hourly; the virtual layer asks the sources every time the dashboard refreshes, with no cache. Real systems vary on all of these. The point is the shape: where the copy sits decides the delay and the failure mode. Numbers in the table are the part numbers in the catalogue below.</p>
     <p class="small"><b>Things to try.</b> Set refreshes to 60 and compare the query column: only the virtual layer's count climbs. Move the outage to 12:30 and the failure to 13:00: the virtual lane's arrow jumps past the outage, while the stream keeps going. Move the outage over 02:00: only the nightly lane notices.</p>
   </section>
-  <p class="small">The stream lane is the subject of a companion page, <a href="/tidepool/2026-10-25-tape-and-tally/">Tape and Tally</a>, which runs a day of scanner events through a partitioned log and a nightly batch side by side.</p>
 
   <h2 id="d-a"><span class="dept">Dept. A</span>Where the data starts</h2>
   <p class="deptline">Not tools to pick so much as the systems everything else reads from.</p>
@@ -229,7 +228,7 @@
       <div class="part-head"><span class="no">102</span><span class="name">Lab information system</span><span class="leader"></span><span class="kind">system</span></div>
       <p>The LIS tracks each case by its accession number, and within it each part, block, and slide, with stains and the final report. It is the record of what a slide is.</p>
       <p class="use"><b>Example</b>The source of truth for which stain a slide carries and which case it belongs to.</p>
-      <p class="see"><a href="https://dicom.nema.org/medical/dicom/2024c/output/chtml/part17/chapter_NN.html">DICOM PS3.17, Annex NN</a>. Practise querying that shape in <a href="/tidepool/2026-10-25-rows-in-the-drawer/">Rows in the Drawer</a>.</p>
+      <p class="see"><a href="https://dicom.nema.org/medical/dicom/2024c/output/chtml/part17/chapter_NN.html">DICOM PS3.17, Annex NN</a>.</p>
     </article>
     <article class="part">
       <div class="part-head"><span class="no">103</span><span class="name">APIs</span><span class="leader"></span><span class="kind">interface</span></div>
@@ -310,7 +309,6 @@
       <div class="part-head"><span class="no">403</span><span class="name">SQL and Python</span><span class="leader"></span><span class="kind">languages</span></div>
       <p>Most of the parts in this guide take one or both. Snowflake, BigQuery, Hive, and Spark all accept SQL; Spark, Airflow, and Dash are driven from Python. Other languages turn up around the edges: JavaScript in front ends, JVM languages in older services and in the tools themselves.</p>
       <p class="use"><b>Example</b>A Python script that calls an API, cleans the result, and loads it with SQL.</p>
-      <p class="see">SQL practice on lab-shaped tables: <a href="/tidepool/2026-10-25-rows-in-the-drawer/">Rows in the Drawer</a></p>
     </article>
     <article class="part">
       <div class="part-head"><span class="no">404</span><span class="name">Apache Flink</span><span class="leader"></span><span class="kind">open source</span></div>
@@ -425,7 +423,7 @@
       <div class="part-head"><span class="no">902</span><span class="name">Machine learning on tiles</span><span class="leader"></span><span class="kind">a practice</span></div>
       <p>Models for slides mostly learn from tiles, thousands per slide. The bookkeeping matters as much as the model: tiles from one patient must stay on one side of a train/test split, or the score measures memory.</p>
       <p class="use"><b>Example</b>A patient-wise split, checked with SQL before training starts.</p>
-      <p class="see"><a href="https://arxiv.org/abs/1909.06539">Bussola et al., AI slipping on tiles</a>; drawn in <a href="/tidepool/2026-10-25-same-patient-both-sides/">Same Patient, Both Sides</a></p>
+      <p class="see"><a href="https://arxiv.org/abs/1909.06539">Bussola et al., AI slipping on tiles</a></p>
     </article>
     <article class="part">
       <div class="part-head"><span class="no">903</span><span class="name">R</span><span class="leader"></span><span class="kind">open source</span></div>
