@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Up and Down Only: Flying a Hot Air Balloon</title>
+<!-- site:head -->
+<meta name="description" content="How a hot air balloon is flown with only a burner and a vent: a flight toy where you steer by picking the height whose wind goes your way, and a sum for how hot the envelope has to be to float.">
+<link rel="canonical" href="https://jkastl.github.io/up-and-down/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Up and Down Only: Flying a Hot Air Balloon">
+<meta property="og:description" content="How a hot air balloon is flown with only a burner and a vent: a flight toy where you steer by picking the height whose wind goes your way, and a sum for how hot the envelope has to be to float.">
+<meta property="og:url" content="https://jkastl.github.io/up-and-down/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Up and Down Only: Flying a Hot Air Balloon",
+ "description": "How a hot air balloon is flown with only a burner and a vent: a flight toy where you steer by picking the height whose wind goes your way, and a sum for how hot the envelope has to be to float.",
+ "url": "https://jkastl.github.io/up-and-down/",
+ "datePublished": "2026-10-22",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/im-fell-english@5.2.6/index.css">
+<style>
+  :root {
+    --paper: #f1e7d0;
+    --paper-2: #e8dbbd;
+    --ink: #2a2017;
+    --ink-soft: #54463a;
+    --muted: #7d6d5c;
+    --rule: #b9a582;
+    --accent: #8c2f1b;
+    --wind: #35546f;
+    --ok: #3d5b2e;
+    --hatch: rgba(42, 32, 23, 0.10);
+    --panel: rgba(255, 250, 238, 0.55);
+    --button: #2a2017;
+    --button-ink: #f1e7d0;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #16130f;
+      --paper-2: #211c16;
+      --ink: #eadfc6;
+      --ink-soft: #c9bb9f;
+      --muted: #9c8d75;
+      --rule: #574a39;
+      --accent: #e0835c;
+      --wind: #93b6d6;
+      --ok: #9cc28a;
+      --hatch: rgba(234, 223, 198, 0.08);
+      --panel: rgba(40, 33, 25, 0.6);
+      --button: #eadfc6;
+      --button-ink: #16130f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.18), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(0,0,0,0.06), transparent 55%);
+    color: var(--ink);
+    font-family: "IM Fell English", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+  .sheet {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+  .topline {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
+  }
+  .topline a { color: inherit; }
+  header.mast {
+    text-align: center;
+    padding: 22px 0 18px;
+    border-bottom: 4px double var(--ink);
+    margin-bottom: 22px;
+  }
+  .mast .kicker {
+    font-size: 15px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .mast h1 {
+    margin: 6px 0 4px;
+    font-weight: normal;
+    font-size: clamp(38px, 8vw, 78px);
+    line-height: 1.02;
+    letter-spacing: 0.02em;
+  }
+  .mast h1 em { font-style: italic; color: var(--accent); }
+  .mast .sub {
+    font-style: italic; font-size: clamp(17px, 2.4vw, 22px); color: var(--ink-soft);
+    max-width: 40em; margin: 8px auto 0;
+  }
+  h2 {
+    font-weight: normal;
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    margin: 36px 0 6px;
+  }
+  h2 + .plate-label { margin-top: 0; }
+  .plate-label {
+    text-align: center; font-style: italic; color: var(--muted); margin: 0 0 14px; font-size: 16px;
+  }
+  h3 {
+    font-weight: normal; font-size: 22px; margin: 0 0 6px;
+    font-variant: small-caps; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--rule);
+  }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  .lede {
+    max-width: 44em; margin: 0 auto 18px; font-size: 19px;
+  }
+  .lede::first-letter {
+    float: left; font-size: 3.4em; line-height: 0.85; padding: 4px 8px 0 0; color: var(--accent);
+  }
+
+  /* The flight plate */
+  .plate {
+    border: 1px solid var(--ink);
+    outline: 1px solid var(--ink);
+    outline-offset: 4px;
+    padding: 14px;
+    margin: 10px 4px 28px;
+    background: var(--panel);
+  }
+  .preflight {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end;
+    border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 12px;
+    font-size: 16px;
+  }
+  .preflight label { display: flex; flex-direction: column; gap: 2px; }
+  .preflight .inline { flex-direction: row; align-items: center; gap: 6px; }
+  .preflight output { font-variant-numeric: tabular-nums; }
+  input[type=range] { accent-color: var(--accent); width: 150px; }
+  select, input[type=number] {
+    font: inherit; font-size: 16px; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--rule); padding: 3px 6px; border-radius: 0;
+  }
+  input[type=number] { width: 6.5em; }
+  button {
+    font: inherit; font-size: 16px; cursor: pointer;
+    color: var(--ink); background: transparent;
+    border: 1px solid var(--ink); padding: 6px 12px; border-radius: 0;
+    letter-spacing: 0.03em;
+  }
+  button:hover { background: var(--paper-2); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .views {
+    display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px;
+  }
+  figure { margin: 0; }
+  figcaption {
+    font-size: 14px; font-style: italic; color: var(--muted); text-align: center; margin-top: 4px;
+  }
+  canvas {
+    display: block; width: 100%;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    touch-action: manipulation;
+  }
+  #map { aspect-ratio: 1 / 1; }
+  #alt { aspect-ratio: 4 / 5; }
+  .gauges {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+    margin: 12px 0;
+  }
+  .gauge {
+    border: 1px solid var(--rule); padding: 6px 8px; background: var(--paper);
+  }
+  .gauge .k { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .gauge .v { font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .gauge .s { font-size: 13px; color: var(--ink-soft); }
+  .bar { height: 6px; border: 1px solid var(--ink-soft); margin-top: 4px; position: relative; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink-soft); }
+  .bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--accent); }
+  .warn .v, .warn .s { color: var(--accent); }
+  .controls {
+    display: grid; grid-template-columns: 2fr 2fr 1.5fr 1fr; gap: 8px;
+  }
+  .controls button { padding: 12px 8px; font-size: 18px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .controls .hold { background: var(--button); color: var(--button-ink); }
+  .controls .hold.on { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .controls small { display: block; font-size: 12px; opacity: 0.8; letter-spacing: 0.06em; }
+  .status {
+    min-height: 1.6em; margin: 10px 0 0; font-style: italic; color: var(--ink-soft); text-align: center;
+  }
+  .status.alert { color: var(--accent); }
+  .debrief {
+    border: 3px double var(--ink); padding: 12px 14px; margin-top: 12px; background: var(--paper);
+  }
+  .debrief[hidden] { display: none; }
+  .debrief h3 { border: 0; text-align: center; }
+  .debrief dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0 0 10px; }
+  .debrief dt { color: var(--muted); }
+  .debrief dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* Explainer */
+  .columns {
+    columns: 2 320px; column-gap: 36px; column-rule: 1px solid var(--rule);
+  }
+  .columns section { break-inside: avoid-column; margin-bottom: 18px; }
+  .formula {
+    font-size: 19px; text-align: center; padding: 8px; margin: 8px 0 12px;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  .calc {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;
+  }
+  .calc label { display: block; margin-bottom: 8px; font-size: 16px; }
+  .calc input[type=range] { width: 100%; }
+  .calc table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  .calc td { padding: 3px 0; border-bottom: 1px dotted var(--rule); font-variant-numeric: tabular-nums; }
+  .calc td:last-child { text-align: right; }
+  .calc .big { font-size: 26px; text-align: center; margin: 8px 0 2px; }
+  .thermo { height: 14px; border: 1px solid var(--ink); position: relative; margin: 6px 0 2px; }
+  .thermo i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); opacity: 0.75; }
+  .thermo b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+  .thermo-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  ul.simpl { padding-left: 1.1em; margin: 0 0 12px; }
+  ul.simpl li { margin-bottom: 4px; }
+  table.log { width: 100%; border-collapse: collapse; font-size: 15px; margin: 8px 0; }
+  table.log th, table.log td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+  table.log th { font-weight: normal; font-variant: small-caps; letter-spacing: 0.05em; color: var(--muted); }
+  .logwrap { overflow-x: auto; }
+  footer {
+    margin-top: 36px; padding-top: 10px; border-top: 4px double var(--ink);
+    font-size: 14px; color: var(--muted); text-align: center;
+  }
+  footer a { color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 760px) {
+    body { font-size: 17px; }
+    .views { grid-template-columns: 1fr; }
+    #alt { aspect-ratio: 3 / 2; }
+    .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .controls { grid-template-columns: 1fr 1fr; }
+    .calc { grid-template-columns: 1fr; }
+    .plate { padding: 10px; margin: 10px 2px 24px; }
+    input[type=range] { width: 120px; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="topline">
+    <span><a href="../">Apps and demos</a></span>
+    <span>A flight toy and explainer</span>
+  </div>
+
+  <header class="mast">
+    <div class="kicker">On the piloting of hot air balloons</div>
+    <h1>Up and Down <em>Only</em></h1>
+    <p class="sub">A balloon has a burner and a vent, and no way to steer. Pilots go where they want by choosing the height whose wind is going their way.</p>
+  </header>
+
+  <p class="lede">A hot air balloon drifts with the air it sits in, so it has no airspeed to steer with. What a pilot can change is height. Heat the air in the envelope and the balloon rises; let some out and it sinks. Since the wind near the ground often blows a different way from the wind a few hundred metres up, picking a height is how you pick a direction. Try it below: reach the target, drop a marker on it, and land gently.</p>
+
+  <h2>The Flight</h2>
+  <p class="plate-label">Plate I. The map from above, and height over time.</p>
+
+  <div class="plate" id="plate">
+    <div class="preflight" id="preflight">
+      <label>Ground temperature
+        <span class="inline"><input type="range" id="temp" min="0" max="32" step="1" value="10"> <output id="tempOut">10 °C</output></span>
+      </label>
+      <label>People aboard
+        <select id="people">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </label>
+      <label>Morning no.
+        <input type="number" id="seed" min="1" max="99999" step="1" value="1">
+      </label>
+      <button type="button" id="newMorning">New morning</button>
+      <button type="button" id="pibal">Release pilot balloon</button>
+      <label class="inline"><input type="checkbox" id="showWinds" checked> Show winds</label>
+      <label>Speed
+        <select id="speed">
+          <option value="2">2&times;</option>
+          <option value="6" selected>6&times;</option>
+          <option value="15">15&times;</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="views">
+      <figure>
+        <canvas id="map" role="img" aria-label="Map of the flight seen from above: launch field, target, balloon track"></canvas>
+        <figcaption>From above. North is up. Each grid square is one kilometre.</figcaption>
+      </figure>
+      <figure>
+        <canvas id="alt" role="img" aria-label="Height over the last ten minutes, with the wind in each layer"></canvas>
+        <figcaption>Height over the last ten minutes of flight, and the wind in each layer.</figcaption>
+      </figure>
+    </div>
+
+    <div class="gauges" aria-live="off">
+      <div class="gauge"><div class="k">Height</div><div class="v" id="gAlt">0 m</div><div class="s" id="gAltFt">0 ft above the field</div></div>
+      <div class="gauge"><div class="k">Climb</div><div class="v" id="gVario">0.0 m/s</div><div class="s" id="gVarioS">on the field</div></div>
+      <div class="gauge" id="gTempBox"><div class="k">Envelope</div><div class="v" id="gTemp">0 °C</div><div class="bar"><i id="gTempBar"></i><b id="gTempMark"></b></div></div>
+      <div class="gauge" id="gFuelBox"><div class="k">Fuel</div><div class="v" id="gFuel">100%</div><div class="bar"><i id="gFuelBar"></i></div></div>
+      <div class="gauge"><div class="k">Drifting</div><div class="v" id="gDrift">0 km/h</div><div class="s" id="gDriftS">&nbsp;</div></div>
+      <div class="gauge"><div class="k">To target</div><div class="v" id="gTarget">0.0 km</div><div class="s" id="gTargetS">&nbsp;</div></div>
+      <div class="gauge"><div class="k">Flight time</div><div class="v" id="gTime">0:00</div><div class="s" id="gTimeS">minutes of flight</div></div>
+      <div class="gauge"><div class="k">Marker</div><div class="v" id="gMarker">aboard</div><div class="s" id="gMarkerS">drop it over the target</div></div>
+    </div>
+
+    <div class="controls">
+      <button type="button" class="hold" id="burn" aria-pressed="false">Burner<small>hold &middot; space</small></button>
+      <button type="button" class="hold" id="vent" aria-pressed="false">Vent<small>hold &middot; V</small></button>
+      <button type="button" id="drop">Drop marker<small>M</small></button>
+      <button type="button" id="pause">Pause<small>P</small></button>
+    </div>
+    <p class="status" id="status" aria-live="polite">Standing on the launch field. Hold the burner to lift off.</p>
+
+    <div class="debrief" id="debrief" hidden>
+      <h3>Landed</h3>
+      <dl id="debriefList"></dl>
+      <div class="row">
+        <button type="button" id="again">Fly this morning again</button>
+        <button type="button" id="again2">New morning</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>How It Works</h2>
+  <p class="plate-label">Notes on what the toy above is doing, and where it simplifies.</p>
+
+  <div class="columns">
+    <section>
+      <h3>Two controls</h3>
+      <p>The burner turns propane into a tall flame aimed up into the envelope. Hotter air is thinner, so the envelope full of it weighs less than the same space full of outside air, and the difference is lift. The vent is a panel at the top that the pilot can pull open with a line. It lets hot air out, so the balloon cools and sinks. Most of the time a pilot just stops burning and lets the envelope cool on its own; the vent is for sinking faster and for the end of the flight.</p>
+      <p>Flying level means giving short burns every so often, enough to make up for the heat lost through the fabric. In the toy, holding level takes the burner about a quarter of the time.</p>
+    </section>
+    <section>
+      <h3>Steering with the layers</h3>
+      <p>The ground slows the wind near it and turns it a little. Higher up the wind is usually faster, and in the Northern Hemisphere it often turns clockwise with height. So the layers stacked above a launch field can each push a balloon a different way. A pilot reads them, then climbs or sinks into the one going closest to where they want to be, and may switch layers several times to zig-zag toward a spot.</p>
+      <p>Each morning in the toy has five made-up layers. The arrows on the right-hand chart point where each layer pushes, using the same north-up view as the map.</p>
+    </section>
+    <section>
+      <h3>Why it handles like a ship</h3>
+      <p>The envelope in the toy holds about 2,550 cubic metres, which is around two and a half tonnes of air. A burn has to heat all of that before the balloon notices, and then the balloon has to get that mass moving, plus some of the outside air it pushes aside. So a burn shows up as a climb many seconds later, and a climb keeps going after the burner stops. Pilots plan ahead: they stop burning before they reach the height they want, and start before they need it.</p>
+      <p>Watch the height chart while you fly. The curve keeps bending after you let go of the button.</p>
+    </section>
+    <section>
+      <h3>Reading the wind first</h3>
+      <p>Before launch, pilots look at forecasts and often let go of a small helium balloon and watch which way it drifts as it climbs. The "Release pilot balloon" button does that: it draws the path a small balloon rising at a steady 3 m/s would take from where you are. Untick "Show winds" to fly from that path alone. In the air, pilots also watch smoke, flags, trees, and other balloons.</p>
+    </section>
+    <section>
+      <h3>Hot limits</h3>
+      <p>The fabric has a temperature limit. The flight manuals found for this page give a continuous limit of 120 °C near the fabric and a never-exceed figure a few degrees higher (for example <a href="https://www.cameronballoons.co.uk/c/download/Sky-Balloons-Flight-Manual-Updated-pages-only_1.pdf">this Sky Balloons manual</a> and <a href="https://ultramagic.com/openfiles/Manuals04/MV04ar28_chonly.pdf">this Ultramagic one</a>). The Sky manual also says the parachute vent should not be held open for more than 3 seconds in flight. The toy warns about both. On a hot day, or with more people aboard, the envelope has to run hotter to float, so it gets closer to the limit. The calculator below shows how much.</p>
+    </section>
+    <section>
+      <h3>Landing</h3>
+      <p>A balloon lands wherever the wind takes it, so pilots look ahead for an open field, sink toward it, and use a last burn to soften the touchdown. In the toy, under about 1.5 m/s counts as soft and over 3 m/s as hard. Those are rough lines for a game, not figures from a manual.</p>
+    </section>
+  </div>
+
+  <h2>The Lift Sum</h2>
+  <p class="plate-label">Plate II. How hot the envelope has to be to float level.</p>
+
+  <div class="plate">
+    <p class="formula">lift = volume &times; (outside air density &minus; inside air density) &times; g</p>
+    <div class="calc">
+      <div>
+        <label>Ground temperature: <output id="cTempOut">10 °C</output>
+          <input type="range" id="cTemp" min="-10" max="38" step="1" value="10"></label>
+        <label>People aboard: <output id="cPeopleOut">2</output>
+          <input type="range" id="cPeople" min="1" max="6" step="1" value="2"></label>
+        <label>Height above the field: <output id="cAltOut">0 m</output>
+          <input type="range" id="cAlt" min="0" max="1800" step="50" value="0"></label>
+        <p style="font-size:15px;color:var(--muted)">Same balloon as the toy: 2,550 m³, 380 kg of envelope, basket, burner and tanks, 100 kg of propane, 80 kg a person. The field is taken to be at sea level.</p>
+      </div>
+      <div>
+        <table>
+          <tr><td>Outside air</td><td id="cRhoOut">&nbsp;</td></tr>
+          <tr><td>Everything to lift</td><td id="cMass">&nbsp;</td></tr>
+          <tr><td>Inside air must be thinner by</td><td id="cDiff">&nbsp;</td></tr>
+          <tr><td>So inside air is</td><td id="cRhoIn">&nbsp;</td></tr>
+          <tr><td>Air held in the envelope</td><td id="cAirMass">&nbsp;</td></tr>
+        </table>
+        <p class="big" id="cNeed">&nbsp;</p>
+        <div class="thermo"><i id="cBar"></i><b id="cMark"></b></div>
+        <div class="thermo-scale"><span>0 °C</span><span>120 °C limit</span><span>150 °C</span></div>
+        <p id="cSay" style="margin-top:8px">&nbsp;</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Where This Simplifies</h2>
+  <div class="columns">
+    <section>
+      <ul class="simpl">
+        <li>One made-up balloon. Real envelopes come in many sizes, and their weights vary.</li>
+        <li>Heat loss is a single rate. Real loss depends on the fabric, sun, wind, and how fast the balloon is moving.</li>
+        <li>Winds are five neat layers with short blends between them, and they never change during a flight. Real winds shift, gust, and change with the sun.</li>
+        <li>No thermals, no terrain, no trees, no power lines, no airspace. The ground is flat and at sea level.</li>
+        <li>The marker drops straight down the moment you press the button.</li>
+        <li>On landing the basket stops dead. Real baskets often drag and tip in a breeze.</li>
+        <li>The burner is one steady flame with no pilot light, whisper burner, or second burner.</li>
+      </ul>
+      <p>It is a toy for getting a feel for the lag and the layers, not a training aid.</p>
+    </section>
+    <section>
+      <h3>Logbook</h3>
+      <p style="font-size:16px">Flights you land are logged here, in this browser only.</p>
+      <div class="logwrap">
+        <table class="log">
+          <thead><tr><th>Date</th><th>Morning</th><th>Time</th><th>Marker</th><th>Touchdown</th><th>Fuel left</th></tr></thead>
+          <tbody id="logBody"><tr><td colspan="6">No flights yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="row">
+        <button type="button" id="logExport">Export</button>
+        <button type="button" id="logImport">Import</button>
+        <button type="button" id="logClear">Clear</button>
+        <input type="file" id="logFile" accept="application/json,.json" class="sr" tabindex="-1" aria-hidden="true">
+      </div>
+      <p id="logMsg" style="font-size:15px;color:var(--muted);margin-top:6px" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <footer>
+    <a href="../">Back to Apps and demos</a> &middot; A first try at the topic, simplified where noted. Nothing you do here leaves your browser; the logbook is kept in this browser only.
+  </footer>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

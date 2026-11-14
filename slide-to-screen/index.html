@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slide to Screen: Digital Pathology</title>
+<!-- site:head -->
+<meta name="description" content="Digital pathology from tissue to pixels: the lab pipeline step by step, a zoomable whole-slide image pyramid, a file-size calculator, and a glossary of the key terms.">
+<link rel="canonical" href="https://jkastl.github.io/slide-to-screen/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Slide to Screen: Digital Pathology">
+<meta property="og:description" content="Digital pathology from tissue to pixels: the lab pipeline step by step, a zoomable whole-slide image pyramid, a file-size calculator, and a glossary of the key terms.">
+<meta property="og:url" content="https://jkastl.github.io/slide-to-screen/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Slide to Screen: Digital Pathology",
+ "description": "Digital pathology from tissue to pixels: the lab pipeline step by step, a zoomable whole-slide image pyramid, a file-size calculator, and a glossary of the key terms.",
+ "url": "https://jkastl.github.io/slide-to-screen/",
+ "datePublished": "2026-10-14",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ },
+ "dateModified": "2026-10-14"
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+  :root {
+    --glass: #f7f3f5;
+    --stage: #ebe3e8;
+    --frost: #e4dde2;
+    --ink: #2b1838;
+    --muted: #6a5872;
+    --hema: #4f2a7a;
+    --hema-soft: #7c5aa6;
+    --eosin: #d9467e;
+    --eosin-soft: #f3bcd2;
+    --dab: #8a5a22;
+    --rule: rgba(79, 42, 122, .28);
+    --card: #fffdfe;
+    --shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 2px 10px rgba(60, 20, 70, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --glass: #160f1b;
+      --stage: #0e0912;
+      --frost: #2a2030;
+      --ink: #f0e6f3;
+      --muted: #b5a2bd;
+      --hema: #b993ea;
+      --hema-soft: #9a78c6;
+      --eosin: #ff7fae;
+      --eosin-soft: #5a2a40;
+      --dab: #e0a764;
+      --rule: rgba(185, 147, 234, .3);
+      --card: #1f1626;
+      --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 2px 14px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--stage); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--eosin) 10%, transparent), transparent 45%),
+      radial-gradient(circle at 90% 30%, color-mix(in srgb, var(--hema) 9%, transparent), transparent 40%),
+      var(--stage);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px 64px; }
+  .home { font: 13px ui-monospace, Menlo, Consolas, monospace; margin: 14px 0 0; }
+  .home a { color: var(--muted); }
+  a { color: var(--hema); }
+
+  /* a glass slide: frosted label end + clear glass */
+  .slide {
+    display: grid;
+    grid-template-columns: minmax(120px, 26%) 1fr;
+    background: var(--glass);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .frost {
+    background:
+      repeating-linear-gradient(45deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,.25) 0 1px, transparent 1px 4px),
+      var(--frost);
+    border-right: 1px dashed var(--rule);
+    padding: 18px 14px;
+    font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
+    color: var(--muted);
+  }
+  .frost b { color: var(--ink); display: block; font-size: 15px; letter-spacing: .04em; }
+  .barcode { height: 34px; margin-top: 12px;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 3px, var(--ink) 3px 4px, transparent 4px 7px, var(--ink) 7px 10px, transparent 10px 11px);
+    opacity: .75; }
+  .clear { padding: 22px 24px; position: relative; }
+
+  header.hero { margin-top: 18px; }
+  header.hero h1 {
+    margin: 0;
+    font-size: clamp(34px, 6vw, 58px);
+    line-height: 1.02;
+    letter-spacing: -.01em;
+    color: var(--hema);
+  }
+  header.hero h1 span { color: var(--eosin); }
+  header.hero p.lede { margin: 12px 0 0; font-size: 19px; max-width: 46ch; }
+  .stain-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
+  .stain-key i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
+
+  h2 {
+    font-size: 15px; letter-spacing: .14em; text-transform: uppercase;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: var(--eosin); margin: 48px 0 6px;
+  }
+  h2 + p.sub { margin: 0 0 16px; color: var(--muted); max-width: 62ch; }
+
+  /* pipeline rack */
+  .rack { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
+  .rack button {
+    flex: 0 0 auto;
+    font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+    color: var(--ink);
+    background: var(--glass);
+    border: 1px solid var(--rule);
+    border-left: 10px solid var(--frost);
+    border-radius: 3px;
+    padding: 8px 10px 8px 8px;
+    cursor: pointer;
+    text-align: left;
+    min-width: 92px;
+  }
+  .rack button small { display: block; color: var(--muted); }
+  .rack button.analog { border-left-color: var(--eosin-soft); }
+  .rack button.digital { border-left-color: var(--hema-soft); }
+  .rack button[aria-current="step"] { outline: 2px solid var(--eosin); outline-offset: 1px; background: var(--card); }
+  .lane-key { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); margin: 2px 0 10px; }
+  .lane-key i { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin: 0 4px 0 10px; }
+
+  .step .clear h3 { margin: 0 0 4px; font-size: 26px; color: var(--hema); }
+  .step .where { font: 12px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .step p { margin: 10px 0; }
+  .step .wrong { border-top: 1px dashed var(--rule); margin-top: 14px; padding-top: 10px; font-size: 16px; }
+  .step .wrong b { color: var(--eosin); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .nav { display: flex; gap: 8px; margin-top: 14px; }
+  button.btn {
+    font: 13px ui-monospace, Menlo, Consolas, monospace;
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px;
+    padding: 8px 12px; cursor: pointer;
+  }
+  button.btn:hover, .rack button:hover { border-color: var(--hema); }
+  button.btn[aria-pressed="true"] { background: var(--hema); color: var(--card); }
+  dfn.term {
+    font-style: normal;
+    border-bottom: 1.5px dotted var(--eosin);
+    cursor: help;
+  }
+  .popover {
+    position: absolute; z-index: 5; max-width: 300px;
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--hema); border-radius: 3px;
+    padding: 10px 12px; font-size: 15px; line-height: 1.4;
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+  }
+  .popover b { color: var(--hema); display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+
+  /* viewer */
+  .viewer { position: relative; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: #fbf8fa; box-shadow: var(--shadow); }
+  .viewer canvas { display: block; width: 100%; height: 440px; touch-action: none; cursor: grab; }
+  .viewer canvas:active { cursor: grabbing; }
+  .hud {
+    position: absolute; left: 10px; top: 10px;
+    font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace;
+    background: rgba(255,253,254,.88); color: #2b1838;
+    border: 1px solid rgba(79,42,122,.3); border-radius: 3px;
+    padding: 6px 9px; pointer-events: none;
+  }
+  .hud b { color: #4f2a7a; }
+  .scalebar { position: absolute; right: 12px; bottom: 12px; font: 11px ui-monospace, Menlo, Consolas, monospace; color: #2b1838; text-align: center; pointer-events: none; }
+  .minipyr {
+    position: absolute; left: 10px; bottom: 10px; width: 176px;
+    background: rgba(255,253,254,.88); border: 1px solid rgba(79,42,122,.3); border-radius: 3px;
+    padding: 4px 6px 2px; pointer-events: none;
+    font: 10px/1.2 ui-monospace, Menlo, Consolas, monospace; color: #6a5872;
+  }
+  .minipyr svg { display: block; width: 100%; height: auto; }
+  .scalebar div { height: 5px; background: #2b1838; margin-bottom: 3px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .controls label { font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); display: flex; gap: 8px; align-items: center; flex: 1 1 220px; }
+  .controls input[type=range] { flex: 1; accent-color: var(--eosin); }
+  .pyramid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; font: 11px/1.3 ui-monospace, Menlo, Consolas, monospace; }
+  .pyramid div { border: 1px solid var(--rule); border-radius: 3px; padding: 6px; background: var(--glass); color: var(--muted); }
+  .pyramid div.on { background: var(--hema); color: #fff; border-color: var(--hema); }
+  .pyramid div b { display: block; font-size: 13px; }
+  .note { font-size: 15px; color: var(--muted); margin-top: 10px; }
+
+  /* calculator */
+  .calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  .calc label { font: 13px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); display: block; }
+  .calc input, .calc select {
+    width: 100%; margin-top: 4px; font: 16px ui-monospace, Menlo, Consolas, monospace;
+    background: var(--card); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; padding: 7px 8px;
+  }
+  .readout { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .readout div { border-top: 3px solid var(--eosin); background: var(--card); padding: 10px 12px; border-radius: 0 0 3px 3px; }
+  .readout div:nth-child(even) { border-top-color: var(--hema); }
+  .readout small { display: block; font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .readout strong { font-size: 24px; color: var(--ink); }
+  .calc-work { font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); margin-top: 12px; white-space: pre-wrap; }
+
+  /* glossary */
+  .gloss-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .gloss-tools input { flex: 1 1 220px; font: 16px ui-monospace, Menlo, Consolas, monospace; padding: 8px 10px; background: var(--card); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; }
+  .gloss { columns: 2 300px; column-gap: 22px; }
+  .gloss article { break-inside: avoid; margin: 0 0 12px; padding: 10px 12px; background: var(--glass); border: 1px solid var(--rule); border-left: 6px solid var(--eosin-soft); border-radius: 3px; }
+  .gloss article.digital { border-left-color: var(--hema-soft); }
+  .gloss article h4 { margin: 0; font-size: 17px; color: var(--hema); }
+  .gloss article p { margin: 4px 0 0; font-size: 15px; line-height: 1.45; }
+  .gloss article small { font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
+  .gloss article.flash { outline: 2px solid var(--eosin); }
+  .empty { color: var(--muted); font-style: italic; }
+
+  footer { margin-top: 56px; font-size: 14px; color: var(--muted); border-top: 1px dashed var(--rule); padding-top: 12px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 17px; }
+    .slide { grid-template-columns: 1fr; }
+    .frost { border-right: 0; border-bottom: 1px dashed var(--rule); padding: 10px 14px; display: flex; gap: 12px; align-items: center; }
+    .frost .barcode { width: 90px; margin: 0 0 0 auto; height: 24px; }
+    .clear { padding: 16px; }
+    .viewer canvas { height: 360px; }
+    .minipyr { width: 128px; }
+    .pyramid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="home"><a href="../">&larr; Apps and demos</a></p>
+
+  <header class="hero slide">
+    <div class="frost"><div><b>S-0001 A1</b>H&amp;E<br>4&nbsp;&micro;m</div><div class="barcode" aria-hidden="true"></div></div>
+    <div class="clear">
+      <h1>Slide <span>to</span> Screen</h1>
+      <p class="lede">Digital pathology, explained by following one piece of tissue from the operating room to a gigapixel image on a screen, with every term defined where it first matters.</p>
+      <div class="stain-key"><span><i style="background:var(--eosin-soft)"></i>analog step: hands, chemistry, glass</span><span><i style="background:var(--hema-soft)"></i>digital step: pixels, files, software</span></div>
+    </div>
+  </header>
+
+  <h2>1 &middot; The pipeline</h2>
+  <p class="sub">Most of the journey happens before the scanner, in glass and wax. Tap a step, or use the arrow keys. Underlined terms open a definition.</p>
+  <div class="rack" id="rack" role="tablist" aria-label="Pipeline steps"></div>
+  <div class="lane-key"><i style="background:var(--eosin-soft)"></i>analog <i style="background:var(--hema-soft)"></i>digital</div>
+  <article class="step slide" id="step" aria-live="polite"></article>
+  <div class="nav"><button class="btn" id="prev">&larr; previous</button><button class="btn" id="next">next &rarr;</button></div>
+
+  <h2>2 &middot; Inside a whole-slide image</h2>
+  <p class="sub">A scanned slide is far too big to open as one picture. It is stored as a <dfn class="term" data-term="pyramid">pyramid</dfn>: the full-resolution image, plus smaller and smaller copies, each cut into <dfn class="term" data-term="tile">tiles</dfn>. The viewer only fetches the tiles you can see, from the level that matches your zoom. Drag to pan, scroll or pinch to zoom. The tissue here is drawn by code, not scanned.</p>
+  <div class="viewer">
+    <canvas id="wsi" aria-label="Zoomable synthetic tissue image"></canvas>
+    <div class="hud" id="hud"></div>
+    <div class="minipyr" aria-hidden="true"><svg id="minipyr" viewBox="0 0 170 252"></svg><span>image pyramid</span></div>
+    <div class="scalebar" id="scalebar"><div></div><span></span></div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="zoomOut" aria-label="Zoom out">&minus;</button>
+    <label>zoom <input type="range" id="zoom" min="0" max="1000" value="0" aria-label="Zoom"></label>
+    <button class="btn" id="zoomIn" aria-label="Zoom in">+</button>
+    <button class="btn" id="tiles" aria-pressed="true">tile grid</button>
+    <button class="btn" id="reset">reset view</button>
+  </div>
+  <div class="pyramid" id="pyramid"></div>
+  <p class="note">Each level is a quarter of the width of the one below, so the whole pyramid adds only about a third to the file. Zoomed all the way out the viewer reads one of the small top levels; at full zoom the viewer is reading level 0, where a pixel is a quarter of a micrometre and a single nucleus spans about 25 pixels.</p>
+
+  <h2>3 &middot; How big is one slide?</h2>
+  <p class="sub">Why the files are measured in gigabytes. Set the size of the tissue and the scan resolution; the arithmetic is shown underneath.</p>
+  <div class="slide">
+    <div class="frost"><div><b>CALC</b>pixels<br>&amp; bytes</div><div class="barcode" aria-hidden="true"></div></div>
+    <div class="clear">
+      <div class="calc">
+        <label>tissue width (mm)<input type="number" id="cw" min="1" max="70" step="1" value="15"></label>
+        <label>tissue height (mm)<input type="number" id="ch" min="1" max="30" step="1" value="12"></label>
+        <label>scan resolution<select id="cr"><option value="0.5">20x &middot; 0.5 &micro;m/pixel</option><option value="0.25" selected>40x &middot; 0.25 &micro;m/pixel</option></select></label>
+        <label>compression<select id="cc"><option value="1">none (raw)</option><option value="10">JPEG, light (~10:1)</option><option value="20" selected>JPEG, typical (~20:1)</option><option value="40">JPEG, heavy (~40:1)</option></select></label>
+      </div>
+      <div class="readout" id="readout"></div>
+      <div class="calc-work" id="calcwork"></div>
+    </div>
+  </div>
+
+  <h2>4 &middot; Glossary</h2>
+  <p class="sub">Every term from the pipeline, in one place. The color strip says whether it belongs to the glass side or the pixel side.</p>
+  <div class="gloss-tools">
+    <input type="search" id="gq" placeholder="filter terms..." aria-label="Filter glossary">
+    <button class="btn" data-lane="all" aria-pressed="true">all</button>
+    <button class="btn" data-lane="analog" aria-pressed="false">analog</button>
+    <button class="btn" data-lane="digital" aria-pressed="false">digital</button>
+  </div>
+  <div class="gloss" id="gloss"></div>
+
+  <footer>
+    A general explainer about the field, simplified: real labs vary in timings, equipment, and file formats. Not medical advice. The tissue in the viewer is synthetic. &middot; <a href="../">Apps and demos</a>
+  </footer>
+</div>
+
+<script>
+const TERMS = {
+  accession: ["Accessioning", "analog", "Logging a specimen into the lab when it arrives: it gets a unique case number and barcode that will follow every block, slide, and image made from it."],
+  lis: ["LIS", "digital", "Laboratory information system: the lab's database of cases, specimens, orders, and reports. The barcode on every cassette and slide points back into it."],
+  grossing: ["Grossing", "analog", "Examining the specimen by eye: describing, measuring, inking margins, and cutting representative pieces small enough to process."],
+  cassette: ["Cassette", "analog", "A small perforated plastic box that holds a piece of tissue through processing. Its label becomes the block's identity, like \"A1\"."],
+  fixation: ["Fixation", "analog", "Stopping decay and locking proteins in place, usually in 10% neutral buffered formalin. Too short or too long changes how the tissue stains later."],
+  formalin: ["Formalin", "analog", "A water solution of formaldehyde, the standard fixative. It cross-links proteins so the tissue keeps its structure."],
+  processing: ["Tissue processing", "analog", "An overnight machine run that swaps the water in tissue for wax: graded alcohols to dehydrate, a clearing agent such as xylene, then molten paraffin."],
+  ffpe: ["FFPE", "analog", "Formalin-fixed, paraffin-embedded: the standard way tissue is preserved. FFPE blocks can be stored for decades and recut."],
+  embedding: ["Embedding", "analog", "Orienting the processed tissue in a mould and filling it with paraffin, so it sets into a block that can be sliced."],
+  microtome: ["Microtome", "analog", "A precision slicer that shaves ribbons of wax and tissue a few micrometres thick from the block."],
+  section: ["Section", "analog", "One slice of the block, typically 3 to 5 micrometres thick, thin enough for light to pass through."],
+  frozen: ["Frozen section", "analog", "A fast alternative used during surgery: tissue is frozen and cut on a cryostat in minutes instead of a day, at some cost in quality."],
+  he: ["H&E", "analog", "Hematoxylin and eosin, the default stain. Hematoxylin colors nuclei blue-purple; eosin colors cytoplasm and connective tissue pink. Most diagnoses start here."],
+  ihc: ["IHC", "analog", "Immunohistochemistry: an antibody finds one specific protein, and a chromogen (often brown DAB) marks where it bound, against a light hematoxylin counterstain."],
+  special: ["Special stains", "analog", "Chemical stains that pick out one thing, such as collagen, mucin, fungi, or iron, when H&E cannot show it."],
+  coverslip: ["Coverslip", "analog", "A thin glass cover mounted over the stained section to protect it and give a flat optical surface."],
+  wsi: ["Whole-slide image (WSI)", "digital", "A scan of an entire glass slide at microscope resolution: often tens of thousands of pixels on each side, billions in total."],
+  scanner: ["Slide scanner", "digital", "A robotic microscope with a camera that images a slide strip by strip or tile by tile and stitches the result. Many load hundreds of slides at once."],
+  mpp: ["Microns per pixel", "digital", "How much tissue one pixel covers. About 0.5 at \"20x\" and about 0.25 at \"40x\". The honest measure of resolution, since \"40x\" means different things on different scanners."],
+  focusmap: ["Focus map", "digital", "Points across the tissue where the scanner measures best focus before scanning, then follows that surface. Too few points and parts of the scan go soft."],
+  zstack: ["Z-stack", "digital", "Several scans at different focal depths, for thick samples like cytology smears where one plane is not enough."],
+  stitching: ["Stitching", "digital", "Aligning and blending the many camera frames into one seamless image. Bad stitching shows as seams or doubled edges."],
+  pyramid: ["Image pyramid", "digital", "The full-resolution image stored alongside smaller copies at each zoom level, so a viewer never has to shrink billions of pixels on the fly."],
+  tile: ["Tile", "digital", "A small square of the image, often 256 or 512 pixels a side. Viewers fetch only the tiles on screen, the same trick online maps use."],
+  formats: ["SVS, NDPI, MRXS", "digital", "Vendor file formats for whole-slide images. Each scanner maker has its own, which is why open readers and standards matter."],
+  dicom: ["DICOM WSI", "digital", "The medical imaging standard, extended to whole-slide images so pathology can share the archives radiology already uses."],
+  ims: ["Image management system", "digital", "Software that stores slide images, links them to cases in the LIS, and serves them to viewers."],
+  qc: ["Scan QC", "digital", "Checking each scan before a pathologist sees it: is all the tissue captured, is it in focus, is the color right? Failures are rescanned."],
+  artifact: ["Artifact", "analog", "Anything in the image that was not in the patient: folds, tears, bubbles, knife chatter, pen marks, uneven stain. Analog artifacts become digital data problems."],
+  primary: ["Primary diagnosis", "digital", "Making the diagnosis from the screen instead of the microscope. In the US this needed regulatory clearance for each system; the first was granted in 2017."],
+  validation: ["Validation", "digital", "A lab proving its digital setup reads as well as glass. Professional guidelines recommend comparing both on at least 60 cases, with a gap of two weeks or more between reads."],
+  telepath: ["Telepathology", "digital", "Reading slides remotely: second opinions, after-hours coverage, and reaching sites without a pathologist on hand."],
+  comppath: ["Computational pathology", "digital", "Running algorithms over whole-slide images: finding tissue, counting cells, flagging regions, or predicting labels. Usually works on tiles, then stitches the answers back together."],
+  stainnorm: ["Stain normalization", "digital", "Adjusting colors so slides from different labs and days look alike. Without it, an algorithm can learn the lab instead of the disease."],
+  annotation: ["Annotation", "digital", "Outlines and labels drawn on an image by an expert, used to train and check algorithms."],
+};
+
+const STEPS = [
+  { name: "Accession", lane: "analog", where: "lab front desk", title: "A specimen arrives",
+    body: `A biopsy or surgical specimen arrives in a container of fixative with a requisition. <dfn class="term" data-term="accession">Accessioning</dfn> gives it a case number and barcode in the <dfn class="term" data-term="lis">LIS</dfn>. That identity is the thread that will later tie a gigabyte image back to the right case.`,
+    wrong: "A label mix-up here follows the case all the way to the screen. Barcodes exist to make this rare." },
+  { name: "Fix", lane: "analog", where: "container, hours", title: "Fixation",
+    body: `<dfn class="term" data-term="fixation">Fixation</dfn> in <dfn class="term" data-term="formalin">formalin</dfn> stops the tissue decaying and cross-links its proteins so it keeps its shape. It needs time: fixative soaks in only about a millimetre an hour.`,
+    wrong: "Under-fixed tissue stains poorly and unevenly, which a scanner faithfully records." },
+  { name: "Gross", lane: "analog", where: "grossing bench", title: "Grossing",
+    body: `<dfn class="term" data-term="grossing">Grossing</dfn> is the naked-eye exam: describe, measure, ink the margins, and cut slices thin enough to fit a <dfn class="term" data-term="cassette">cassette</dfn>. A small biopsy may go in whole; a large resection may become dozens of cassettes.`,
+    wrong: "What is not sampled here is never seen under any microscope, glass or digital." },
+  { name: "Process", lane: "analog", where: "processor, overnight", title: "Processing and embedding",
+    body: `An overnight <dfn class="term" data-term="processing">processing</dfn> run replaces water with paraffin wax. <dfn class="term" data-term="embedding">Embedding</dfn> then sets the tissue into a wax block, giving the standard <dfn class="term" data-term="ffpe">FFPE</dfn> block that can be stored and recut for years.`,
+    wrong: "Poor orientation in the block means the section cuts the tissue at the wrong angle." },
+  { name: "Cut", lane: "analog", where: "microtome", title: "Sectioning",
+    body: `A <dfn class="term" data-term="microtome">microtome</dfn> shaves a ribbon of <dfn class="term" data-term="section">sections</dfn> a few micrometres thick, about a twentieth of a human hair. A section is floated on warm water to flatten it, then picked up on a glass slide. In surgery, a <dfn class="term" data-term="frozen">frozen section</dfn> skips the wax to get an answer in minutes.`,
+    wrong: "Folds, tears, and knife chatter start here, and they are the most common <dfn class=\"term\" data-term=\"artifact\">artifacts</dfn> a scan will show." },
+  { name: "Stain", lane: "analog", where: "autostainer", title: "Staining",
+    body: `Unstained tissue is nearly transparent. <dfn class="term" data-term="he">H&amp;E</dfn> colors nuclei purple and everything else shades of pink; it is what this page is styled after. <dfn class="term" data-term="ihc">IHC</dfn> and <dfn class="term" data-term="special">special stains</dfn> answer narrower questions. A <dfn class="term" data-term="coverslip">coverslip</dfn> seals the result.`,
+    wrong: "Stain strength drifts between batches and labs. Humans adjust without noticing; algorithms notice a lot." },
+  { name: "Scan", lane: "digital", where: "slide scanner", title: "Scanning",
+    body: `The <dfn class="term" data-term="scanner">scanner</dfn> finds the tissue, builds a <dfn class="term" data-term="focusmap">focus map</dfn>, images it frame by frame, and does <dfn class="term" data-term="stitching">stitching</dfn> into one <dfn class="term" data-term="wsi">whole-slide image</dfn>. Resolution is quoted as a magnification, but <dfn class="term" data-term="mpp">microns per pixel</dfn> is the real number. Thick samples may need a <dfn class="term" data-term="zstack">z-stack</dfn>.`,
+    wrong: "Out-of-focus patches, missed faint tissue, and seams. A good scan is mostly a well-made slide." },
+  { name: "Store", lane: "digital", where: "image store", title: "The file",
+    body: `The image is saved as a <dfn class="term" data-term="pyramid">pyramid</dfn> of <dfn class="term" data-term="tile">tiles</dfn> in a vendor format (<dfn class="term" data-term="formats">SVS, NDPI, MRXS</dfn>, and others) or the open <dfn class="term" data-term="dicom">DICOM WSI</dfn> standard. An <dfn class="term" data-term="ims">image management system</dfn> links it to the case. Section 2 below lets you zoom through one.`,
+    wrong: "Thousands of slides a day at around a gigabyte each: storage is a real cost, and section 3 shows why." },
+  { name: "QC", lane: "digital", where: "lab or software", title: "Quality control",
+    body: `<dfn class="term" data-term="qc">Scan QC</dfn> catches what the glass got wrong and what the scanner got wrong: missing tissue, blur, bubbles, pen marks, color casts. Anything that fails is rescanned, or recut and restained.`,
+    wrong: "QC that only checks the file and not the tissue coverage lets a missed fragment through." },
+  { name: "Read", lane: "digital", where: "pathologist's screen", title: "Reading on screen",
+    body: `The pathologist reviews the image in a viewer, panning and zooming as they would move a slide and change objectives. This can be the <dfn class="term" data-term="primary">primary diagnosis</dfn> after local <dfn class="term" data-term="validation">validation</dfn>, or a second opinion by <dfn class="term" data-term="telepath">telepathology</dfn> from anywhere.`,
+    wrong: "Some features, such as tiny organisms or subtle crystals, can be harder to see on screen; labs keep glass available for those cases." },
+  { name: "Compute", lane: "digital", where: "software", title: "Algorithms",
+    body: `With the slide as pixels, <dfn class="term" data-term="comppath">computational pathology</dfn> can measure, count, and flag. Models are trained on expert <dfn class="term" data-term="annotation">annotations</dfn>, work tile by tile, and usually need <dfn class="term" data-term="stainnorm">stain normalization</dfn> to cope with color drift. The first AI product for pathology was authorized in the US in 2021, as a tool that flags areas for the pathologist to look at.`,
+    wrong: "A model trained on one lab's slides can stumble on another's. Every upstream step above is now an input feature." },
+];
+
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("slide2screen:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("slide2screen:" + k, JSON.stringify(v)); } catch (e) {} },
+};
+
+/* ---------- pipeline ---------- */
+let cur = Math.min(Math.max(store.get("step", 0) | 0, 0), STEPS.length - 1);
+const rack = $("#rack");
+STEPS.forEach((s, i) => {
+  const b = document.createElement("button");
+  b.className = s.lane;
+  b.setAttribute("role", "tab");
+  b.innerHTML = `${String(i + 1).padStart(2, "0")}<small>${s.name}</small>`;
+  b.addEventListener("click", () => show(i));
+  rack.appendChild(b);
+});
+function show(i) {
+  cur = (i + STEPS.length) % STEPS.length;
+  store.set("step", cur);
+  const s = STEPS[cur];
+  [...rack.children].forEach((b, j) => { if (j === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  rack.children[cur].scrollIntoView({ block: "nearest", inline: "nearest" });
+  $("#step").innerHTML = `
+    <div class="frost"><div><b>STEP ${String(cur + 1).padStart(2, "0")}</b>${s.lane}<br>${s.where}</div><div class="barcode" aria-hidden="true"></div></div>
+    <div class="clear"><div class="where">${s.lane} &middot; ${s.where}</div><h3>${s.title}</h3><p>${s.body}</p>
+    <div class="wrong"><b>What can go wrong</b><br>${s.wrong}</div></div>`;
+}
+$("#prev").addEventListener("click", () => show(cur - 1));
+$("#next").addEventListener("click", () => show(cur + 1));
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input, select, textarea")) return;
+  if (e.key === "ArrowRight") show(cur + 1);
+  if (e.key === "ArrowLeft") show(cur - 1);
+  if (e.key === "Escape") closePop();
+});
+show(cur);
+
+/* ---------- term popovers ---------- */
+let pop = null;
+function closePop() { if (pop) { pop.remove(); pop = null; } }
+document.addEventListener("click", e => {
+  const d = e.target.closest("dfn.term");
+  closePop();
+  if (!d) return;
+  const t = TERMS[d.dataset.term];
+  if (!t) return;
+  pop = document.createElement("div");
+  pop.className = "popover";
+  pop.setAttribute("role", "tooltip");
+  pop.innerHTML = `<b>${t[0]}</b>${t[2]}`;
+  document.body.appendChild(pop);
+  const r = d.getBoundingClientRect();
+  const w = Math.min(300, document.documentElement.clientWidth - 32);
+  pop.style.maxWidth = w + "px";
+  let left = r.left + window.scrollX;
+  left = Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 16);
+  pop.style.left = Math.max(16, left) + "px";
+  pop.style.top = (r.bottom + window.scrollY + 6) + "px";
+});
+
+/* ---------- glossary ---------- */
+let lane = "all";
+function renderGloss() {
+  const q = $("#gq").value.trim().toLowerCase();
+  const items = Object.entries(TERMS)
+    .filter(([, t]) => lane === "all" || t[1] === lane)
+    .filter(([, t]) => !q || (t[0] + " " + t[2]).toLowerCase().includes(q))
+    .sort((a, b) => a[1][0].localeCompare(b[1][0]));
+  $("#gloss").innerHTML = items.length
+    ? items.map(([k, t]) => `<article id="g-${k}" class="${t[1]}"><h4>${t[0]}</h4><small>${t[1]}</small><p>${t[2]}</p></article>`).join("")
+    : `<p class="empty">No terms match.</p>`;
+}
+$("#gq").addEventListener("input", renderGloss);
+document.querySelectorAll("[data-lane]").forEach(b => b.addEventListener("click", () => {
+  lane = b.dataset.lane;
+  document.querySelectorAll("[data-lane]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  renderGloss();
+}));
+renderGloss();
+
+/* ---------- size calculator ---------- */
+function fmtBytes(b) {
+  const u = ["B", "KB", "MB", "GB", "TB"]; let i = 0;
+  while (b >= 1000 && i < u.length - 1) { b /= 1000; i++; }
+  return (b >= 100 ? b.toFixed(0) : b >= 10 ? b.toFixed(1) : b.toFixed(2)) + " " + u[i];
+}
+function fmtN(n) { return n >= 1e9 ? (n / 1e9).toFixed(2) + " billion" : n >= 1e6 ? (n / 1e6).toFixed(1) + " million" : Math.round(n).toLocaleString("en-US"); }
+const calcIds = ["cw", "ch", "cr", "cc"];
+calcIds.forEach(id => { const v = store.get("calc-" + id, null); if (v != null) $("#" + id).value = v; });
+function calc() {
+  const clamp = (v, lo, hi, d) => { v = parseFloat(v); return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+  const w = clamp($("#cw").value, 1, 70, 15), h = clamp($("#ch").value, 1, 30, 12);
+  const mpp = parseFloat($("#cr").value), comp = parseFloat($("#cc").value);
+  calcIds.forEach(id => store.set("calc-" + id, $("#" + id).value));
+  const pw = w * 1000 / mpp, ph = h * 1000 / mpp, px = pw * ph;
+  const raw = px * 3, pyr = raw * 4 / 3, file = pyr / comp;
+  const tiles = Math.ceil(pw / 256) * Math.ceil(ph / 256);
+  const screens = px / (1920 * 1080);
+  $("#readout").innerHTML = `
+    <div><small>pixels</small><strong>${fmtN(px)}</strong></div>
+    <div><small>base-level tiles</small><strong>${fmtN(tiles)}</strong></div>
+    <div><small>file on disk</small><strong>${fmtBytes(file)}</strong></div>
+    <div><small>HD screens to show it all</small><strong>${fmtN(screens)}</strong></div>`;
+  $("#calcwork").textContent =
+`${w} mm / ${mpp} um per px = ${Math.round(pw).toLocaleString("en-US")} px wide
+${h} mm / ${mpp} um per px = ${Math.round(ph).toLocaleString("en-US")} px tall
+x 3 bytes per pixel (RGB)        = ${fmtBytes(raw)} raw
+x 4/3 for the pyramid levels     = ${fmtBytes(pyr)}
+/ ${comp} compression               = ${fmtBytes(file)}`;
+}
+calcIds.forEach(id => $("#" + id).addEventListener("input", calc));
+calc();
+
+/* ---------- synthetic whole-slide viewer ---------- */
+// World units are micrometres. The "slide" tissue spans about 12 x 8 mm.
+const WORLD_W = 12000, WORLD_H = 8000;
+const BASE_MPP = 0.25, LEVELS = 5, DS = 4;
+const MIN_SCALE = 0.12; // um per screen px at max zoom
+const cv = $("#wsi"), ctx = cv.getContext("2d");
+let scale, cx, cy, showTiles = true;
+
+function hash(x, y) {
+  let h = (x | 0) * 374761393 + (y | 0) * 668265263;
+  h = (h ^ (h >>> 13)) * 1274126177;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x, y, o) { let s = 0, a = .5, f = 1; for (let i = 0; i < o; i++) { s += a * vnoise(x * f, y * f); f *= 2; a *= .5; } return s; }
+
+// tissue mask and local nuclear density, from coarse noise
+function tissue(x, y) {
+  const nx = (x - WORLD_W / 2) / (WORLD_W * .46), ny = (y - WORLD_H / 2) / (WORLD_H * .44);
+  const r = Math.sqrt(nx * nx + ny * ny);
+  const n = fbm(x / 1800, y / 1800, 4);
+  return 1.05 - r + (n - .5) * .9; // > 0 inside
+}
+function density(x, y) { return Math.min(1, Math.max(0, fbm(x / 900 + 31, y / 900 + 7, 4) * 1.8 - .45)); }
+
+const CELL = 14; // um grid for nuclei
+function nucleusAt(gx, gy) {
+  const cxn = (gx + .2 + hash(gx, gy) * .6) * CELL, cyn = (gy + .2 + hash(gy + 99, gx) * .6) * CELL;
+  const dens = density(cxn, cyn);
+  if (hash(gx * 3 + 1, gy * 7 + 2) > .25 + dens * .75) return null;
+  const big = dens > .65;
+  return { x: cxn, y: cyn, rx: (big ? 3.4 : 2.4) + hash(gx, gy + 5) * 1.6, ry: (big ? 2.6 : 1.8) + hash(gx + 5, gy) * 1.2,
+           a: hash(gx + 11, gy + 3) * Math.PI, dark: .55 + hash(gx + 2, gy + 9) * .45 };
+}
+function shade(x, y, s) {
+  const t = tissue(x, y);
+  if (t <= 0) {
+    const g = 250 - hash(x / 40 | 0, y / 40 | 0) * 3;
+    return [g, g - 3, g - 1];
+  }
+  const edge = Math.min(1, t * 8);
+  const fib = fbm(x / 60, y / 25, 3);
+  const dens = density(x, y);
+  let r = 236 - fib * 40, g = 150 - fib * 50, b = 188 - fib * 30;      // eosin
+  if (fib < .38 && s < 6) { r = 246; g = 226; b = 236; }                 // pale gaps
+  let nucl = 0;
+  if (s > 3.5) {
+    nucl = (.12 + dens * .55) * Math.min(1, (s - 3.5) / 3);
+  }
+  if (s <= 6.5) {
+    const gx = Math.floor(x / CELL), gy = Math.floor(y / CELL);
+    let hit = 0;
+    for (let dx = -1; dx <= 1 && !hit; dx++) for (let dy = -1; dy <= 1; dy++) {
+      const n = nucleusAt(gx + dx, gy + dy);
+      if (!n) continue;
+      const px = x - n.x, py = y - n.y, ca = Math.cos(n.a), sa = Math.sin(n.a);
+      const u = (px * ca + py * sa) / n.rx, v = (-px * sa + py * ca) / n.ry;
+      const d = u * u + v * v;
+      if (d < 1) { hit = n.dark * (d > .7 ? .75 : 1) * (1 - hash(x * 4 | 0, y * 4 | 0) * .2); break; }
+    }
+    const exactW = s <= 3.5 ? 1 : 1 - (s - 3.5) / 3;
+    nucl = nucl * (1 - exactW) + hit * exactW;
+  }
+  r = r * (1 - nucl) + 78 * nucl; g = g * (1 - nucl) + 44 * nucl; b = b * (1 - nucl) + 128 * nucl;
+  const bg = [250, 247, 249];
+  return [bg[0] + (r - bg[0]) * edge, bg[1] + (g - bg[1]) * edge, bg[2] + (b - bg[2]) * edge];
+}
+
+function fitScale() { const r = cv.getBoundingClientRect(); return Math.max(WORLD_W / r.width, WORLD_H / r.height) * 1.08; }
+function levelFor(s) {
+  let L = 0;
+  for (let k = 0; k < LEVELS; k++) if (BASE_MPP * Math.pow(DS, k) <= s * 1.0001) L = k;
+  return L;
+}
+const zoomToScale = z => { const mx = fitScale(); return mx * Math.pow(MIN_SCALE / mx, z / 1000); };
+const scaleToZoom = s => { const mx = fitScale(); return 1000 * Math.log(s / mx) / Math.log(MIN_SCALE / mx); };
+
+let raf = 0;
+function draw() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+function render() {
+  const rect = cv.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // render at reduced resolution for speed, then let the browser upscale
+  const q = 0.5 * dpr;
+  const W = Math.max(1, Math.round(rect.width * q)), H = Math.max(1, Math.round(rect.height * q));
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const img = ctx.createImageData(W, H), d = img.data;
+  const s = scale / q; // um per canvas px
+  const x0 = cx - (W / 2) * s, y0 = cy - (H / 2) * s;
+  for (let j = 0; j < H; j++) {
+    const y = y0 + (j + .5) * s;
+    for (let i = 0; i < W; i++) {
+      const c = shade(x0 + (i + .5) * s, y, s);
+      const k = (j * W + i) * 4;
+      d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const L = levelFor(scale), lvlMpp = BASE_MPP * Math.pow(DS, L), tileUm = 256 * lvlMpp;
+  let nTiles = 0;
+  const tx0 = Math.max(0, Math.floor(x0 / tileUm)), ty0 = Math.max(0, Math.floor(y0 / tileUm));
+  const tx1 = Math.min(Math.ceil(WORLD_W / tileUm), Math.ceil((x0 + W * s) / tileUm));
+  const ty1 = Math.min(Math.ceil(WORLD_H / tileUm), Math.ceil((y0 + H * s) / tileUm));
+  nTiles = Math.max(0, tx1 - tx0) * Math.max(0, ty1 - ty0);
+  if (showTiles) {
+    ctx.strokeStyle = "rgba(79,42,122,.55)"; ctx.lineWidth = Math.max(1, q);
+    ctx.setLineDash([4 * q, 3 * q]);
+    ctx.beginPath();
+    for (let tx = tx0; tx <= tx1; tx++) { const X = (tx * tileUm - x0) / s; ctx.moveTo(X, Math.max(0, (0 - y0) / s)); ctx.lineTo(X, Math.min(H, (WORLD_H - y0) / s)); }
+    for (let ty = ty0; ty <= ty1; ty++) { const Y = (ty * tileUm - y0) / s; ctx.moveTo(Math.max(0, (0 - x0) / s), Y); ctx.lineTo(Math.min(W, (WORLD_W - x0) / s), Y); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  const levelW = Math.round(WORLD_W / lvlMpp), levelH = Math.round(WORLD_H / lvlMpp);
+  const mag = 10 / scale;
+  $("#hud").innerHTML = `<b>level ${L}</b> of 0&ndash;${LEVELS - 1} &middot; ${lvlMpp} &micro;m/px<br>level size ${levelW.toLocaleString("en-US")} &times; ${levelH.toLocaleString("en-US")} px<br>on screen &asymp; ${mag >= 1 ? mag.toFixed(mag < 10 ? 1 : 0) : mag.toFixed(2)}x &middot; ${nTiles} tile${nTiles === 1 ? "" : "s"} fetched`;
+  // scale bar
+  const target = scale * 110; const nice = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+  const um = nice.reduce((p, n) => n <= target ? n : p, 1);
+  $("#scalebar div").style.width = (um / scale) + "px";
+  $("#scalebar span").textContent = um >= 1000 ? (um / 1000) + " mm" : um + " µm";
+  $("#pyramid").innerHTML = Array.from({ length: LEVELS }, (_, k) => {
+    const m = BASE_MPP * Math.pow(DS, k);
+    return `<div class="${k === L ? "on" : ""}"><b>L${k}</b>${m} &micro;m/px<br>${fmtN(Math.round(WORLD_W / m) * Math.round(WORLD_H / m))} px</div>`;
+  }).join("");
+  $("#zoom").value = Math.round(scaleToZoom(scale));
+  drawMiniPyramid(L, x0, y0, x0 + W * s, y0 + H * s, tx0, ty0, tx1, ty1);
+}
+// A small isometric stack of the pyramid's levels: the level being read is
+// filled and the tiles fetched for the screen are marked on it. Below it, a
+// flat map of that level's tile grid around the view, with those tiles filled.
+function drawMiniPyramid(L, vx0, vy0, vx1, vy1, tx0, ty0, tx1, ty1) {
+  const C = Math.cos(Math.PI / 6), Sn = Math.sin(Math.PI / 6);
+  const ox = 68, base = 110, gap = 23;
+  const layer = k => { const w = 84 * (1 - k * .19); return { w, h: w * WORLD_H / WORLD_W, y: base - k * gap }; };
+  const pt = (k, u, v) => {
+    const l = layer(k), a = (u - .5) * l.w, b = (v - .5) * l.h;
+    return [(ox + (a - b) * C).toFixed(1), (l.y + (a + b) * Sn).toFixed(1)];
+  };
+  const poly = (k, u0, v0, u1, v1) => [pt(k, u0, v0), pt(k, u1, v0), pt(k, u1, v1), pt(k, u0, v1)].map(p => p.join(",")).join(" ");
+  let out = "", ring = "";
+  for (let k = 0; k < LEVELS; k++) {
+    const on = k === L, m = BASE_MPP * Math.pow(DS, k);
+    const ntx = Math.ceil(WORLD_W / (256 * m)), nty = Math.ceil(WORLD_H / (256 * m));
+    out += `<polygon points="${poly(k, 0, 0, 1, 1)}" fill="${on ? "#4f2a7a" : "#f3e9f0"}" fill-opacity="${on ? .85 : .92}" stroke="#4f2a7a" stroke-width=".8"/>`;
+    // tile grid: every line while there are few tiles, a sample of them when there are many
+    const stepX = Math.max(1, Math.ceil(ntx / 12)), stepY = Math.max(1, Math.ceil(nty / 8));
+    let g = "";
+    for (let i = stepX; i < ntx; i += stepX) { const u = i / ntx; g += `M${pt(k, u, 0)}L${pt(k, u, 1)}`; }
+    for (let j = stepY; j < nty; j += stepY) { const v = j / nty; g += `M${pt(k, 0, v)}L${pt(k, 1, v)}`; }
+    if (g) out += `<path d="${g}" stroke="${on ? "#fff" : "#4f2a7a"}" stroke-opacity="${on ? .45 : .3}" stroke-width=".5" fill="none"/>`;
+    if (on) {
+      const tu = 256 * m / WORLD_W, tv = 256 * m / WORLD_H;
+      const u0 = tx0 * tu, v0 = ty0 * tv, u1 = Math.min(1, tx1 * tu), v1 = Math.min(1, ty1 * tv);
+      out += `<polygon points="${poly(k, u0, v0, u1, v1)}" fill="#d9467e" fill-opacity=".8" stroke="#d9467e" stroke-width="1"/>`;
+      // when the fetched block is too small to see, ring it
+      if (u1 - u0 < .12 && v1 - v0 < .12) {
+        const c = pt(k, (u0 + u1) / 2, (v0 + v1) / 2);
+        ring = `<circle cx="${c[0]}" cy="${c[1]}" r="5" fill="none" stroke="#d9467e" stroke-width="1.6"/>`;
+      }
+    }
+    const lp = pt(k, 1, 0);
+    out += `<text x="${+lp[0] + 5}" y="${+lp[1] + 3}" font-size="9" font-family="ui-monospace, Menlo, Consolas, monospace" fill="${on ? "#d9467e" : "#6a5872"}" font-weight="${on ? 700 : 400}">L${k}${on ? " \u25c0" : ""}</text>`;
+  }
+  out += ring; // drawn last so the upper layers do not hide it
+  out += tileMap(L, vx0, vy0, vx1, vy1, tx0, ty0, tx1, ty1);
+  $("#minipyr").innerHTML = out;
+}
+function tileMap(L, vx0, vy0, vx1, vy1, tx0, ty0, tx1, ty1) {
+  const tileUm = 256 * BASE_MPP * Math.pow(DS, L);
+  const ntx = Math.ceil(WORLD_W / tileUm), nty = Math.ceil(WORLD_H / tileUm);
+  // show the whole level if it is small, otherwise a window centred on the fetched tiles
+  const cols = Math.min(ntx, Math.max(14, tx1 - tx0 + 2)), rows = Math.min(nty, Math.max(9, ty1 - ty0 + 2));
+  const wx0 = Math.min(ntx - cols, Math.max(0, Math.round((tx0 + tx1 - cols) / 2)));
+  const wy0 = Math.min(nty - rows, Math.max(0, Math.round((ty0 + ty1 - rows) / 2)));
+  const top = 166, areaW = 162, areaH = 82;
+  const cs = Math.min(areaW / cols, areaH / rows);
+  const left = 4 + (areaW - cs * cols) / 2;
+  const mono = `font-family="ui-monospace, Menlo, Consolas, monospace"`;
+  let o = `<line x1="4" x2="166" y1="146" y2="146" stroke="#4f2a7a" stroke-opacity=".25"/>`;
+  o += `<text x="4" y="158" font-size="9" ${mono} fill="#4f2a7a" font-weight="700">L${L} tiles</text>`;
+  o += `<text x="166" y="158" font-size="8" ${mono} fill="#6a5872" text-anchor="end">${cols < ntx || rows < nty ? `window of ${ntx}&times;${nty}` : `all ${ntx}&times;${nty}`}</text>`;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const gx = wx0 + i, gy = wy0 + j, hit = gx >= tx0 && gx < tx1 && gy >= ty0 && gy < ty1;
+    o += `<rect x="${(left + i * cs + .5).toFixed(1)}" y="${(top + j * cs + .5).toFixed(1)}" width="${(cs - 1).toFixed(1)}" height="${(cs - 1).toFixed(1)}" fill="${hit ? "#d9467e" : "#f3e9f0"}" stroke="#4f2a7a" stroke-opacity=".35" stroke-width=".5"/>`;
+  }
+  // the screen's outline, in tile units
+  const X = u => left + (u / tileUm - wx0) * cs, Y = v => top + (v / tileUm - wy0) * cs;
+  const ax = Math.max(left, X(Math.max(0, vx0))), ay = Math.max(top, Y(Math.max(0, vy0)));
+  const bx = Math.min(left + cols * cs, X(Math.min(WORLD_W, vx1))), by = Math.min(top + rows * cs, Y(Math.min(WORLD_H, vy1)));
+  if (bx > ax && by > ay) o += `<rect x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${(bx - ax).toFixed(1)}" height="${(by - ay).toFixed(1)}" fill="none" stroke="#4f2a7a" stroke-width="1.4"/>`;
+  return o;
+}
+function clampView() {
+  const mx = fitScale();
+  scale = Math.min(mx, Math.max(MIN_SCALE, scale));
+  cx = Math.min(WORLD_W, Math.max(0, cx)); cy = Math.min(WORLD_H, Math.max(0, cy));
+}
+function zoomAt(f, sx, sy) {
+  const r = cv.getBoundingClientRect();
+  const wx = cx + (sx - r.width / 2) * scale, wy = cy + (sy - r.height / 2) * scale;
+  scale *= f; clampView();
+  cx = wx - (sx - r.width / 2) * scale; cy = wy - (sy - r.height / 2) * scale; clampView();
+  draw();
+}
+function reset() {
+  scale = fitScale(); cx = WORLD_W / 2; cy = WORLD_H / 2; draw();
+}
+cv.addEventListener("wheel", e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(e.deltaY * .0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+const ptrs = new Map(); let pinch0 = 0;
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); } });
+cv.addEventListener("pointermove", e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 1) { cx -= dx * scale; cy -= dy * scale; clampView(); draw(); }
+  else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], dist = Math.hypot(a.x - b.x, a.y - b.y), r = cv.getBoundingClientRect();
+    if (pinch0) zoomAt(pinch0 / dist, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+    pinch0 = dist;
+  }
+});
+const up = e => { ptrs.delete(e.pointerId); pinch0 = 0; };
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+$("#zoom").addEventListener("input", e => { scale = zoomToScale(+e.target.value); clampView(); draw(); });
+$("#zoomIn").addEventListener("click", () => { const r = cv.getBoundingClientRect(); zoomAt(1 / 2.5, r.width / 2, r.height / 2); });
+$("#zoomOut").addEventListener("click", () => { const r = cv.getBoundingClientRect(); zoomAt(2.5, r.width / 2, r.height / 2); });
+$("#tiles").addEventListener("click", e => { showTiles = !showTiles; e.currentTarget.setAttribute("aria-pressed", String(showTiles)); draw(); });
+$("#reset").addEventListener("click", reset);
+window.addEventListener("resize", () => { clampView(); draw(); });
+reset();
+</script>
+</body>
+</html>

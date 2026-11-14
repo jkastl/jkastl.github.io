@@ -2,13 +2,19 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://jkastl.github.io/</loc></url>
   <url><loc>https://jkastl.github.io/agent-triage/</loc></url>
+  <url><loc>https://jkastl.github.io/agreement-loop/</loc></url>
+  <url><loc>https://jkastl.github.io/catharsis/</loc></url>
   <url><loc>https://jkastl.github.io/data-eng-advanced/</loc></url>
   <url><loc>https://jkastl.github.io/data-eng-concepts/</loc></url>
   <url><loc>https://jkastl.github.io/emergence/</loc></url>
   <url><loc>https://jkastl.github.io/ml-showcase/</loc></url>
+  <url><loc>https://jkastl.github.io/operators-manual/</loc></url>
+  <url><loc>https://jkastl.github.io/parts-list/</loc></url>
+  <url><loc>https://jkastl.github.io/pit-program/</loc></url>
   <url><loc>https://jkastl.github.io/ride-report/</loc></url>
   <url><loc>https://jkastl.github.io/scroll-report/</loc></url>
   <url><loc>https://jkastl.github.io/slide-pyramid/</loc></url>
+  <url><loc>https://jkastl.github.io/slide-to-screen/</loc></url>
   <url><loc>https://jkastl.github.io/stain-drift/</loc></url>
   <url><loc>https://jkastl.github.io/tolerance/</loc></url>
   <url><loc>https://jkastl.github.io/tolerance/bufferbloat/</loc></url>
@@ -21,4 +27,6 @@
   <url><loc>https://jkastl.github.io/tolerance/tearproof/</loc></url>
   <url><loc>https://jkastl.github.io/tolerance/traitors/</loc></url>
   <url><loc>https://jkastl.github.io/tolerance/vote/</loc></url>
+  <url><loc>https://jkastl.github.io/touch-bench/</loc></url>
+  <url><loc>https://jkastl.github.io/up-and-down/</loc></url>
 </urlset>

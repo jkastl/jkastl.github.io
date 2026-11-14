@@ -13,6 +13,11 @@ README and tests, run by GitHub Actions:
 - [Slide Pyramid](slide-pyramid/) in `slide-pyramid/`
 - [Stain Drift](stain-drift/) in `stain-drift/`
 
+Eight more graduated from [tidepool](https://github.com/jkastl/tidepool) and live here as plain
+pages, each a folder with an `index.html` (and a script or two) but no README or tests of its own:
+`agreement-loop/`, `catharsis/`, `operators-manual/`, `parts-list/`, `pit-program/`,
+`slide-to-screen/`, `touch-bench/`, and `up-and-down/`. Their old tidepool URLs are gone.
+
 Slide Pyramid and Stain Drift share [`shared/base.css`](shared/base.css) (the dark theme) and
 [`shared/tissue.js`](shared/tissue.js), the procedural slide they both render. Change either and run
 both apps' tests. Commit and push changes directly to `main`; there are no feature branches or

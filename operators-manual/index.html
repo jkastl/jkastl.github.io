@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator's Manual: How a Robot Arm Reaches</title>
+<!-- site:head -->
+<meta name="description" content="Robot arm basics as an old operator&#x27;s manual: joints and degrees of freedom, a drag-the-hand inverse kinematics figure with elbow-up, elbow-down, and redundancy, a singularity you can run into, and the motors, grippers, and arm families.">
+<link rel="canonical" href="https://jkastl.github.io/operators-manual/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Operator&#x27;s Manual: How a Robot Arm Reaches">
+<meta property="og:description" content="Robot arm basics as an old operator&#x27;s manual: joints and degrees of freedom, a drag-the-hand inverse kinematics figure with elbow-up, elbow-down, and redundancy, a singularity you can run into, and the motors, grippers, and arm families.">
+<meta property="og:url" content="https://jkastl.github.io/operators-manual/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Operator's Manual: How a Robot Arm Reaches",
+ "description": "Robot arm basics as an old operator's manual: joints and degrees of freedom, a drag-the-hand inverse kinematics figure with elbow-up, elbow-down, and redundancy, a singularity you can run into, and the motors, grippers, and arm families.",
+ "url": "https://jkastl.github.io/operators-manual/",
+ "datePublished": "2026-10-17",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+  :root {
+    --paper: #f1ead8;
+    --paper-2: #e6dcc3;
+    --ink: #24211b;
+    --muted: #5d5646;
+    --rule: #24211b;
+    --line: #2f4f6e;
+    --ghost: rgba(47, 79, 110, 0.28);
+    --reach: rgba(47, 79, 110, 0.10);
+    --caution: #f2c230;
+    --caution-ink: #1d1a12;
+    --red: #b0321f;
+    --ok: #2f6b3a;
+    --j1: #2f4f6e;
+    --j2: #b0321f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1c1b18;
+      --paper-2: #26241f;
+      --ink: #ece4cf;
+      --muted: #ada48c;
+      --rule: #ece4cf;
+      --line: #8fb6da;
+      --ghost: rgba(143, 182, 218, 0.30);
+      --reach: rgba(143, 182, 218, 0.10);
+      --caution: #e0b42c;
+      --caution-ink: #1a170f;
+      --red: #ef7b62;
+      --ok: #8fd09a;
+      --j1: #8fb6da;
+      --j2: #ef7b62;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Courier Prime", "Courier New", Courier, monospace;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .sheet {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+  }
+  .cond {
+    font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    font-stretch: condensed;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  header.cover {
+    border: 3px solid var(--rule);
+    padding: 20px 18px;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  header.cover .docno {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    font-size: 13px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 14px;
+  }
+  header.cover h1 {
+    font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    font-stretch: condensed;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: clamp(30px, 7vw, 54px);
+    line-height: 1;
+    margin: 0 0 10px;
+    letter-spacing: 0.01em;
+  }
+  header.cover p { margin: 0; max-width: 60ch; }
+  .stripe {
+    height: 14px; margin-top: 16px;
+    background: repeating-linear-gradient(-45deg, var(--caution) 0 12px, var(--caution-ink) 12px 24px);
+  }
+  nav.toc { margin: 0 0 28px; font-size: 14px; }
+  nav.toc ol { margin: 6px 0 0; padding-left: 0; list-style: none; columns: 2; column-gap: 24px; }
+  nav.toc li { break-inside: avoid; border-bottom: 1px dotted var(--muted); display: flex; justify-content: space-between; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  @media (max-width: 560px) { nav.toc ol { columns: 1; } }
+  section { margin: 0 0 44px; }
+  h2 {
+    font-family: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    font-stretch: condensed;
+    text-transform: uppercase;
+    font-size: 24px;
+    letter-spacing: 0.03em;
+    border-top: 3px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 6px 0;
+    margin: 0 0 14px;
+    display: flex; gap: 12px; align-items: baseline;
+  }
+  h2 .num { font-family: inherit; min-width: 2.2em; }
+  h3 { font-size: 16px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  p { margin: 0 0 12px; }
+  .fig {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    margin: 16px 0;
+  }
+  .fig .cap {
+    border-top: 1px solid var(--rule);
+    padding: 6px 10px; font-size: 13px; color: var(--muted);
+  }
+  .fig .cap b { color: var(--ink); }
+  svg { display: block; width: 100%; height: auto; }
+  .controls {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px 18px; padding: 10px; border-top: 1px dashed var(--muted);
+    font-size: 14px;
+  }
+  .controls label { display: flex; flex-direction: column; gap: 2px; }
+  .controls .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=range] { width: 100%; accent-color: var(--line); }
+  button {
+    font: inherit; font-size: 14px;
+    background: var(--paper); color: var(--ink);
+    border: 2px solid var(--rule); padding: 4px 10px; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--caution); outline-offset: 2px; }
+  .readout {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-top: 1px solid var(--rule); font-size: 13px;
+  }
+  .readout div { padding: 6px 10px; border-right: 1px solid var(--rule); }
+  .readout div:last-child { border-right: 0; }
+  .readout b { display: block; font-size: 17px; }
+  .status { font-weight: bold; }
+  .status.bad { color: var(--red); }
+  .status.warn { color: var(--red); }
+  .status.good { color: var(--ok); }
+  .caution {
+    border: 2px solid var(--caution-ink);
+    background: var(--caution); color: var(--caution-ink);
+    padding: 10px 12px; margin: 14px 0; font-size: 15px;
+  }
+  .caution .tag { font-family: "Arial Narrow", Arial, sans-serif; font-weight: 800; letter-spacing: 0.08em; margin-right: 6px; }
+  .note { border-left: 4px solid var(--rule); padding: 2px 0 2px 12px; margin: 14px 0; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: var(--paper-2); text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; }
+  .tablewrap { overflow-x: auto; }
+  .families { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .families .fig { margin: 0; }
+  .families h3 { margin: 0; padding: 6px 10px; border-bottom: 1px solid var(--rule); }
+  .families p { padding: 8px 10px 0; font-size: 14px; }
+  dl.gloss { margin: 0; display: grid; grid-template-columns: minmax(120px, 30%) 1fr; border-top: 1px solid var(--rule); }
+  dl.gloss dt, dl.gloss dd { margin: 0; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  dl.gloss dt { font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: 0.04em; }
+  @media (max-width: 520px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dt { border-bottom: 0; padding-bottom: 0; } }
+  .lab svg { touch-action: none; cursor: crosshair; }
+  .handle { cursor: grab; }
+  footer { border-top: 3px solid var(--rule); padding-top: 10px; font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  footer a, .sheet a { color: var(--ink); }
+  .stroke { stroke: var(--ink); }
+  .sr { position: absolute; left: -9999px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header class="cover">
+  <div class="docno cond"><span>Form RA-1 · Operator's manual</span><span>Rev. A</span></div>
+  <h1>How a robot arm reaches</h1>
+  <p>Links, joints, motors, and the bit of geometry that turns "put the hand there" into joint angles. Read in order. Every figure with a slider or a handle can be operated.</p>
+  <div class="stripe" aria-hidden="true"></div>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <div class="cond">Contents</div>
+  <ol>
+    <li><a href="#s1">1. Links and joints</a><span>FIG. 1</span></li>
+    <li><a href="#s2">2. Degrees of freedom</a><span>FIG. 2</span></li>
+    <li><a href="#s3">3. Forward kinematics</a><span>FIG. 3</span></li>
+    <li><a href="#s4">4. Inverse kinematics</a><span>FIG. 4</span></li>
+    <li><a href="#s5">5. Singularities</a><span>FIG. 5</span></li>
+    <li><a href="#s6">6. Motors, gears, sensors</a><span>TABLE 1</span></li>
+    <li><a href="#s7">7. End effectors</a><span>TABLE 2</span></li>
+    <li><a href="#s8">8. Arm families</a><span>FIG. 6–10</span></li>
+    <li><a href="#s9">9. Glossary</a><span></span></li>
+  </ol>
+</nav>
+
+<section id="s1">
+  <h2><span class="num">1.</span>Links and joints</h2>
+  <p>An arm is a chain. The rigid pieces are <b>links</b>; what connects them are <b>joints</b>. The chain starts at a fixed <b>base</b> and ends at the <b>end effector</b>, the hand or tool that does the work.</p>
+  <p>Nearly every joint is one of two kinds. A <b>revolute</b> joint turns, like an elbow. A <b>prismatic</b> joint slides, like a drawer. Each lets the next link move in exactly one way.</p>
+  <div class="fig">
+    <svg id="fig1" viewBox="0 0 600 200" role="img" aria-label="Two animated joints: a revolute joint rotating and a prismatic joint sliding">
+      <g transform="translate(150,120)">
+        <rect x="-60" y="22" width="120" height="16" fill="none" stroke="currentColor" stroke-width="2"/>
+        <line x1="-60" y1="38" x2="-70" y2="48" stroke="currentColor"/><line x1="-30" y1="38" x2="-40" y2="48" stroke="currentColor"/><line x1="0" y1="38" x2="-10" y2="48" stroke="currentColor"/><line x1="30" y1="38" x2="20" y2="48" stroke="currentColor"/><line x1="60" y1="38" x2="50" y2="48" stroke="currentColor"/>
+        <line x1="0" y1="22" x2="0" y2="0" stroke="currentColor" stroke-width="6"/>
+        <g id="rev"><line x1="0" y1="0" x2="0" y2="-90" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/></g>
+        <circle cx="0" cy="0" r="12" fill="var(--paper)" stroke="currentColor" stroke-width="3"/>
+        <circle cx="0" cy="0" r="3" fill="currentColor"/>
+        <text x="0" y="68" text-anchor="middle" font-size="14" fill="currentColor" class="cond">Revolute (turns)</text>
+      </g>
+      <g transform="translate(450,120)">
+        <rect x="-60" y="22" width="120" height="16" fill="none" stroke="currentColor" stroke-width="2"/>
+        <line x1="-60" y1="38" x2="-70" y2="48" stroke="currentColor"/><line x1="-30" y1="38" x2="-40" y2="48" stroke="currentColor"/><line x1="0" y1="38" x2="-10" y2="48" stroke="currentColor"/><line x1="30" y1="38" x2="20" y2="48" stroke="currentColor"/><line x1="60" y1="38" x2="50" y2="48" stroke="currentColor"/>
+        <rect x="-16" y="-60" width="32" height="82" fill="none" stroke="currentColor" stroke-width="3"/>
+        <g id="pri"><rect x="-8" y="-90" width="16" height="100" fill="var(--line)"/></g>
+        <text x="0" y="68" text-anchor="middle" font-size="14" fill="currentColor" class="cond">Prismatic (slides)</text>
+      </g>
+    </svg>
+    <div class="cap"><b>FIG. 1</b> The two basic joints. Each adds one way to move.</div>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="num">2.</span>Degrees of freedom</h2>
+  <p>Each independent joint adds one <b>degree of freedom</b> (DOF). Count them and you know how many ways the arm can move.</p>
+  <p>Why do so many factory arms have six? A rigid object floating in space has six things you can set: where it is (left–right, forward–back, up–down) and which way it faces (roll, pitch, yaw). To put a tool anywhere in its reach <i>and</i> point it any way, an arm needs at least six joints. Fewer, and some poses are impossible. More (seven is common on collaborative arms) and the arm has spare motion, so it can reach the same pose while swinging its elbow around an obstacle.</p>
+  <div class="fig">
+    <svg viewBox="0 0 600 300" role="img" aria-label="A six-axis arm drawn as a line diagram with joints J1 to J6 labelled">
+      <g fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="150" y="250" width="100" height="18"/>
+        <rect x="170" y="215" width="60" height="35"/>
+        <line x1="200" y1="215" x2="200" y2="170" stroke-width="10" stroke="var(--line)"/>
+        <line x1="200" y1="170" x2="330" y2="90" stroke-width="10" stroke="var(--line)"/>
+        <line x1="330" y1="90" x2="440" y2="130" stroke-width="8" stroke="var(--line)"/>
+        <line x1="440" y1="130" x2="470" y2="150" stroke-width="6" stroke="var(--line)"/>
+        <line x1="470" y1="150" x2="485" y2="175" stroke-width="5" stroke="var(--line)"/>
+        <path d="M480 178 l-10 22 M490 172 l14 18"/>
+        <circle cx="200" cy="232" r="9" fill="var(--paper-2)"/>
+        <circle cx="200" cy="170" r="11" fill="var(--paper-2)"/>
+        <circle cx="330" cy="90" r="11" fill="var(--paper-2)"/>
+        <circle cx="440" cy="130" r="9" fill="var(--paper-2)"/>
+        <circle cx="470" cy="150" r="7" fill="var(--paper-2)"/>
+        <circle cx="485" cy="175" r="6" fill="var(--paper-2)"/>
+        <path d="M120 232 h60 M140 160 h50 M330 40 v38 M440 70 v48 M520 145 h-40 M530 185 h-38" stroke-width="1"/>
+      </g>
+      <g font-size="13" fill="currentColor" class="cond">
+        <text x="20" y="236">J1 waist (swing)</text>
+        <text x="20" y="164">J2 shoulder</text>
+        <text x="300" y="34">J3 elbow</text>
+        <text x="410" y="64">J4 wrist roll</text>
+        <text x="524" y="149">J5 pitch</text>
+        <text x="534" y="189">J6 roll</text>
+      </g>
+    </svg>
+    <div class="cap"><b>FIG. 2</b> A typical six-axis arm. The first three joints mostly decide <i>where</i> the wrist is; the last three mostly decide <i>which way</i> the tool points.</div>
+  </div>
+  <p>The figures that follow flatten the arm onto a page: two or three revolute joints in a plane. Every idea carries up to six joints in three dimensions; only the arithmetic gets longer.</p>
+</section>
+
+<section id="s3">
+  <h2><span class="num">3.</span>Forward kinematics</h2>
+  <p><b>Kinematics</b> is the geometry of motion, ignoring the forces behind it. The easy direction is <b>forward</b>: given every joint angle, where does the hand end up? Add up the links, each turned by the angles before it.</p>
+  <div class="fig">
+    <svg id="fig3" viewBox="-220 -200 440 260" role="img" aria-label="A two-link arm set by two angle sliders"></svg>
+    <div class="controls">
+      <label>θ1, shoulder angle: <span id="fk1v"></span><input id="fk1" type="range" min="-30" max="210" value="55"></label>
+      <label>θ2, elbow angle: <span id="fk2v"></span><input id="fk2" type="range" min="-160" max="160" value="-60"></label>
+    </div>
+    <div class="readout">
+      <div>Hand x<b id="fkx"></b></div>
+      <div>Hand y<b id="fky"></b></div>
+    </div>
+    <div class="cap"><b>FIG. 3</b> Links of 100 and 80 units. x = L1·cos θ1 + L2·cos(θ1+θ2); y = L1·sin θ1 + L2·sin(θ1+θ2). One answer, every time.</div>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="num">4.</span>Inverse kinematics</h2>
+  <p>The useful direction is backwards. A task says "pick up the part <i>there</i>"; the controller has to work out which joint angles get the hand to that spot. That is <b>inverse kinematics</b> (IK), and it is where arms get interesting:</p>
+  <ul>
+    <li><b>Two answers.</b> A two-link arm can reach most points elbow-up or elbow-down.</li>
+    <li><b>No answer.</b> Outside the <b>workspace</b>, the ring the arm can reach, there is none. With unequal links there is a hole in the middle, too.</li>
+    <li><b>Endless answers.</b> Add a joint the task does not need and a whole family of poses reaches the same point. Fix the hand's angle as well and you are back to two.</li>
+  </ul>
+  <div class="fig lab">
+    <svg id="fig4" viewBox="-230 -230 460 460" role="img" aria-label="Inverse kinematics lab: drag the target and the arm solves for joint angles"></svg>
+    <div class="controls">
+      <div class="row" role="group" aria-label="Elbow">
+        <span>Elbow:</span>
+        <button id="up" aria-pressed="true">Up</button>
+        <button id="down" aria-pressed="false">Down</button>
+        <button id="both" aria-pressed="false">Show both</button>
+      </div>
+      <div class="row" role="group" aria-label="Joints">
+        <span>Joints:</span>
+        <button id="j2" aria-pressed="true">2</button>
+        <button id="j3" aria-pressed="false">3 (add wrist)</button>
+      </div>
+      <label>Link 1 length: <span id="l1v"></span><input id="l1" type="range" min="40" max="140" value="110"></label>
+      <label>Link 2 length: <span id="l2v"></span><input id="l2" type="range" min="40" max="140" value="70"></label>
+      <label id="phiwrap" hidden>Hand angle: <span id="phiv"></span><input id="phi" type="range" min="-180" max="180" value="-30"></label>
+    </div>
+    <div class="readout">
+      <div>Target<b id="tg"></b></div>
+      <div>θ1 / θ2<b id="ang"></b></div>
+      <div>Status<b id="st" class="status"></b></div>
+    </div>
+    <div class="cap"><b>FIG. 4</b> Drag the crosshair, or tap anywhere in the figure. The shaded ring is the workspace. Arrow keys nudge the target when the figure has focus.</div>
+  </div>
+  <p>For two links, IK has a tidy closed form. The law of cosines gives the elbow: cos θ2 = (x² + y² − L1² − L2²) / (2·L1·L2). Taking the positive or negative angle picks elbow-down or elbow-up. If that cosine comes out above 1 or below −1, the point is out of reach. Six-axis arms built with three wrist axes meeting at one point split the same way into a "where" problem and a "which way" problem, each with a closed form; arms without that layout are usually solved numerically, nudging the angles until the hand lands.</p>
+  <div class="note">Try three joints with the wrist on. The faint arms all put the hand on the target; only the hand angle slider picks one. That spare freedom is called <b>redundancy</b>.</div>
+</section>
+
+<section id="s5">
+  <h2><span class="num">5.</span>Singularities</h2>
+  <p>At certain poses the arm loses a direction it can move in. Stretch a two-link arm straight out: the hand can swing sideways but cannot move further out, however the joints turn. That pose is a <b>singularity</b>.</p>
+  <p>The other classic one: fold the arm back so the hand sits right over the shoulder joint. Now the shoulder angle no longer matters, since turning it just spins the hand in place, so the arm has lost a direction again.</p>
+  <p>The trouble shows up <i>near</i> them. Ask the hand to move in a straight line at a steady speed past a singularity, and the joints must spin faster and faster to keep up. Real controllers slow down, stop, or plan around them.</p>
+  <div class="fig">
+    <svg id="fig5" viewBox="-230 -40 460 250" role="img" aria-label="An arm tracing a straight line that passes close over its shoulder joint"></svg>
+    <svg id="plot5" viewBox="0 0 460 160" role="img" aria-label="Joint speed plot over the move"></svg>
+    <div class="controls">
+      <label>Line distance from the shoulder: <span id="gapv"></span><input id="gap" type="range" min="2" max="90" value="25"></label>
+      <div class="row"><button id="run5">Run the move</button></div>
+    </div>
+    <div class="readout">
+      <div>Hand speed<b>constant</b></div>
+      <div>Peak shoulder speed<b id="peak"></b></div>
+      <div>Status<b id="st5" class="status"></b></div>
+    </div>
+    <div class="cap"><b>FIG. 5</b> The hand slides along the dashed line at one speed. The plot shows how fast each joint turns, as a multiple of the shoulder speed at the start of the line. Links are equal, so the hand can pass right over the shoulder. Move the line closer to the shoulder and watch it spike.</div>
+  </div>
+  <div class="caution"><span class="tag">CAUTION</span>Six-axis arms have more of these: wrist singularities (two wrist axes line up), shoulder singularities (the wrist passes over the base), and elbow singularities (fully stretched). Path planners check for them before a move, not during it.</div>
+</section>
+
+<section id="s6">
+  <h2><span class="num">6.</span>Motors, gears, sensors</h2>
+  <p>Every joint has the same small kit: something to turn it, something to multiply the force, something to measure where it is, and a controller closing the loop between them, thousands of times a second.</p>
+  <div class="tablewrap">
+  <table>
+    <caption class="sr">Table 1: joint hardware</caption>
+    <thead><tr><th>Part</th><th>Common choices</th><th>What it trades</th></tr></thead>
+    <tbody>
+      <tr><td>Motor</td><td>Brushless servo motor; stepper motor; hobby servo</td><td>Brushless servos are smooth and strong but need a proper drive. Steppers are cheap and hold position without sensors until overloaded, then silently lose steps. Hobby servos bundle motor, gears, and sensor for small arms.</td></tr>
+      <tr><td>Reducer (gearing)</td><td>Strain wave ("harmonic") gear; cycloidal drive; planetary gearbox; belts</td><td>Motors spin fast and weak; joints need slow and strong. Strain wave gears give high ratios with almost no backlash in a compact package, which is why wrists use them. Cycloidal drives take shock loads in big joints. Planetary gears are cheaper but have more play.</td></tr>
+      <tr><td>Sensor</td><td>Optical or magnetic encoder, incremental or absolute</td><td>An incremental encoder counts ticks from a known home; an absolute one knows its angle at power-on, so the arm needs no homing routine.</td></tr>
+      <tr><td>Brake</td><td>Spring-applied brake on each heavy axis</td><td>Holds the arm when power is cut, so it does not fold under its own weight.</td></tr>
+      <tr><td>Controller</td><td>Per-joint drive plus a motion controller</td><td>Turns a planned path into joint commands, checks limits, and compares where each joint is with where it should be.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Specs worth knowing</h3>
+  <p><b>Reach</b>: how far from the base the wrist can get. <b>Payload</b>: the mass it can carry at full reach, tool included. <b>Repeatability</b>: how closely it returns to the same taught point, often a few hundredths of a millimetre on industrial arms. <b>Accuracy</b> is different: how close it gets to a point given as coordinates, which depends on how well its link lengths and offsets are known. Most arms are far more repeatable than accurate.</p>
+</section>
+
+<section id="s7">
+  <h2><span class="num">7.</span>End effectors</h2>
+  <p>The arm only moves the tool. The tool decides the job, and on many cells a <b>tool changer</b> swaps it automatically.</p>
+  <div class="tablewrap">
+  <table>
+    <caption class="sr">Table 2: end effectors</caption>
+    <thead><tr><th>Tool</th><th>Good for</th></tr></thead>
+    <tbody>
+      <tr><td>Parallel-jaw gripper</td><td>Boxes, parts with flat faces; the default</td></tr>
+      <tr><td>Vacuum (suction) cups</td><td>Flat or smooth items: sheets, cartons, glass</td></tr>
+      <tr><td>Soft or finger grippers</td><td>Food and irregular, fragile shapes</td></tr>
+      <tr><td>Magnetic gripper</td><td>Steel parts</td></tr>
+      <tr><td>Process tools</td><td>Welding torches, spray guns, screwdrivers, dispensers, cameras</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Many tools add a <b>force-torque sensor</b> at the wrist, so the arm can feel contact: pressing a part home, sanding with steady pressure, or stopping when it bumps something.</p>
+</section>
+
+<section id="s8">
+  <h2><span class="num">8.</span>Arm families</h2>
+  <p>Same parts, different layouts, each shaped by the job.</p>
+  <div class="families">
+    <div class="fig">
+      <h3>Articulated</h3>
+      <svg viewBox="0 0 200 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="40" y="100" width="40" height="10"/><line x1="60" y1="100" x2="60" y2="75" stroke="var(--line)" stroke-width="7"/><line x1="60" y1="75" x2="115" y2="30" stroke="var(--line)" stroke-width="7"/><line x1="115" y1="30" x2="160" y2="60" stroke="var(--line)" stroke-width="6"/><circle cx="60" cy="75" r="6" fill="var(--paper-2)"/><circle cx="115" cy="30" r="6" fill="var(--paper-2)"/><path d="M160 60 l-4 14 M160 60 l10 10"/></g></svg>
+      <p>Revolute joints all the way, usually six. Reaches around things; the general-purpose shape for welding, painting, handling.</p>
+      <div class="cap"><b>FIG. 6</b></div>
+    </div>
+    <div class="fig">
+      <h3>SCARA</h3>
+      <svg viewBox="0 0 200 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="25" y="40" width="20" height="70"/><line x1="35" y1="40" x2="105" y2="40" stroke="var(--line)" stroke-width="8"/><line x1="105" y1="40" x2="165" y2="40" stroke="var(--line)" stroke-width="7"/><circle cx="105" cy="40" r="6" fill="var(--paper-2)"/><line x1="165" y1="30" x2="165" y2="85" stroke-width="4"/><path d="M158 85 h14"/></g></svg>
+      <p>Two horizontal revolute joints plus a vertical slide. Stiff up and down, flexible side to side: fast, precise assembly on a flat table. The name means Selective Compliance Assembly Robot Arm.</p>
+      <div class="cap"><b>FIG. 7</b></div>
+    </div>
+    <div class="fig">
+      <h3>Delta</h3>
+      <svg viewBox="0 0 200 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="50" y="10" width="100" height="14"/><line x1="60" y1="24" x2="45" y2="55" stroke="var(--line)" stroke-width="5"/><line x1="140" y1="24" x2="155" y2="55" stroke="var(--line)" stroke-width="5"/><line x1="100" y1="24" x2="100" y2="50" stroke="var(--line)" stroke-width="5"/><path d="M45 55 L90 95 M155 55 L110 95 M100 50 L100 95"/><rect x="85" y="95" width="30" height="8"/></g></svg>
+      <p>Three light arms from an overhead base meet at one small platform. Very fast pick-and-place, small payloads; the classic packaging-line robot.</p>
+      <div class="cap"><b>FIG. 8</b></div>
+    </div>
+    <div class="fig">
+      <h3>Cartesian (gantry)</h3>
+      <svg viewBox="0 0 200 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><path d="M20 110 V20 H180 V110"/><line x1="20" y1="30" x2="180" y2="30" stroke="var(--line)" stroke-width="6"/><rect x="95" y="25" width="22" height="12" fill="var(--paper-2)"/><line x1="106" y1="37" x2="106" y2="85" stroke="var(--line)" stroke-width="5"/><path d="M98 85 h16"/></g></svg>
+      <p>Three prismatic joints at right angles: x, y, z. Simple maths, easy to scale up, the same layout as most 3D printers and CNC routers.</p>
+      <div class="cap"><b>FIG. 9</b></div>
+    </div>
+    <div class="fig">
+      <h3>Collaborative</h3>
+      <svg viewBox="0 0 200 120" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="40" y="100" width="40" height="10"/><line x1="60" y1="100" x2="60" y2="70" stroke="var(--line)" stroke-width="9" stroke-linecap="round"/><line x1="60" y1="70" x2="120" y2="45" stroke="var(--line)" stroke-width="9" stroke-linecap="round"/><line x1="120" y1="45" x2="150" y2="75" stroke="var(--line)" stroke-width="8" stroke-linecap="round"/><path d="M150 75 l-6 12 M150 75 l10 8"/><path d="M170 30 q8 10 0 20 M178 26 q12 14 0 28" stroke-width="1.5"/></g></svg>
+      <p>Usually articulated, built to work beside people: rounded, lighter, and limited in force and speed so a bump stops it. Often taught by hand-guiding the arm through a move.</p>
+      <div class="cap"><b>FIG. 10</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="s9">
+  <h2><span class="num">9.</span>Glossary</h2>
+  <dl class="gloss">
+    <dt>Actuator</dt><dd>Whatever moves a joint: usually an electric motor, sometimes hydraulics or pneumatics.</dd>
+    <dt>Backlash</dt><dd>Play in the gears: the little bit a joint can move before the gears engage.</dd>
+    <dt>Degree of freedom</dt><dd>One independent way to move. One per joint, in a simple chain.</dd>
+    <dt>End effector</dt><dd>The tool at the end of the arm.</dd>
+    <dt>Encoder</dt><dd>A sensor that reports a joint's angle.</dd>
+    <dt>Forward kinematics</dt><dd>Joint angles in, hand position out. Always one answer.</dd>
+    <dt>Inverse kinematics</dt><dd>Hand position in, joint angles out. None, a few, or infinitely many answers.</dd>
+    <dt>Link</dt><dd>A rigid piece between two joints.</dd>
+    <dt>Payload</dt><dd>The mass an arm can carry at full reach, tool included.</dd>
+    <dt>Pose</dt><dd>A position plus an orientation.</dd>
+    <dt>Prismatic joint</dt><dd>A joint that slides.</dd>
+    <dt>Redundancy</dt><dd>More joints than the task needs, so many poses reach the same goal.</dd>
+    <dt>Repeatability</dt><dd>How closely an arm returns to the same taught point.</dd>
+    <dt>Revolute joint</dt><dd>A joint that turns.</dd>
+    <dt>Singularity</dt><dd>A pose where the arm loses a direction of motion; near one, small hand motions need huge joint motions.</dd>
+    <dt>Teach pendant</dt><dd>The handheld control box used to jog an arm and record points.</dd>
+    <dt>Workspace</dt><dd>Every point the hand can reach.</dd>
+  </dl>
+</section>
+
+<footer>
+  <a href="../">← Apps and demos</a>
+  <span class="cond">End of Form RA-1</span>
+</footer>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const deg = r => r * 180 / Math.PI;
+  const rad = d => d * Math.PI / 180;
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const $ = id => document.getElementById(id);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Shared drawing: arm from a list of joint points (math coords, y up; svg flips).
+  function drawArm(g, pts, opts = {}) {
+    const color = opts.color || 'var(--line)';
+    const w = opts.width || 9;
+    for (let i = 0; i < pts.length - 1; i++) {
+      el('line', { x1: pts[i][0], y1: -pts[i][1], x2: pts[i + 1][0], y2: -pts[i + 1][1],
+        stroke: color, 'stroke-width': w - i * 1.5, 'stroke-linecap': 'round', opacity: opts.opacity ?? 1 }, g);
+    }
+    if (opts.ghost) return;
+    for (let i = 0; i < pts.length - 1; i++) {
+      el('circle', { cx: pts[i][0], cy: -pts[i][1], r: 7 - i, fill: 'var(--paper-2)', stroke: 'currentColor', 'stroke-width': 2.5 }, g);
+    }
+    const h = pts[pts.length - 1];
+    el('circle', { cx: h[0], cy: -h[1], r: 4, fill: 'currentColor' }, g);
+  }
+  function base(g) {
+    el('rect', { x: -22, y: 8, width: 44, height: 10, fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }, g);
+    for (let x = -22; x <= 22; x += 11) el('line', { x1: x, y1: 18, x2: x - 7, y2: 25, stroke: 'currentColor' }, g);
+    el('line', { x1: 0, y1: 0, x2: 0, y2: 8, stroke: 'currentColor', 'stroke-width': 4 }, g);
+  }
+  function grid(svg, x0, y0, w, h, step) {
+    const g = el('g', { stroke: 'currentColor', opacity: 0.12 }, svg);
+    for (let x = Math.ceil(x0 / step) * step; x <= x0 + w; x += step) el('line', { x1: x, y1: y0, x2: x, y2: y0 + h }, g);
+    for (let y = Math.ceil(y0 / step) * step; y <= y0 + h; y += step) el('line', { x1: x0, y1: y, x2: x0 + w, y2: y }, g);
+  }
+  function fk(ls, ths) {
+    const pts = [[0, 0]]; let a = 0, x = 0, y = 0;
+    ls.forEach((l, i) => { a += ths[i]; x += l * Math.cos(a); y += l * Math.sin(a); pts.push([x, y]); });
+    return pts;
+  }
+  // Two-link IK; sign +1 = elbow-down-ish (positive θ2), -1 = the other branch.
+  function ik2(x, y, l1, l2, sign) {
+    const d2 = x * x + y * y;
+    let c = (d2 - l1 * l1 - l2 * l2) / (2 * l1 * l2);
+    const reachable = c >= -1 && c <= 1;
+    c = Math.max(-1, Math.min(1, c));
+    const t2 = sign * Math.acos(c);
+    const t1 = Math.atan2(y, x) - Math.atan2(l2 * Math.sin(t2), l1 + l2 * Math.cos(t2));
+    return { t1, t2, reachable };
+  }
+
+  // FIG. 1 animation
+  (function fig1() {
+    const rev = $('rev'), pri = $('pri');
+    let t0 = performance.now();
+    function tick(t) {
+      const s = (t - t0) / 1000;
+      rev.setAttribute('transform', `rotate(${Math.sin(s * 1.2) * 50})`);
+      pri.setAttribute('transform', `translate(0, ${(Math.sin(s * 1.2) + 1) * 22})`);
+      if (!reduced) requestAnimationFrame(tick);
+    }
+    if (reduced) { rev.setAttribute('transform', 'rotate(30)'); } else requestAnimationFrame(tick);
+  })();
+
+  // FIG. 3 forward kinematics
+  (function fig3() {
+    const svg = $('fig3');
+    grid(svg, -220, -200, 440, 260, 20);
+    const g = el('g', {}, svg);
+    const L = [100, 80];
+    function draw() {
+      const a1 = +$('fk1').value, a2 = +$('fk2').value;
+      $('fk1v').textContent = a1 + '°'; $('fk2v').textContent = a2 + '°';
+      g.replaceChildren();
+      base(g);
+      const pts = fk(L, [rad(a1), rad(a2)]);
+      // angle arcs
+      const r1 = 28;
+      el('path', { d: `M${r1} 0 A${r1} ${r1} 0 ${Math.abs(a1) > 180 ? 1 : 0} ${a1 > 0 ? 0 : 1} ${r1 * Math.cos(rad(a1))} ${-r1 * Math.sin(rad(a1))}`,
+        fill: 'none', stroke: 'var(--j1)', 'stroke-width': 2 }, g);
+      el('line', { x1: 0, y1: 0, x2: 50, y2: 0, stroke: 'currentColor', 'stroke-dasharray': '3 3' }, g);
+      const e = pts[1];
+      el('line', { x1: e[0], y1: -e[1], x2: e[0] + 40 * Math.cos(rad(a1)), y2: -(e[1] + 40 * Math.sin(rad(a1))), stroke: 'currentColor', 'stroke-dasharray': '3 3' }, g);
+      const r2 = 22, s = rad(a1), f = rad(a1 + a2);
+      el('path', { d: `M${e[0] + r2 * Math.cos(s)} ${-(e[1] + r2 * Math.sin(s))} A${r2} ${r2} 0 0 ${a2 > 0 ? 0 : 1} ${e[0] + r2 * Math.cos(f)} ${-(e[1] + r2 * Math.sin(f))}`,
+        fill: 'none', stroke: 'var(--j2)', 'stroke-width': 2 }, g);
+      drawArm(g, pts);
+      const h = pts[2];
+      el('text', { x: h[0] + 8, y: -h[1] - 8, 'font-size': 13, fill: 'currentColor' }, g).textContent = `(${h[0].toFixed(0)}, ${h[1].toFixed(0)})`;
+      $('fkx').textContent = h[0].toFixed(1); $('fky').textContent = h[1].toFixed(1);
+    }
+    $('fk1').addEventListener('input', draw); $('fk2').addEventListener('input', draw);
+    draw();
+  })();
+
+  // FIG. 4 inverse kinematics lab
+  (function fig4() {
+    const svg = $('fig4');
+    svg.setAttribute('tabindex', '0');
+    grid(svg, -230, -230, 460, 460, 20);
+    const g = el('g', {}, svg);
+    const st = { x: 120, y: 60, branch: -1, both: false, three: false };
+    const L3 = 35;
+    const setPressed = () => {
+      $('up').setAttribute('aria-pressed', !st.both && st.branch === -1);
+      $('down').setAttribute('aria-pressed', !st.both && st.branch === 1);
+      $('both').setAttribute('aria-pressed', st.both);
+      $('j2').setAttribute('aria-pressed', !st.three);
+      $('j3').setAttribute('aria-pressed', st.three);
+      $('phiwrap').hidden = !st.three;
+    };
+    function draw() {
+      const l1 = +$('l1').value, l2 = +$('l2').value, phi = rad(+$('phi').value);
+      $('l1v').textContent = l1; $('l2v').textContent = l2; $('phiv').textContent = $('phi').value + '°';
+      g.replaceChildren();
+      // workspace of the 2-link part
+      const R = l1 + l2, r = Math.abs(l1 - l2);
+      const ring = el('path', { d: `M${R} 0 A${R} ${R} 0 1 0 ${-R} 0 A${R} ${R} 0 1 0 ${R} 0 Z M${r} 0 A${r} ${r} 0 1 1 ${-r} 0 A${r} ${r} 0 1 1 ${r} 0 Z`,
+        fill: 'var(--reach)', 'fill-rule': 'evenodd', stroke: 'var(--line)', 'stroke-dasharray': '5 4' }, g);
+      if (st.three) ring.setAttribute('opacity', 0.6);
+      base(g);
+      let wx = st.x, wy = st.y;
+      if (st.three) {
+        // ghost family: every hand angle that reaches the target
+        for (let a = -180; a < 180; a += 15) {
+          const ex = st.x - L3 * Math.cos(rad(a)), ey = st.y - L3 * Math.sin(rad(a));
+          const s = ik2(ex, ey, l1, l2, st.branch);
+          if (!s.reachable) continue;
+          drawArm(g, fk([l1, l2, L3], [s.t1, s.t2, rad(a) - s.t1 - s.t2]), { ghost: true, color: 'var(--ghost)', width: 4 });
+        }
+        wx = st.x - L3 * Math.cos(phi); wy = st.y - L3 * Math.sin(phi);
+      }
+      const branches = st.both ? [-1, 1] : [st.branch];
+      let main = null;
+      branches.forEach((b, i) => {
+        const s = ik2(wx, wy, l1, l2, b);
+        const ths = st.three ? [s.t1, s.t2, phi - s.t1 - s.t2] : [s.t1, s.t2];
+        const pts = fk(st.three ? [l1, l2, L3] : [l1, l2], ths);
+        if (i === 0) main = { s, pts };
+        drawArm(g, pts, { color: i === 0 ? 'var(--line)' : 'var(--j2)', opacity: s.reachable ? 1 : 0.55 });
+        if (st.both && s.reachable) {
+          const e = pts[1];
+          el('text', { x: e[0] + 10, y: -e[1] + (b === -1 ? -10 : 18), 'font-size': 12, fill: i === 0 ? 'var(--line)' : 'var(--j2)' }, g).textContent = b === -1 ? 'elbow up' : 'elbow down';
+        }
+      });
+      // target crosshair
+      const tg = el('g', { class: 'handle', transform: `translate(${st.x} ${-st.y})` }, g);
+      el('circle', { r: 22, fill: 'transparent' }, tg);
+      el('circle', { r: 10, fill: 'none', stroke: 'var(--red)', 'stroke-width': 2 }, tg);
+      el('path', { d: 'M-16 0 H16 M0 -16 V16', stroke: 'var(--red)', 'stroke-width': 2 }, tg);
+      const reach = main.s.reachable;
+      const stEl = $('st');
+      $('tg').textContent = `(${st.x.toFixed(0)}, ${st.y.toFixed(0)})`;
+      $('ang').textContent = `${deg(main.s.t1).toFixed(0)}° / ${deg(main.s.t2).toFixed(0)}°`;
+      const near = Math.abs(Math.sin(main.s.t2)) < 0.12;
+      if (!reach) {
+        const d = Math.hypot(wx, wy);
+        stEl.textContent = d > R ? 'OUT OF REACH' : 'TOO CLOSE: IN THE HOLE';
+        stEl.className = 'status bad';
+      } else if (near) {
+        stEl.textContent = 'NEAR SINGULARITY';
+        stEl.className = 'status warn';
+      } else {
+        stEl.textContent = st.three ? 'REACHED (1 of many)' : 'REACHED (1 of 2)';
+        stEl.className = 'status good';
+      }
+    }
+    function toLocal(ev) {
+      const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+      const q = p.matrixTransform(svg.getScreenCTM().inverse());
+      return [Math.max(-225, Math.min(225, q.x)), Math.max(-225, Math.min(225, -q.y))];
+    }
+    let dragging = false;
+    svg.addEventListener('pointerdown', ev => { dragging = true; svg.setPointerCapture(ev.pointerId); [st.x, st.y] = toLocal(ev); draw(); });
+    svg.addEventListener('pointermove', ev => { if (!dragging) return; [st.x, st.y] = toLocal(ev); draw(); });
+    const end = () => { dragging = false; };
+    svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+    svg.addEventListener('keydown', ev => {
+      const k = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] }[ev.key];
+      if (!k) return;
+      ev.preventDefault(); st.x += k[0]; st.y += k[1]; draw();
+    });
+    $('up').onclick = () => { st.branch = -1; st.both = false; setPressed(); draw(); };
+    $('down').onclick = () => { st.branch = 1; st.both = false; setPressed(); draw(); };
+    $('both').onclick = () => { st.both = !st.both; setPressed(); draw(); };
+    $('j2').onclick = () => { st.three = false; setPressed(); draw(); };
+    $('j3').onclick = () => { st.three = true; if (st.both) st.both = false; setPressed(); draw(); };
+    ['l1', 'l2', 'phi'].forEach(id => $(id).addEventListener('input', draw));
+    setPressed(); draw();
+  })();
+
+  // FIG. 5 singularity demo
+  (function fig5() {
+    const svg = $('fig5'), plot = $('plot5');
+    const l1 = 100, l2 = 100, R = l1 + l2;
+    const g = el('g', {}, svg);
+    const pg = el('g', {}, plot);
+    const N = 241, X0 = -150, X1 = 150;
+    let data = null, anim = null;
+    function compute() {
+      const gap = +$('gap').value;
+      const h = gap;
+      const xs = [], t1 = [], t2 = [];
+      for (let i = 0; i < N; i++) {
+        const x = X0 + (X1 - X0) * i / (N - 1);
+        const s = ik2(x, h, l1, l2, -1);
+        xs.push(x); t1.push(s.t1); t2.push(s.t2);
+      }
+      const dx = (X1 - X0) / (N - 1);
+      const v1 = [], v2 = [];
+      for (let i = 0; i < N; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(N - 1, i + 1);
+        v1.push(Math.abs((t1[b] - t1[a]) / ((b - a) * dx)));
+        v2.push(Math.abs((t2[b] - t2[a]) / ((b - a) * dx)));
+      }
+      // reference: elbow speed at the start of the line
+      const ref = Math.max(v1[0], 1e-9);
+      data = { h, xs, t1, t2, v1: v1.map(v => v / ref), v2: v2.map(v => v / ref) };
+      $('gapv').textContent = gap + ' units';
+      const pk = Math.max(...data.v1);
+      $('peak').textContent = '×' + pk.toFixed(1);
+      const s5 = $('st5');
+      if (pk > 6) { s5.textContent = 'TOO FAST: SLOW DOWN'; s5.className = 'status bad'; }
+      else if (pk > 3) { s5.textContent = 'MARGINAL'; s5.className = 'status warn'; }
+      else { s5.textContent = 'OK'; s5.className = 'status good'; }
+    }
+    function drawArmAt(i) {
+      g.replaceChildren();
+      el('path', { d: `M${R} 0 A${R} ${R} 0 0 0 ${-R} 0`, fill: 'none', stroke: 'var(--line)', 'stroke-dasharray': '5 4', opacity: 0.6 }, g);
+      el('text', { x: R - 4, y: -8, 'text-anchor': 'end', 'font-size': 12, fill: 'currentColor' }, g).textContent = 'edge of reach';
+      el('line', { x1: X0, y1: -data.h, x2: X1, y2: -data.h, stroke: 'var(--red)', 'stroke-dasharray': '6 4', 'stroke-width': 1.5 }, g);
+      // flip: draw svg with y up but origin near bottom
+      g.setAttribute('transform', 'translate(0 205)');
+      base(g);
+      drawArm(g, fk([l1, l2], [data.t1[i], data.t2[i]]));
+    }
+    function drawPlot(upto) {
+      pg.replaceChildren();
+      const W = 460, H = 160, pad = 28;
+      const ymax = Math.max(8, Math.ceil(Math.max(...data.v2, ...data.v1)));
+      el('line', { x1: pad, y1: H - 20, x2: W - 6, y2: H - 20, stroke: 'currentColor' }, pg);
+      el('line', { x1: pad, y1: 8, x2: pad, y2: H - 20, stroke: 'currentColor' }, pg);
+      [1, ymax].forEach(v => {
+        const y = H - 20 - (H - 28) * v / ymax;
+        el('line', { x1: pad, y1: y, x2: W - 6, y2: y, stroke: 'currentColor', opacity: 0.2, 'stroke-dasharray': '2 3' }, pg);
+        el('text', { x: pad - 4, y: y + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'currentColor' }, pg).textContent = '×' + v;
+      });
+      el('text', { x: W - 8, y: H - 4, 'text-anchor': 'end', 'font-size': 11, fill: 'currentColor' }, pg).textContent = 'hand position along the line →';
+      const px = i => pad + (W - 6 - pad) * i / (N - 1);
+      const py = v => H - 20 - (H - 28) * Math.min(v, ymax) / ymax;
+      [['v1', 'var(--j1)', 'shoulder'], ['v2', 'var(--j2)', 'elbow']].forEach(([k, c, name], j) => {
+        let d = '';
+        for (let i = 0; i <= upto; i++) d += (i ? 'L' : 'M') + px(i).toFixed(1) + ' ' + py(data[k][i]).toFixed(1);
+        el('path', { d, fill: 'none', stroke: c, 'stroke-width': 2.2 }, pg);
+        el('text', { x: pad + 8 + j * 90, y: 20, 'font-size': 12, fill: c }, pg).textContent = '— ' + name;
+      });
+    }
+    function still() { if (anim) cancelAnimationFrame(anim); anim = null; compute(); drawArmAt(Math.floor(N / 2)); drawPlot(N - 1); }
+    $('gap').addEventListener('input', still);
+    $('run5').onclick = () => {
+      if (anim) cancelAnimationFrame(anim);
+      compute();
+      if (reduced) { drawArmAt(N - 1); drawPlot(N - 1); return; }
+      const t0 = performance.now(), dur = 3500;
+      const step = t => {
+        const i = Math.min(N - 1, Math.floor((t - t0) / dur * (N - 1)));
+        drawArmAt(i); drawPlot(i);
+        anim = i < N - 1 ? requestAnimationFrame(step) : null;
+      };
+      anim = requestAnimationFrame(step);
+    };
+    still();
+  })();
+})();
+</script>
+</body>
+</html>

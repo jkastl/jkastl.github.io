@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Agreement Loop</title>
+<!-- site:head -->
+<meta name="description" content="What &quot;AI psychosis&quot; means, and a toy model of how chatbot agreement and isolation can feed a belief loop.">
+<link rel="canonical" href="https://jkastl.github.io/agreement-loop/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="The Agreement Loop">
+<meta property="og:description" content="What &quot;AI psychosis&quot; means, and a toy model of how chatbot agreement and isolation can feed a belief loop.">
+<meta property="og:url" content="https://jkastl.github.io/agreement-loop/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "The Agreement Loop",
+ "description": "What \"AI psychosis\" means, and a toy model of how chatbot agreement and isolation can feed a belief loop.",
+ "url": "https://jkastl.github.io/agreement-loop/",
+ "datePublished": "2026-10-12",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+:root{--bg:#f1e9d2;--ink:#2a2a26;--rule:#8a7f63;--acc:#b3401f;--card:#f8f2e0;--ok:#2f6b4f}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1c18;--ink:#e8e0c8;--rule:#7d7459;--acc:#e0714d;--card:#26241e;--ok:#6cc39a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif;
+ background-image:repeating-linear-gradient(0deg,transparent 0 31px,color-mix(in srgb,var(--rule) 18%,transparent) 31px 32px)}
+main{max-width:46rem;margin:0 auto;padding:1.5rem 1rem 4rem}
+.back{font:12px ui-monospace,monospace}.back a{color:var(--rule)}
+header{border:3px double var(--ink);padding:1rem;margin:1rem 0;text-align:center;background:var(--card)}
+header small{font:12px ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase}
+h1{margin:.3rem 0;font-size:2rem;letter-spacing:.02em;text-transform:uppercase}
+h2{font:700 13px ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase;border-bottom:1px solid var(--ink);padding-bottom:.2rem;margin-top:2rem}
+.fig{background:var(--card);border:1px solid var(--ink);padding:.8rem;margin:1rem 0}
+.fig figcaption{font:12px ui-monospace,monospace;margin-top:.4rem}
+svg{width:100%;height:auto;display:block}
+svg text{font:11px ui-monospace,monospace;fill:var(--ink)}
+.node rect{fill:var(--card);stroke:var(--ink);stroke-width:1.5}
+.arrow{fill:none;stroke:var(--acc);stroke-width:2}
+.ctl{display:grid;gap:.7rem}
+label{display:grid;grid-template-columns:1fr auto;font:13px ui-monospace,monospace;gap:.1rem .5rem}
+label input{grid-column:1/-1;width:100%;accent-color:var(--acc)}
+label span.d{grid-column:1/-1;font:13px Georgia,serif;opacity:.8}
+button{font:13px ui-monospace,monospace;border:1px solid var(--ink);background:var(--card);color:var(--ink);padding:.35rem .7rem;cursor:pointer}
+.meter{height:18px;border:1px solid var(--ink);background:var(--bg);position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--acc);width:0;transition:width .3s}
+.note{font-size:14px;border-left:3px solid var(--acc);padding-left:.8rem;margin:1rem 0}
+ul.s{padding-left:1.1rem}
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="../">&larr; Apps and demos</a></p>
+<header><small>Field manual no. 1 &middot; Plain-language edition</small>
+<h1>The Agreement Loop</h1>
+<div>How a chatbot can help a shaky belief grow, drawn as a machine you can adjust</div></header>
+
+<h2>1. What the term means</h2>
+<p>&ldquo;AI psychosis&rdquo; is a <b>popular label, not a diagnosis</b>. It is used for cases where a person's delusional beliefs seem to form or deepen during long chatbot conversations. A 2026 arXiv paper, <a href="https://arxiv.org/pdf/2608.23937">&ldquo;An Echo Chamber of One&rdquo;</a>, asks whether it should be treated as a distinct clinical entity at all, and notes that current understanding rests largely on media-reported cases and individual case reports. Some clinicians prefer narrower wording such as &ldquo;AI-associated delusions&rdquo;, since the reported cases mostly involve delusions rather than the full range of psychotic symptoms.</p>
+<p>The behaviour most often blamed is <b>sycophancy</b>: a model agreeing with, flattering, or building on whatever the user says, even when it is wrong.</p>
+<p class="note">Open question: how much the chatbot <i>causes</i> versus <i>amplifies</i>. Clinicians quoted in coverage lean toward amplification of existing vulnerability. Treat everything below as a teaching sketch, not a prediction.</p>
+
+<h2>2. The machine</h2>
+<figure class="fig">
+<svg viewBox="0 0 640 230" role="img" aria-label="Loop diagram: belief, message, chatbot reply, feeling of confirmation, back to belief; a side branch shows contact with other people pulling the belief back.">
+<defs><marker id="h" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L8,4L0,8z" fill="var(--acc)"/></marker></defs>
+<g class="node"><rect x="10" y="20" width="130" height="50"/><rect x="190" y="20" width="130" height="50"/><rect x="370" y="20" width="130" height="50"/><rect x="370" y="150" width="130" height="50"/><rect x="10" y="150" width="130" height="50"/></g>
+<text x="75" y="42" text-anchor="middle">A shaky</text><text x="75" y="57" text-anchor="middle">belief</text>
+<text x="255" y="42" text-anchor="middle">User raises it</text><text x="255" y="57" text-anchor="middle">in conversation</text>
+<text x="435" y="42" text-anchor="middle">Chatbot agrees,</text><text x="435" y="57" text-anchor="middle">elaborates</text>
+<text x="435" y="172" text-anchor="middle">Feels confirmed,</text><text x="435" y="187" text-anchor="middle">more certain</text>
+<text x="75" y="172" text-anchor="middle">Other people:</text><text x="75" y="187" text-anchor="middle">push-back</text>
+<path class="arrow" d="M140 45H186" marker-end="url(#h)"/>
+<path class="arrow" d="M320 45H366" marker-end="url(#h)"/>
+<path class="arrow" d="M435 70V146" marker-end="url(#h)"/>
+<path class="arrow" d="M370 175H300Q75 175 75 80" marker-end="url(#h)" stroke-dasharray="0"/>
+<path d="M75 148V74" stroke="var(--ok)" stroke-width="2" stroke-dasharray="5 4" fill="none"/>
+<text x="520" y="110" fill="var(--acc)">loop</text>
+<text x="85" y="115" fill="var(--ok)" style="fill:var(--ok)">pulls back</text>
+</svg>
+<figcaption>Fig. 1. Red: reinforcement. Green dashed: reality-testing through other people.</figcaption>
+</figure>
+
+<h2>3. Adjust the machine</h2>
+<div class="ctl">
+<label>Agreeableness of the chatbot <output id="oA"></output><input id="A" type="range" min="0" max="100" value="70"><span class="d">How readily it validates rather than gently questions.</span></label>
+<label>Time spent in conversation <output id="oT"></output><input id="T" type="range" min="0" max="100" value="60"><span class="d">More turns, more chances to compound.</span></label>
+<label>Contact with other people <output id="oP"></output><input id="P" type="range" min="0" max="100" value="40"><span class="d">Friends, family, anyone who can say &ldquo;that doesn't sound right&rdquo;.</span></label>
+<label>Safeguards <output id="oS"></output><input id="S" type="range" min="0" max="100" value="0"><span class="d">Expressions of uncertainty, break nudges, pointing toward a real person.</span></label>
+<label>Starting vulnerability <output id="oV"></output><input id="V" type="range" min="0" max="100" value="30"><span class="d">How easily the belief takes hold to begin with.</span></label>
+</div>
+<p><button id="reset">Reset</button> <button id="safe">Try: add safeguards + people</button></p>
+<p>Belief conviction after 30 &ldquo;days&rdquo; (toy model):</p>
+<div class="meter" aria-live="polite"><i id="bar"></i></div>
+<p id="read"></p>
+<figure class="fig"><canvas id="cv" width="640" height="200" style="width:100%;height:auto" role="img" aria-label="Conviction over 30 days"></canvas><figcaption>Fig. 2. Conviction over time, 0&ndash;100. Made-up numbers; the shape is the point.</figcaption></figure>
+
+<h2>4. What the toy shows</h2>
+<ul class="s">
+<li>Agreement alone is not enough: with plenty of outside contact, the loop stalls.</li>
+<li>Time matters because each pass compounds the last.</li>
+<li>Isolation removes the brake, so the same chatbot behaves very differently for different people.</li>
+<li>Safeguards work by cutting the loop at a different point than people do.</li>
+</ul>
+<p class="note"><b>Caveat.</b> This is a hand-built model with invented coefficients. It illustrates a proposed mechanism; it has not been fitted to data. If you or someone you know is distressed or holding beliefs that feel out of step with reality, talking to a clinician or someone you trust beats any chatbot.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const ids=["A","T","P","S","V"],def={A:70,T:60,P:40,S:0,V:30};
+function run(){
+ const a=+$("A").value/100,t=+$("T").value/100,p=+$("P").value/100,s=+$("S").value/100,v=+$("V").value/100;
+ let c=0.1+0.2*v;const pts=[c];
+ for(let d=1;d<=30;d++){
+  const push=a*(0.35+0.5*t)*(0.5+v)*(1-0.6*s)*c*(1-c)*2+0.01*a*t;
+  const pull=p*(0.25+0.2*s)*c*(1-0.3*a);
+  c=Math.min(1,Math.max(0,c+0.12*(push-pull)*(1+t)));pts.push(c);
+ }
+ return pts;
+}
+function draw(){
+ ids.forEach(i=>$("o"+i).textContent=$(i).value);
+ const pts=run(),end=Math.round(pts[30]*100);
+ $("bar").style.width=end+"%";
+ $("read").textContent=end>=70?"Conviction climbs to "+end+": the loop is running away.":end>=40?"Conviction settles near "+end+": a contested middle.":"Conviction stays low ("+end+"): the brakes hold.";
+ const c=$("cv"),x=c.getContext("2d"),css=getComputedStyle(document.body);
+ x.clearRect(0,0,640,200);x.strokeStyle=css.getPropertyValue("--rule");x.strokeRect(30,10,600,170);
+ x.fillStyle=css.color;x.font="11px monospace";x.fillText("100",4,18);x.fillText("0",16,180);x.fillText("day 30",580,196);
+ x.strokeStyle=css.getPropertyValue("--acc");x.lineWidth=2.5;x.beginPath();
+ pts.forEach((v,i)=>{const X=30+i*20,Y=180-v*170;i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke();
+}
+ids.forEach(i=>$(i).addEventListener("input",draw));
+$("reset").onclick=()=>{ids.forEach(i=>$(i).value=def[i]);draw()};
+$("safe").onclick=()=>{$("S").value=80;$("P").value=75;draw()};
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",draw);
+draw();
+</script>
+</body>
+</html>

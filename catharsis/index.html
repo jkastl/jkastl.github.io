@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catharsis: A Drama in Five Acts</title>
+<!-- site:head -->
+<meta name="description" content="The word catharsis from Aristotle&#x27;s stage to the psychology lab, and why letting feelings out doesn&#x27;t drain them the way the steam-valve picture says.">
+<link rel="canonical" href="https://jkastl.github.io/catharsis/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Catharsis: A Drama in Five Acts">
+<meta property="og:description" content="The word catharsis from Aristotle&#x27;s stage to the psychology lab, and why letting feelings out doesn&#x27;t drain them the way the steam-valve picture says.">
+<meta property="og:url" content="https://jkastl.github.io/catharsis/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Catharsis: A Drama in Five Acts",
+ "description": "The word catharsis from Aristotle's stage to the psychology lab, and why letting feelings out doesn't drain them the way the steam-valve picture says.",
+ "url": "https://jkastl.github.io/catharsis/",
+ "datePublished": "2026-10-13",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+  :root {
+    --paper: #f1e6cc;
+    --paper-edge: #e3d3ac;
+    --ink: #231a12;
+    --muted: #5d4a36;
+    --red: #a3261b;
+    --rule: #231a12;
+    --gauge-bg: #fbf4e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1d1813;
+      --paper-edge: #14100c;
+      --ink: #efe3c6;
+      --muted: #b9a684;
+      --red: #e0624f;
+      --rule: #efe3c6;
+      --gauge-bg: #26201a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--paper-edge); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    font-size: 18px;
+    line-height: 1.55;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(255,255,255,.08), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,.018) 0 2px, transparent 2px 4px),
+      var(--paper-edge);
+  }
+  .bill {
+    max-width: 760px;
+    margin: 24px auto;
+    padding: 28px 40px 40px;
+    background: var(--paper);
+    border: 3px double var(--rule);
+    outline: 1px solid var(--rule);
+    outline-offset: 6px;
+    box-shadow: 0 2px 18px rgba(0,0,0,.18);
+  }
+  .home { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  .home a { color: var(--muted); }
+  header { text-align: center; border-bottom: 3px double var(--rule); padding-bottom: 18px; margin-top: 10px; }
+  .kicker { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; margin: 0; }
+  .presents { font-style: italic; margin: 4px 0 0; color: var(--muted); }
+  h1 {
+    font-family: "Rockwell Extra Bold", Rockwell, "Clarendon", "Bookman Old Style", Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(46px, 13vw, 96px);
+    line-height: 1;
+    margin: 10px 0 4px;
+    color: var(--red);
+    letter-spacing: .02em;
+  }
+  .sub { font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-size: clamp(20px, 5vw, 28px); margin: 0; }
+  .billing { display: flex; justify-content: center; gap: 10px 18px; flex-wrap: wrap; margin-top: 12px;
+    font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+  .billing span::before { content: "\2726  "; color: var(--red); }
+  .prologue { font-size: 19px; margin: 22px 0 0; }
+  .prologue::first-letter { font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-size: 3.2em; float: left; line-height: .9; margin: 4px 8px 0 0; color: var(--red); }
+  section.act { border-top: 1px solid var(--rule); margin-top: 30px; padding-top: 18px; }
+  .act-no { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--red); margin: 0; text-align: center; }
+  h2 { font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-weight: 400; font-size: clamp(26px, 6vw, 36px); text-align: center; margin: 2px 0 2px; line-height: 1.1; }
+  .scene { text-align: center; font-style: italic; color: var(--muted); margin: 0 0 12px; }
+  .cast { border: 1px solid var(--rule); padding: 8px 14px; margin: 14px 0; font-size: 15px; }
+  .cast dt { font-variant: small-caps; font-weight: 700; letter-spacing: .05em; }
+  .cast dd { margin: 0 0 6px; }
+  blockquote { margin: 14px 0; padding: 0 20px; font-style: italic; border-left: 3px solid var(--red); }
+  .greek { font-style: normal; letter-spacing: .05em; }
+  .readings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .reading { border: 1px solid var(--rule); padding: 10px; text-align: center; font-size: 15px; }
+  .reading b { display: block; font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-weight: 400; font-size: 20px; color: var(--red); }
+  .verdict { text-align: center; font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-size: 22px; margin: 18px 0 4px; }
+  .fine { font-size: 14px; color: var(--muted); }
+  a { color: var(--red); }
+
+  /* the valve */
+  .valve { border: 3px double var(--rule); padding: 16px; margin-top: 16px; background: var(--gauge-bg); }
+  .valve h3 { font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-weight: 400; text-align: center; margin: 0 0 4px; font-size: 24px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
+  .choices button {
+    font: inherit; font-size: 14px; letter-spacing: .08em; text-transform: uppercase;
+    background: transparent; color: var(--ink); border: 1px solid var(--rule); padding: 7px 10px; cursor: pointer;
+  }
+  .choices button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .choices button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gauge { text-align: center; }
+  .gauge h4 { margin: 0; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+  .gauge svg { width: 100%; max-width: 230px; height: auto; display: block; margin: 0 auto; }
+  .gauge .needle { transition: transform .9s cubic-bezier(.3,1.4,.5,1); transform-origin: 100px 100px; }
+  .gauge .out { font-family: "Bodoni 72", Didot, "Bodoni MT", "Playfair Display", Georgia, serif; font-size: 18px; min-height: 1.3em; }
+  .finding { border-top: 1px solid var(--rule); margin-top: 12px; padding-top: 10px; font-size: 16px; min-height: 5em; }
+  .finding .src { font-size: 13px; color: var(--muted); display: block; margin-top: 6px; }
+
+  .epilogue { border: 1px solid var(--rule); padding: 14px 18px; margin-top: 16px; }
+  .epilogue ol { margin: 8px 0 0; padding-left: 22px; }
+  footer { border-top: 3px double var(--rule); margin-top: 30px; padding-top: 12px; text-align: center; font-size: 13px; color: var(--muted); }
+  footer ul { list-style: none; padding: 0; text-align: left; }
+  footer li { margin-bottom: 6px; }
+
+  @media (max-width: 560px) {
+    body { font-size: 17px; }
+    .bill { margin: 10px; padding: 18px 16px 28px; outline-offset: 3px; }
+    .readings { grid-template-columns: 1fr; }
+    .gauges { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .gauge .out { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="bill">
+  <p class="home"><a href="../">&larr; Apps and demos</a></p>
+  <header>
+    <p class="kicker">Tonight &amp; every night &middot; the theatre of the mind</p>
+    <p class="presents">is proudly presented</p>
+    <h1>Catharsis</h1>
+    <p class="sub">or, Does Letting It Out Let It Go?</p>
+    <p class="sub" style="font-size:16px;font-family:inherit;font-style:italic;margin-top:6px">A Drama in Five Acts, with an Intermission at the Valve</p>
+    <div class="billing"><span>Aristotle</span><span>The Physicians</span><span>Breuer &amp; Freud</span><span>The Punching Bag</span><span>The Evidence</span></div>
+  </header>
+
+  <p class="prologue">Almost everyone believes some version of it: feelings build up like steam, and a good cry, a shout, or a swing at a pillow lets the pressure out. The word for that belief is <em>catharsis</em>. It has had a long and strange career, and tonight's bill follows it from a Greek stage to a modern laboratory, where it ran into trouble.</p>
+
+  <section class="act">
+    <p class="act-no">Act the First</p>
+    <h2>The Tragedian's Word</h2>
+    <p class="scene">Athens, the 4th century BC. A theatre of stone.</p>
+    <p>Aristotle's <em>Poetics</em> defines tragedy as an imitation of a serious action that, through pity and fear, brings about the <span class="greek">katharsis</span> of such emotions. That is very nearly the whole of what he says about it there. He promised to explain the word and, in the text that survives, never did.</p>
+    <p>In ordinary Greek, <span class="greek">katharsis</span> meant cleansing, and it lived in two worlds: the doctor's (purging the body) and the priest's (ritual purification). Readers have argued over which one he meant for well over two thousand years.</p>
+    <div class="readings" aria-label="Three readings of Aristotle">
+      <div class="reading"><b>Purgation</b>Tragedy draws out excess pity and fear, like a medicine.</div>
+      <div class="reading"><b>Purification</b>Tragedy refines the emotions, leaving them better tuned.</div>
+      <div class="reading"><b>Clarification</b>Tragedy makes the events, and our feelings about them, understood.</div>
+    </div>
+    <p class="fine">The purgation reading was made famous in 1857 by the philologist Jacob Bernays. Keep his surname in mind for Act the Third.</p>
+  </section>
+
+  <section class="act">
+    <p class="act-no">Act the Second</p>
+    <h2>The Physicians' Purge</h2>
+    <p class="scene">Any sickroom, for centuries.</p>
+    <p>Long before it meant anything about feelings, a "cathartic" was a laxative, and the word still means that in pharmacology. The medical picture behind it is simple and powerful: something harmful has accumulated, and health returns when it is expelled. Carry that picture over to emotion and you get the idea that grief or rage is a kind of build-up that has to be drained.</p>
+  </section>
+
+  <section class="act">
+    <p class="act-no">Act the Third</p>
+    <h2>The Talking Cure</h2>
+    <p class="scene">Vienna, the 1880s and '90s. A consulting room.</p>
+    <dl class="cast">
+      <dt>Josef Breuer</dt><dd>a physician, who called his treatment the "cathartic method"</dd>
+      <dt>Sigmund Freud</dt><dd>his younger colleague; co-author of <em>Studies on Hysteria</em> (1895)</dd>
+      <dt>"Anna O."</dt><dd>Breuer's patient, who named the method the "talking cure" and, jokingly, "chimney-sweeping"</dd>
+    </dl>
+    <p>Breuer and Freud reported that symptoms eased when a patient recalled a buried memory and expressed the feeling that went with it. They named this after Aristotle's word. The link was close to home: Jacob Bernays, the scholar of purgation, was the uncle of Freud's wife, Martha Bernays.</p>
+    <p>Freud himself soon moved away from the cathartic method. But the image stuck, and the 20th century spread it everywhere: emotions as fluid under pressure, which must find an outlet or burst out somewhere worse. Psychologists call it the <em>hydraulic model</em>.</p>
+  </section>
+
+  <section class="act">
+    <p class="act-no">Act the Fourth</p>
+    <h2>The Punching Bag</h2>
+    <p class="scene">A university laboratory. A bag hangs from the ceiling.</p>
+    <p>If the hydraulic model is right, venting anger should leave people less angry and less aggressive. Social psychologists set out to test that directly, and the results kept coming back the wrong way round.</p>
+    <p>In a well-known 2002 study, Brad Bushman had people who had just been insulted hit a punching bag while thinking about the person who insulted them. Afterwards they were <em>angrier</em> and more aggressive toward that person than people who simply sat quietly for a couple of minutes. An earlier study by Bushman, Baumeister and Stack (1999) found that just reading an article praising catharsis made people more eager to hit the bag, and no less aggressive after doing it.</p>
+    <p>A 2024 review by Kjærvik and Bushman pooled more than 150 studies of anger-management activities. Activities that calmed the body (slow breathing, relaxation, mindfulness) reduced anger. Activities that revved it up did not reliably reduce it.</p>
+
+    <div class="valve" id="valve">
+      <h3>Intermission at the Valve</h3>
+      <p class="fine" style="text-align:center;margin:0">Choose a way of "letting it out." The left gauge shows what the steam-pressure picture predicts for the feeling afterwards; the right shows what the research found.</p>
+      <div class="choices" role="group" aria-label="Ways of letting it out">
+        <button type="button" data-k="bag" aria-pressed="false">Hit a pillow</button>
+        <button type="button" data-k="rant" aria-pressed="false">Rant about it</button>
+        <button type="button" data-k="breathe" aria-pressed="false">Slow breathing</button>
+        <button type="button" data-k="cry" aria-pressed="false">Cry at a sad film</button>
+        <button type="button" data-k="write" aria-pressed="false">Write it down</button>
+        <button type="button" data-k="run" aria-pressed="false">Go for a hard run</button>
+      </div>
+      <div class="gauges">
+        <div class="gauge">
+          <h4>The steam picture</h4>
+          <svg viewBox="0 0 200 120" role="img" aria-label="Predicted feeling afterwards">
+            <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="currentColor" stroke-width="3"/>
+            <path d="M20 100 A80 80 0 0 1 100 20" fill="none" stroke="var(--muted)" stroke-width="10" opacity=".25"/>
+            <path d="M100 20 A80 80 0 0 1 180 100" fill="none" stroke="var(--red)" stroke-width="10" opacity=".35"/>
+            <text x="18" y="116" font-size="10" fill="currentColor">LESS</text>
+            <text x="160" y="116" font-size="10" fill="currentColor">MORE</text>
+            <g class="needle" id="needleA"><line x1="100" y1="100" x2="100" y2="30" stroke="var(--red)" stroke-width="3"/></g>
+            <circle cx="100" cy="100" r="7" fill="currentColor"/>
+          </svg>
+          <div class="out" id="outA">&nbsp;</div>
+        </div>
+        <div class="gauge">
+          <h4>The evidence</h4>
+          <svg viewBox="0 0 200 120" role="img" aria-label="Observed feeling afterwards">
+            <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="currentColor" stroke-width="3"/>
+            <path d="M20 100 A80 80 0 0 1 100 20" fill="none" stroke="var(--muted)" stroke-width="10" opacity=".25"/>
+            <path d="M100 20 A80 80 0 0 1 180 100" fill="none" stroke="var(--red)" stroke-width="10" opacity=".35"/>
+            <text x="18" y="116" font-size="10" fill="currentColor">LESS</text>
+            <text x="160" y="116" font-size="10" fill="currentColor">MORE</text>
+            <g class="needle" id="needleB"><line x1="100" y1="100" x2="100" y2="30" stroke="var(--red)" stroke-width="3"/></g>
+            <circle cx="100" cy="100" r="7" fill="currentColor"/>
+          </svg>
+          <div class="out" id="outB">&nbsp;</div>
+        </div>
+      </div>
+      <div class="finding" id="finding" aria-live="polite">Pick one above. The needle points to how much of the feeling is left afterwards, compared with doing nothing (straight up).</div>
+    </div>
+  </section>
+
+  <section class="act">
+    <p class="act-no">Act the Fifth</p>
+    <h2>The Relief Is Real; the Plumbing Isn't</h2>
+    <p class="scene">The present day. Anywhere a person has just had a good cry.</p>
+    <p>None of this means the feeling of relief is imaginary. People do often feel better after crying, and writing about a hard experience seems to help some people a little. What the evidence argues against is the <em>mechanism</em>: that a fixed tank of feeling is emptied by expressing it, so that more expression means more relief.</p>
+    <p>A better-supported picture looks something like this:</p>
+    <div class="epilogue">
+      <ol>
+        <li><strong>Feelings run their course.</strong> Arousal rises and falls on its own; relief often arrives with the falling, whatever you did meanwhile.</li>
+        <li><strong>Rehearsal feeds them.</strong> Replaying a grievance with fists or words keeps it vivid. That is why venting at someone who stokes it tends to backfire.</li>
+        <li><strong>Calming the body helps.</strong> Slow breathing and relaxation lower anger more reliably than burning it off.</li>
+        <li><strong>Making sense helps.</strong> When expression works (writing, talking, even a tragedy on stage), it may be because it turns a feeling into a story you understand.</li>
+      </ol>
+    </div>
+    <p class="verdict">Which brings us back to Aristotle.</p>
+    <p>Of the three readings in Act the First, the plumbing one, purgation, is the one the 20th century ran with and the lab undercut. The quieter reading, <em>clarification</em>, fits the modern evidence rather well: tragedy does not drain your pity and fear, it gives them a shape. Whether that is what he meant, no one can say. He never came back to explain.</p>
+  </section>
+
+  <footer>
+    <p><strong>Programme notes &amp; sources</strong></p>
+    <ul>
+      <li>Aristotle, <em>Poetics</em>, ch. 6 (definition of tragedy).</li>
+      <li>J. Bernays, <em>Grundzüge der verlorenen Abhandlung des Aristoteles über Wirkung der Tragödie</em> (1857).</li>
+      <li>J. Breuer &amp; S. Freud, <em>Studies on Hysteria</em> (1895).</li>
+      <li>B. J. Bushman, R. F. Baumeister &amp; A. D. Stack, "Catharsis, aggression, and persuasive influence," <em>Journal of Personality and Social Psychology</em> (1999).</li>
+      <li>B. J. Bushman, "Does venting anger feed or extinguish the flame?" <em>Personality and Social Psychology Bulletin</em> (2002).</li>
+      <li>S. L. Kjærvik &amp; B. J. Bushman, "A meta-analytic review of anger management activities that increase or decrease arousal," <em>Clinical Psychology Review</em> (2024).</li>
+      <li>A. Gračanin, L. M. Bylsma &amp; A. J. J. M. Vingerhoets, "Is crying a self-soothing behavior?" <em>Frontiers in Psychology</em> (2014).</li>
+      <li>J. W. Pennebaker &amp; S. K. Beall, "Confronting a traumatic event," <em>Journal of Abnormal Psychology</em> (1986); J. Frattaroli, "Experimental disclosure and its moderators: a meta-analysis," <em>Psychological Bulletin</em> (2006).</li>
+    </ul>
+    <p>The gauges are a summary for illustration, not measurements. Not medical advice. &middot; <a href="../">Apps and demos</a></p>
+  </footer>
+</div>
+
+<script>
+  // angle: -80 = much less, 0 = same as doing nothing, +80 = much more
+  const DATA = {
+    bag: {
+      a: [-65, "Drained"], b: [30, "Stays up"],
+      text: "Hitting a bag while thinking about the person who angered you left people angrier and more aggressive than sitting quietly.",
+      src: "Bushman 2002; Bushman, Baumeister & Stack 1999"
+    },
+    rant: {
+      a: [-55, "Drained"], b: [20, "Often stays up"],
+      text: "Venting by rehearsing the grievance tends to keep anger going, especially when the listener stokes it. Talking that moves toward understanding the situation is a different thing.",
+      src: "Bushman 2002; Kjærvik & Bushman 2024"
+    },
+    breathe: {
+      a: [10, "Bottled up"], b: [-45, "Goes down"],
+      text: "The steam picture says calming down just bottles the feeling. In the pooled studies, arousal-lowering activities like slow breathing and relaxation reliably reduced anger.",
+      src: "Kjærvik & Bushman 2024"
+    },
+    cry: {
+      a: [-60, "Drained"], b: [-15, "Dips, then lifts"],
+      text: "Crying at a sad film often makes mood worse at first; in some studies criers' mood later recovered past where it started. The relief seems to come with time and calming, not from tears emptying a tank.",
+      src: "Gračanin, Bylsma & Vingerhoets 2014 and related studies"
+    },
+    write: {
+      a: [-60, "Drained"], b: [-15, "Small help"],
+      text: "Writing about a hard experience for a few sessions has small average benefits, with a lot of variation. The leading explanation is making sense of it, not getting it out.",
+      src: "Pennebaker & Beall 1986; Frattaroli 2006"
+    },
+    run: {
+      a: [-50, "Burned off"], b: [0, "Not reliably lower"],
+      text: "Exercise is good for many things, but as a way to cool off right after being angered, activities that raise arousal did not reliably reduce anger in the pooled studies.",
+      src: "Kjærvik & Bushman 2024"
+    }
+  };
+  const buttons = document.querySelectorAll(".choices button");
+  const needleA = document.getElementById("needleA");
+  const needleB = document.getElementById("needleB");
+  const outA = document.getElementById("outA");
+  const outB = document.getElementById("outB");
+  const finding = document.getElementById("finding");
+  function pick(k) {
+    const d = DATA[k];
+    if (!d) return;
+    buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+    needleA.style.transform = `rotate(${d.a[0]}deg)`;
+    needleB.style.transform = `rotate(${d.b[0]}deg)`;
+    outA.textContent = d.a[1];
+    outB.textContent = d.b[1];
+    finding.innerHTML = "";
+    finding.append(document.createTextNode(d.text));
+    const s = document.createElement("span");
+    s.className = "src";
+    s.textContent = "Source: " + d.src;
+    finding.append(s);
+    try { localStorage.setItem("catharsis-pick", k); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener("click", () => pick(b.dataset.k)));
+  try { const k = localStorage.getItem("catharsis-pick"); if (k) pick(k); } catch (e) {}
+</script>
+</body>
+</html>

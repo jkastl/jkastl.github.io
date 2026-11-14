@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parts List: A Field Guide to the Tools in a Pathology Data Stack</title>
+<!-- site:head -->
+<meta name="description" content="Common data tools filed by the job they do, from getting data in to dashboards, with one question traced through a nightly copy, a stream, and a virtual layer.">
+<link rel="canonical" href="https://jkastl.github.io/parts-list/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Parts List: A Field Guide to the Tools in a Pathology Data Stack">
+<meta property="og:description" content="Common data tools filed by the job they do, from getting data in to dashboards, with one question traced through a nightly copy, a stream, and a virtual layer.">
+<meta property="og:url" content="https://jkastl.github.io/parts-list/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Parts List: A Field Guide to the Tools in a Pathology Data Stack",
+ "description": "Common data tools filed by the job they do, from getting data in to dashboards, with one question traced through a nightly copy, a stream, and a virtual layer.",
+ "url": "https://jkastl.github.io/parts-list/",
+ "datePublished": "2026-10-25",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+  :root {
+    --paper: #f2ead6;
+    --paper-2: #e9dfc6;
+    --ink: #1b1915;
+    --ink-soft: #423d34;
+    --muted: #6f675a;
+    --red: #b8301f;
+    --red-soft: rgba(184, 48, 31, 0.1);
+    --rule: #b9ad8f;
+    --dot: rgba(27, 25, 21, 0.35);
+    --ok: #2f6a3a;
+    --cond: "Arial Narrow", "Helvetica Neue", "Roboto Condensed", "Liberation Sans Narrow", "Nimbus Sans Narrow", Arial, sans-serif;
+    --body: "Century Schoolbook", "New Century Schoolbook", "TeX Gyre Schola", "C059", Georgia, serif;
+    --mono: ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1a1814;
+      --paper-2: #24211b;
+      --ink: #ece4d0;
+      --ink-soft: #d2c9b4;
+      --muted: #a1977f;
+      --red: #f0806f;
+      --red-soft: rgba(240, 128, 111, 0.12);
+      --rule: #4b4436;
+      --dot: rgba(236, 228, 208, 0.35);
+      --ok: #87c98f;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--ink); font: 17px/1.55 var(--body);
+    background:
+      radial-gradient(var(--dot) 0.5px, transparent 0.6px) 0 0 / 4px 4px,
+      var(--paper);
+    background-attachment: fixed;
+  }
+  @media (prefers-color-scheme: dark) { body { background: var(--paper); } }
+  a { color: inherit; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--red); outline-offset: 2px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 40px; }
+  .home { display: inline-block; margin-top: 14px; font: 14px var(--cond); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  header.mast { border-top: 8px solid var(--ink); border-bottom: 3px solid var(--ink); margin: 12px 0 22px; padding: 14px 0 12px; text-align: center; }
+  .issue { display: flex; justify-content: space-between; font: 13px var(--cond); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); border-bottom: 1px solid var(--ink); padding-bottom: 6px; margin-bottom: 10px; }
+  h1 { font: 700 clamp(44px, 11vw, 104px)/0.9 var(--cond); font-stretch: condensed; text-transform: uppercase; letter-spacing: -0.01em; margin: 0; }
+  h1 .red { color: var(--red); }
+  .tag { font: italic 19px/1.35 var(--body); margin: 10px auto 0; max-width: 640px; }
+  h2 {
+    font: 700 28px/1.05 var(--cond); font-stretch: condensed; text-transform: uppercase;
+    margin: 44px 0 4px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;
+  }
+  h2 .dept { color: var(--paper); background: var(--red); padding: 2px 8px 1px; font-size: 18px; letter-spacing: 0.08em; }
+  .deptline { font: italic 16px var(--body); color: var(--ink-soft); margin: 0 0 12px; border-bottom: 2px solid var(--ink); padding-bottom: 8px; max-width: none; }
+  p { margin: 0 0 12px; max-width: 70ch; }
+  .lede { font-size: 19px; }
+  .small { font-size: 15px; color: var(--ink-soft); }
+
+  /* catalogue entries */
+  .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 26px; }
+  .part { border-bottom: 1px solid var(--rule); padding: 12px 0 14px; break-inside: avoid; }
+  .part-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .no { font: 700 13px var(--cond); color: var(--red); border: 1.5px solid var(--red); border-radius: 50%; min-width: 2.9em; height: 2.9em; display: inline-flex; align-items: center; justify-content: center; flex: none; letter-spacing: 0.02em; }
+  .name { font: 700 21px/1.1 var(--cond); font-stretch: condensed; text-transform: uppercase; }
+  .leader { flex: 1; border-bottom: 2px dotted var(--dot); transform: translateY(-4px); min-width: 12px; }
+  .kind { font: 12px var(--cond); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); white-space: nowrap; }
+  .part p { font-size: 15.5px; line-height: 1.5; margin: 6px 0 0; }
+  .part .use { border-left: 3px solid var(--red); padding-left: 8px; color: var(--ink-soft); }
+  .part .use b { font: 700 12px var(--cond); text-transform: uppercase; letter-spacing: 0.08em; color: var(--red); margin-right: 4px; }
+  .part .see { font-size: 13.5px; color: var(--muted); }
+
+  /* the plate */
+  .plate { border: 3px double var(--ink); padding: 14px; background: var(--paper-2); }
+  .plate-title { font: 700 22px/1.1 var(--cond); text-transform: uppercase; margin: 0 0 4px; }
+  .plate-title span { color: var(--red); }
+  .question { font: italic 18px var(--body); margin: 0 0 12px; }
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 22px; margin-bottom: 14px; }
+  .controls label { font: 15px var(--cond); text-transform: uppercase; letter-spacing: 0.04em; display: block; }
+  .controls output { float: right; font: 700 15px var(--mono); color: var(--red); text-transform: none; }
+  .controls input[type=range] { width: 100%; accent-color: var(--red); }
+  .controls .hint { font-size: 13.5px; color: var(--muted); margin: 2px 0 0; }
+  .check { display: flex !important; gap: 8px; align-items: center; }
+  .check input { accent-color: var(--red); width: 22px; height: 22px; }
+  .ways { padding-left: 20px; margin: 0 0 8px; }
+  .ways li { margin-bottom: 4px; }
+  .controls input[type=range] { min-height: 28px; }
+  .lanes { width: 100%; height: auto; display: block; background: var(--paper); border: 1px solid var(--ink); }
+  .lanes text { font-family: var(--cond); fill: var(--ink); }
+  .compare { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 15px; }
+  .compare th, .compare td { border-bottom: 1px solid var(--rule); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .compare th { font: 700 14px var(--cond); text-transform: uppercase; letter-spacing: 0.04em; }
+  .compare td.n { font-family: var(--mono); white-space: nowrap; }
+  .compare .path { font-size: 13.5px; color: var(--ink-soft); }
+  .tablewrap { overflow-x: auto; }
+  .caveat { font-size: 13.5px; font-style: italic; color: var(--muted); margin-top: 10px; max-width: none; }
+  .bad { color: var(--red); }
+  .good { color: var(--ok); }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; font: 14px var(--cond); text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--ink); padding: 3px 8px; text-decoration: none; }
+  .toc a:hover { background: var(--red-soft); }
+  .sources { font-size: 14.5px; padding-left: 22px; columns: 2; column-gap: 30px; }
+  .sources li { margin-bottom: 5px; break-inside: avoid; }
+  footer { margin-top: 36px; border-top: 8px solid var(--ink); padding-top: 8px; font: 14px var(--cond); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+  @media (max-width: 700px) {
+    .parts { grid-template-columns: minmax(0, 1fr); }
+    .sources { columns: 1; }
+    .compare { font-size: 14px; }
+    .compare thead { display: none; }
+    .compare tr { display: block; border-top: 2px solid var(--ink); padding: 6px 0; }
+    .compare th, .compare td { display: block; border: 0; padding: 3px 0; white-space: normal; }
+    .compare th { font-size: 18px; }
+    .compare td::before { content: attr(data-label); display: block; font: 700 12px var(--cond); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="../">Apps and demos</a>
+  <header class="mast">
+    <div class="issue"><span>Field guide</span><span>Ten departments, 37 parts</span></div>
+    <h1>Parts <span class="red">List</span></h1>
+    <p class="tag">The tools in a data stack for digital pathology, filed by the job each one does, with one question traced through three ways of putting them together</p>
+  </header>
+
+  <p class="lede">A data stack does about ten jobs: getting data in, moving it, keeping it, crunching it, scheduling the work, packing and running it, shipping changes, reaching across systems, analysing, and showing the results. This guide files common tools under each job, old and new, open source and commercial, says in a line or two what each one is, and gives an example of where it could sit when the data is about pathology slides. The examples are illustrations, not a description of any real lab's setup, and the tools are a sample: every job has more.</p>
+  <ul class="toc" aria-label="Departments">
+    <li><a href="#plate">The plate</a></li>
+    <li><a href="#d-a">A. Start</a></li>
+    <li><a href="#d-b">B. Move</a></li>
+    <li><a href="#d-c">C. Keep</a></li>
+    <li><a href="#d-d">D. Crunch</a></li>
+    <li><a href="#d-e">E. Schedule</a></li>
+    <li><a href="#d-f">F. Pack and run</a></li>
+    <li><a href="#d-g">G. Ship changes</a></li>
+    <li><a href="#d-h">H. Reach across</a></li>
+    <li><a href="#d-i">I. Analyse</a></li>
+    <li><a href="#d-j">J. Show</a></li>
+  </ul>
+
+  <h2 id="plate"><span class="dept">Plate 1</span>One question, three assemblies</h2>
+  <p class="deptline">The same parts can be put together in different orders. Where the data gets copied decides when an answer shows up and what breaks when a source goes down.</p>
+  <section class="plate" aria-labelledby="plate-t">
+    <p class="plate-title" id="plate-t">Question <span>No. 1</span></p>
+    <p class="question">"How many slides failed scan quality control today, by scanner and by stain?"</p>
+    <p class="small">The QC result comes from the scanner side (the image store). The stain comes from the lab information system (LIS). So the answer needs both. Three ways to build it, drawn as three lanes below:</p>
+    <ul class="small ways">
+      <li><b>Nightly copy.</b> A job copies both sources into a warehouse once a night, and the dashboard reads the warehouse.</li>
+      <li><b>Stream.</b> Scan events are sent on as they happen, and the stain is looked up in a copy of the LIS stain list that refreshes every hour.</li>
+      <li><b>Virtual layer.</b> Nothing is copied. Each time the dashboard refreshes, it asks the LIS and the image store directly.</li>
+    </ul>
+    <p class="small">Move the sliders and watch where the red arrow lands in each lane.</p>
+    <div class="controls">
+      <div>
+        <label for="failAt">A slide fails QC at <output id="failAtV" for="failAt"></output></label>
+        <input type="range" id="failAt" min="420" max="1140" step="5" value="612">
+      </div>
+      <div>
+        <label class="check"><input type="checkbox" id="outage" checked>The LIS goes offline</label>
+        <label for="outAt" style="margin-top:6px">from <output id="outAtV" for="outAt"></output></label>
+        <input type="range" id="outAt" min="0" max="1380" step="30" value="780">
+        <p class="hint">For two hours. The nightly job starts at 02:00, so try an outage that covers it.</p>
+      </div>
+      <div>
+        <label for="refresh">Dashboard refreshes per hour <output id="refreshV" for="refresh"></output></label>
+        <input type="range" id="refresh" min="1" max="60" step="1" value="4">
+        <p class="hint">Between 07:00 and 19:00, summed over everyone looking at it.</p>
+      </div>
+    </div>
+    <svg class="lanes" id="lanes" viewBox="0 0 900 300" role="img" aria-label="A timeline from 06:00 to 06:00 the next day with one lane per design, showing when the failed slide first appears on the dashboard and what the LIS outage does to each lane."></svg>
+    <div class="tablewrap">
+      <table class="compare">
+        <thead><tr><th>Design</th><th>Parts, in order</th><th>Failure first shown</th><th>During the outage</th><th>Queries sent to the LIS a day</th><th>Copies of the data</th></tr></thead>
+        <tbody id="compare"></tbody>
+      </table>
+    </div>
+    <p class="caveat">Made-up timings: the nightly job starts at 02:00 and takes 30 minutes, and a failed run is retried every 30 minutes; the stream shows an event about 2 minutes after it happens and refreshes its copy of the LIS stain list hourly; the virtual layer asks the sources every time the dashboard refreshes, with no cache. Real systems vary on all of these. The point is the shape: where the copy sits decides the delay and the failure mode. Numbers in the table are the part numbers in the catalogue below.</p>
+    <p class="small"><b>Things to try.</b> Set refreshes to 60 and compare the query column: only the virtual layer's count climbs. Move the outage to 12:30 and the failure to 13:00: the virtual lane's arrow jumps past the outage, while the stream keeps going. Move the outage over 02:00: only the nightly lane notices.</p>
+  </section>
+  <p class="small">The stream lane is the subject of a companion page, <a href="/tidepool/2026-10-25-tape-and-tally/">Tape and Tally</a>, which runs a day of scanner events through a partitioned log and a nightly batch side by side.</p>
+
+  <h2 id="d-a"><span class="dept">Dept. A</span>Where the data starts</h2>
+  <p class="deptline">Not tools to pick so much as the systems everything else reads from.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">101</span><span class="name">Whole-slide images</span><span class="leader"></span><span class="kind">files</span></div>
+      <p>A scanned slide is a very large image stored as a pyramid: full resolution at the bottom, smaller overviews above, each level cut into tiles so a viewer loads only what is on screen. Scanners often write their own file formats; DICOM, the medical imaging standard, added a whole-slide format in 2010 (Supplement 145).</p>
+      <p class="use"><b>Example</b>Each scan's file location, scanner, and QC result become rows that the rest of the stack can join on.</p>
+      <p class="see"><a href="https://dicom.nema.org/Dicom/DICOMWSI/">DICOM WSI</a>. See also <a href="../slide-to-screen/">Slide to Screen</a>.</p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">102</span><span class="name">Lab information system</span><span class="leader"></span><span class="kind">system</span></div>
+      <p>The LIS tracks each case by its accession number, and within it each part, block, and slide, with stains and the final report. It is the record of what a slide is.</p>
+      <p class="use"><b>Example</b>The source of truth for which stain a slide carries and which case it belongs to.</p>
+      <p class="see"><a href="https://dicom.nema.org/medical/dicom/2024c/output/chtml/part17/chapter_NN.html">DICOM PS3.17, Annex NN</a>. Practise querying that shape in <a href="/tidepool/2026-10-25-rows-in-the-drawer/">Rows in the Drawer</a>.</p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">103</span><span class="name">APIs</span><span class="leader"></span><span class="kind">interface</span></div>
+      <p>An API is a documented way for one program to ask another for data or to make it do something, often over HTTP with data sent back as JSON. Connecting systems through their APIs means writing the code that calls one system and hands the result to another, handling paging, retries, and errors.</p>
+      <p class="use"><b>Example</b>A small Python job that asks an image store's API for yesterday's scans and writes them to a table.</p>
+      <p class="see"><a href="https://developer.mozilla.org/en-US/docs/Glossary/API">MDN: API</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-b"><span class="dept">Dept. B</span>Moving it</h2>
+  <p class="deptline">Getting data out of the sources and into somewhere it can be worked on, either as a steady stream or in loads.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">201</span><span class="name">Apache Kafka</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>An event streaming platform: programs write events to named topics, Kafka keeps them in order within each partition of a topic, and any number of readers can read them, now or later. It runs as a distributed, fault-tolerant cluster.</p>
+      <p class="use"><b>Example</b>Each scanner sends a "slide scanned" event, keyed by scanner, to a topic that a streaming job and an archive both read.</p>
+      <p class="see"><a href="https://kafka.apache.org/42/getting-started/introduction/">Kafka introduction</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">202</span><span class="name">SSIS</span><span class="leader"></span><span class="kind">Microsoft</span></div>
+      <p>SQL Server Integration Services: Microsoft's platform for data integration and ETL (extract, transform, load). Packages are built in graphical tools from ready-made tasks and transformations, and stored and run from an SSIS catalog database.</p>
+      <p class="use"><b>Example</b>A nightly package that copies the day's cases from the LIS database into a reporting database.</p>
+      <p class="see"><a href="https://learn.microsoft.com/en-us/sql/integration-services/sql-server-integration-services">Microsoft Learn: SSIS</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">203</span><span class="name">Airbyte and Fivetran</span><span class="leader"></span><span class="kind">open source / managed</span></div>
+      <p>Connector tools for the extract-and-load half of the job. Each ships a catalogue of ready-made connectors that copy data from apps and databases into a warehouse, leaving the transforming for later (ELT). Airbyte is open source and can be self-hosted; Fivetran is a managed service.</p>
+      <p class="use"><b>Example</b>Copying a scheduling system's tables into the warehouse every hour without writing the API code by hand.</p>
+      <p class="see"><a href="https://airbyte.com/compare/airbyte-vs-fivetran">Airbyte's comparison page</a>; <a href="https://estuary.dev/blog/airbyte-vs-fivetran/">Estuary's comparison</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-c"><span class="dept">Dept. C</span>Keeping it</h2>
+  <p class="deptline">Where the copied data lives so it can be queried with SQL without slowing the source systems down.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">301</span><span class="name">Snowflake</span><span class="leader"></span><span class="kind">cloud service</span></div>
+      <p>A cloud data platform. Data sits in one central store; queries run on "virtual warehouses", separate compute clusters that can be started, stopped, and resized on their own, so two teams' workloads do not slow each other down.</p>
+      <p class="use"><b>Example</b>A table of every scan and QC result, joined to case and stain, for reporting.</p>
+      <p class="see"><a href="https://docs.snowflake.com/user-guide/intro-key-concepts">Snowflake key concepts</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">302</span><span class="name">Google BigQuery</span><span class="leader"></span><span class="kind">cloud service</span></div>
+      <p>Google Cloud's serverless data warehouse. Its storage layer and compute layer scale independently, and users do not provision servers; they load data and run SQL.</p>
+      <p class="use"><b>Example</b>The same reporting table, if the stack lives on Google Cloud.</p>
+      <p class="see"><a href="https://docs.cloud.google.com/bigquery/docs/introduction">BigQuery overview</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">303</span><span class="name">Apache Hive</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>Data warehouse software from the Hadoop world (Hadoop being an older system for spreading files and jobs across many machines): it puts table structure over files in distributed storage and lets people query them in a SQL dialect. Its metastore, which records each table's schema and location, is also used by other tools.</p>
+      <p class="use"><b>Example</b>Tables over years of tile-level results stored as files in a data lake.</p>
+      <p class="see"><a href="https://hive.apache.org/">hive.apache.org</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">304</span><span class="name">Amazon Redshift</span><span class="leader"></span><span class="kind">cloud service</span></div>
+      <p>Amazon's fully managed, petabyte-scale data warehouse service. AWS handles provisioning, backups, and patches, and a serverless option charges nothing while the warehouse sits idle.</p>
+      <p class="use"><b>Example</b>The reporting table again, on AWS.</p>
+      <p class="see"><a href="https://docs.aws.amazon.com/redshift/latest/dg/welcome.html">Introduction to Amazon Redshift</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-d"><span class="dept">Dept. D</span>Crunching it</h2>
+  <p class="deptline">Engines and languages that transform and summarise data too large for one machine, in batches or as a stream.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">401</span><span class="name">Apache Spark</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A general-purpose engine for processing large data sets across many machines, with APIs in Scala, Java, and Python. The same DataFrame code (tables handled as objects in a program) can run as a batch job or, through Structured Streaming, over a stream, which Spark processes as a series of small batches by default.</p>
+      <p class="use"><b>Example</b>Counting tiles and QC failures per slide across a year of scans, or the live hourly tally in the plate's stream lane.</p>
+      <p class="see"><a href="https://spark.apache.org/">spark.apache.org</a>; <a href="https://spark.apache.org/docs/latest/streaming/">Structured Streaming guide</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">402</span><span class="name">Apache Pig</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A dataflow environment for very large files. Scripts in its language, Pig Latin, describe a series of steps (load, filter, group, join), which Pig compiles into MapReduce or Tez jobs on Hadoop. Spark and Hive cover overlapping ground.</p>
+      <p class="use"><b>Example</b>An older Hadoop job that groups scan logs by scanner and day.</p>
+      <p class="see"><a href="https://pig.apache.org/">pig.apache.org</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">403</span><span class="name">SQL and Python</span><span class="leader"></span><span class="kind">languages</span></div>
+      <p>Most of the parts in this guide take one or both. Snowflake, BigQuery, Hive, and Spark all accept SQL; Spark, Airflow, and Dash are driven from Python. Other languages turn up around the edges: JavaScript in front ends, JVM languages in older services and in the tools themselves.</p>
+      <p class="use"><b>Example</b>A Python script that calls an API, cleans the result, and loads it with SQL.</p>
+      <p class="see">SQL practice on lab-shaped tables: <a href="/tidepool/2026-10-25-rows-in-the-drawer/">Rows in the Drawer</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">404</span><span class="name">Apache Flink</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A framework and distributed engine for stateful processing of both kinds of data: streams with no end, handled as events arrive, and finite data sets, handled whole.</p>
+      <p class="use"><b>Example</b>The live hourly tally, built stream-first.</p>
+      <p class="see"><a href="https://flink.apache.org/flink-architecture.html">What is Apache Flink?</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">405</span><span class="name">dbt</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A command-line tool for the transform step inside the warehouse. Each model is a SQL SELECT statement; dbt runs the models in order of their dependencies, and adds tests and documentation, with the project kept in Git.</p>
+      <p class="use"><b>Example</b>A model that turns raw scan rows into one clean row per slide, with a test that slide ids are unique.</p>
+      <p class="see"><a href="https://en.wikipedia.org/wiki/Data_build_tool">Wikipedia: Data build tool</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-e"><span class="dept">Dept. E</span>Running it on time</h2>
+  <p class="deptline">Something has to start the nightly job, wait for its inputs, retry it when it fails, and say what ran.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">501</span><span class="name">Apache Airflow</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A platform for writing workflows as code, then scheduling and monitoring them. A workflow is a DAG (directed acyclic graph) of tasks written in Python; the scheduler runs each task once the tasks it depends on are done, and a web interface shows what ran and what failed. Its own docs say it is not a streaming system.</p>
+      <p class="use"><b>Example</b>Every night at 02:00: wait for the LIS extract, run the Spark job, check the row counts, refresh the dashboard's table.</p>
+      <p class="see"><a href="https://airflow.apache.org/docs/apache-airflow/stable/">Airflow documentation</a>; the streaming note is in the <a href="https://airflow.apache.org/docs/apache-airflow/2.3.3/">2.3 docs</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">502</span><span class="name">Cloud Composer</span><span class="leader"></span><span class="kind">Google Cloud</span></div>
+      <p>Google Cloud's managed Airflow: Google runs the Airflow environment, and you write the same DAGs. Google's documentation now calls it Managed Service for Apache Airflow.</p>
+      <p class="use"><b>Example</b>The same nightly DAG, without running the Airflow servers yourself.</p>
+      <p class="see"><a href="https://docs.cloud.google.com/composer/docs">Google Cloud documentation</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">503</span><span class="name">Dagster and Prefect</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>Two newer Python orchestrators. Dagster is organised around data assets, the tables and files a pipeline produces, rather than around tasks. Prefect turns ordinary Python functions into scheduled, retryable flows with <code>@flow</code> and <code>@task</code> decorators.</p>
+      <p class="use"><b>Example</b>The same nightly job, written as a chain of assets.</p>
+      <p class="see"><a href="https://dagster.io/blog/what-is-dagster">What is Dagster?</a>; <a href="https://pypi.org/project/prefect/">Prefect on PyPI</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-f"><span class="dept">Dept. F</span>Packing and running it</h2>
+  <p class="deptline">Making a job run the same way on a laptop, a test server, and production, keeping it running, and writing the machines it runs on down as code.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">601</span><span class="name">Docker</span><span class="leader"></span><span class="kind">open source and commercial</span></div>
+      <p>Packs a program into an image that contains everything it needs to run (code, libraries, settings) and runs it as a container: a process kept isolated from everything else on the machine.</p>
+      <p class="use"><b>Example</b>A tiling script and its exact library versions, packed so it runs the same on every machine.</p>
+      <p class="see"><a href="https://docs.docker.com/get-started/">Docker: get started</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">602</span><span class="name">Kubernetes</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>Open-source software that starts, scales, and looks after containerised programs across many machines; a graduated project of the Cloud Native Computing Foundation.</p>
+      <p class="use"><b>Example</b>Running twenty copies of the tiling container overnight, and restarting any that crash.</p>
+      <p class="see"><a href="https://kubernetes.io/">kubernetes.io</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">603</span><span class="name">Terraform</span><span class="leader"></span><span class="kind">HashiCorp</span></div>
+      <p>An infrastructure-as-code tool. Cloud resources such as servers, storage buckets, and databases are written down in declarative configuration files, and Terraform works out the changes needed to make the real thing match, using plugins called providers for each platform.</p>
+      <p class="use"><b>Example</b>The pipeline's storage, warehouse, and Kubernetes cluster, defined in files kept in Git.</p>
+      <p class="see"><a href="https://developer.hashicorp.com/terraform/tutorials/aws-get-started/infrastructure-as-code">HashiCorp: What is infrastructure as code?</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-g"><span class="dept">Dept. G</span>Shipping changes</h2>
+  <p class="deptline">CI/CD (continuous integration and delivery): every change to pipeline code gets built, tested, and deployed the same way, by a machine.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">701</span><span class="name">Jenkins</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>An open-source automation server with a large plugin ecosystem, used to build projects, run tests, and deploy. You run the Jenkins server yourself.</p>
+      <p class="use"><b>Example</b>On every merge, run the pipeline's tests against a small sample of made-up slides, then deploy.</p>
+      <p class="see"><a href="https://github.com/jenkinsci">Jenkins project</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">702</span><span class="name">GitHub Actions</span><span class="leader"></span><span class="kind">GitHub</span></div>
+      <p>GitHub's CI/CD platform. Workflows are YAML files kept in the repository's <code>.github/workflows</code> folder, and run on events such as a push or a pull request.</p>
+      <p class="use"><b>Example</b>The same tests, run on each pull request, with the result shown on the request.</p>
+      <p class="see"><a href="https://docs.github.com/en/actions">GitHub Actions documentation</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">703</span><span class="name">DataOps</span><span class="leader"></span><span class="kind">a practice</span></div>
+      <p>Not a tool: a way of working modelled on DevOps, aiming to make data work more automated and consistent, with continuous testing and monitoring of pipelines so they keep delivering timely, accurate data. Definitions vary.</p>
+      <p class="use"><b>Example</b>A check that fails the nightly run if any patient appears in both a model's training and test tables.</p>
+      <p class="see"><a href="https://www.ibm.com/topics/dataops">IBM: What is DataOps?</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-h"><span class="dept">Dept. H</span>Reaching across</h2>
+  <p class="deptline">Querying several systems as if they were one, without copying them first. Several products do this; two of them below.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">801</span><span class="name">Denodo</span><span class="leader"></span><span class="kind">commercial</span></div>
+      <p>A data virtualization platform: a logical layer that presents views over many sources and fetches from them when a query arrives, instead of copying the data into a warehouse first. Denodo's own material describes a cache that keeps local copies of source data, to spare busy sources and to cope with slow ones.</p>
+      <p class="use"><b>Example</b>One view that joins the LIS and the image store, so a report reads both live. The plate's third lane.</p>
+      <p class="see"><a href="https://www.denodo.com/en/data-management/data-virtualization">Denodo: data virtualization</a>; <a href="https://research.isg-one.com/analyst-perspectives/denodo-provides-a-logical-approach-to-data-management">ISG Research</a>; <a href="https://www.datamanagementblog.com/intelligent-caching-in-data-virtualization/">Denodo blog on caching</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">802</span><span class="name">Trino</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A distributed SQL query engine that stores no data of its own. Connectors let one query read data lakes, warehouses, and operational databases where they are, and join across them. A cousin of data virtualization, aimed at large analytic queries.</p>
+      <p class="use"><b>Example</b>One SQL query joining tile results in a data lake with case data in a relational database.</p>
+      <p class="see"><a href="https://www.starburst.io/trino/">Starburst: Trino</a>; <a href="https://oreilly.com/library/view/trino-the-definitive/9781098137229/ch01.html">O'Reilly, Introducing Trino</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-i"><span class="dept">Dept. I</span>Analysing it</h2>
+  <p class="deptline">Statistics and models, once the data is clean and in one place.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">901</span><span class="name">SAS</span><span class="leader"></span><span class="kind">commercial</span></div>
+      <p>An integrated suite from SAS Institute for statistical analysis, data management, business intelligence, and predictive analytics, with its own programming language.</p>
+      <p class="use"><b>Example</b>A statistician's analysis of turnaround times across years of cases.</p>
+      <p class="see"><a href="https://support.sas.com/software/products/sas-studio/faq/SAS_whatis.htm">SAS: What is SAS?</a>; <a href="https://kb.ndsu.edu/page.php?id=101582">NDSU: Statistical Analysis System</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">902</span><span class="name">Machine learning on tiles</span><span class="leader"></span><span class="kind">a practice</span></div>
+      <p>Models for slides mostly learn from tiles, thousands per slide. The bookkeeping matters as much as the model: tiles from one patient must stay on one side of a train/test split, or the score measures memory.</p>
+      <p class="use"><b>Example</b>A patient-wise split, checked with SQL before training starts.</p>
+      <p class="see"><a href="https://arxiv.org/abs/1909.06539">Bussola et al., AI slipping on tiles</a>; drawn in <a href="/tidepool/2026-10-25-same-patient-both-sides/">Same Patient, Both Sides</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">903</span><span class="name">R</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A free software environment for statistical computing and graphics, with its own language and thousands of add-on packages on CRAN.</p>
+      <p class="use"><b>Example</b>Survival curves or a mixed-effects model on case outcomes.</p>
+      <p class="see"><a href="https://www.r-project.org/">r-project.org</a></p>
+    </article>
+  </div>
+
+  <h2 id="d-j"><span class="dept">Dept. J</span>Showing it</h2>
+  <p class="deptline">Dashboards bought ready-made, and libraries for building your own.</p>
+  <div class="parts">
+    <article class="part">
+      <div class="part-head"><span class="no">1001</span><span class="name">Tableau</span><span class="leader"></span><span class="kind">commercial</span></div>
+      <p>A visual analytics platform: Tableau Desktop for building views, Tableau Prep for preparing data, and Tableau Server (self-hosted) or Tableau Cloud (hosted) for sharing them.</p>
+      <p class="use"><b>Example</b>A QC dashboard by scanner and stain, read from the warehouse.</p>
+      <p class="see"><a href="https://www.tableau.com/why-tableau/what-is-tableau">What is Tableau?</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1002</span><span class="name">Power BI</span><span class="leader"></span><span class="kind">Microsoft</span></div>
+      <p>Microsoft's business analytics platform for turning data into reports and dashboards, now part of Microsoft Fabric.</p>
+      <p class="use"><b>Example</b>The same dashboard, in a Microsoft shop.</p>
+      <p class="see"><a href="https://learn.microsoft.com/en-us/power-bi/fundamentals/power-bi-overview">Power BI overview</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1003</span><span class="name">ThoughtSpot</span><span class="leader"></span><span class="kind">commercial</span></div>
+      <p>An analytics platform built around asking questions of the data in plain language and getting charts back, rather than building each report by hand.</p>
+      <p class="use"><b>Example</b>"Failed scans by stain last month" typed into a search box.</p>
+      <p class="see"><a href="https://www.thoughtspot.com/">thoughtspot.com</a>; <a href="https://www.phdata.io/blog/what-is-thoughtspot-everything-you-need-to-know">phData overview</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1004</span><span class="name">Dash</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>Plotly's open-source Python framework for data apps: the layout and the callbacks are written in Python, and Dash is built on Plotly.js, React, and Flask.</p>
+      <p class="use"><b>Example</b>A small internal app that shows a slide's QC history next to its tiles.</p>
+      <p class="see"><a href="https://plotly.com/products/">Plotly products</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1005</span><span class="name">D3</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A JavaScript library for custom data visualizations. It has no ready-made charts; you build a picture from scales, shapes, and layouts, which suits drawings no chart tool offers.</p>
+      <p class="use"><b>Example</b>A custom view of a slide's tile grid coloured by model score.</p>
+      <p class="see"><a href="https://d3js.org/">d3js.org</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1006</span><span class="name">React</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>A JavaScript library for building user interfaces out of components, used on the web with react-dom and on phones with React Native. Dash uses it underneath.</p>
+      <p class="use"><b>Example</b>The front end of a slide-review tool, with a D3 chart inside one of its components.</p>
+      <p class="see"><a href="https://react.dev/">react.dev</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1007</span><span class="name">Looker</span><span class="leader"></span><span class="kind">Google Cloud</span></div>
+      <p>A BI platform, now part of Google Cloud, built around LookML: a modelling language that defines measures and joins once, in version-controlled files, so every report uses the same definitions.</p>
+      <p class="use"><b>Example</b>One shared definition of "failed scan" that every dashboard reuses.</p>
+      <p class="see"><a href="https://cloud.google.com/looker">Google Cloud: Looker</a>; <a href="https://cube.dev/events/replacing-looker-with-cube-and-superset">Cube on LookML</a></p>
+    </article>
+    <article class="part">
+      <div class="part-head"><span class="no">1008</span><span class="name">Apache Superset</span><span class="leader"></span><span class="kind">open source</span></div>
+      <p>An open-source data exploration and visualization platform, started at Airbnb and now an Apache project, with a SQL editor for analysts and drag-and-drop charts for everyone else.</p>
+      <p class="use"><b>Example</b>A self-hosted QC dashboard, where licence costs matter.</p>
+      <p class="see"><a href="https://superset.apache.org/">superset.apache.org</a>; <a href="https://preset.io/blog/apache-superset-as-a-looker-alternative/">Preset on Superset</a></p>
+    </article>
+  </div>
+
+  <h2><span class="dept">Notes</span>Already out there</h2>
+  <p>Overviews of the "modern data stack", such as <a href="https://www.ibm.com/think/topics/modern-data-stack">IBM's</a> and <a href="https://datavidhya.com/learn/de-fundamentals/tools-and-modern-stack/modern-data-stack/">Data Vidhya's lesson</a>, sort tools into layers such as ingestion, storage, transformation, orchestration, and analysis or BI (the exact layers differ between them). This guide uses a similar sorting, tied to slide data, and adds the plate: one question run through three assemblies of the same parts.</p>
+  <p class="small">Descriptions are this page's own words, based on each maker's documentation or the named source. Names identify the products; this page is not connected with any of them.</p>
+
+  <h2><span class="dept">Notes</span>Sources</h2>
+  <ol class="sources">
+    <li>DICOM whole-slide imaging and Supplement 145: <a href="https://dicom.nema.org/Dicom/DICOMWSI/">NEMA DICOM WSI</a>.</li>
+    <li>Case, part, block, slide, and accession numbers: <a href="https://dicom.nema.org/medical/dicom/2024c/output/chtml/part17/chapter_NN.html">DICOM PS3.17 Annex NN</a>.</li>
+    <li>Kafka: <a href="https://kafka.apache.org/42/getting-started/introduction/">Introduction</a>.</li>
+    <li>SSIS: <a href="https://learn.microsoft.com/en-us/sql/integration-services/sql-server-integration-services">Microsoft Learn</a>.</li>
+    <li>Snowflake: <a href="https://docs.snowflake.com/user-guide/intro-key-concepts">Key concepts and architecture</a>.</li>
+    <li>BigQuery: <a href="https://docs.cloud.google.com/bigquery/docs/introduction">Overview</a>.</li>
+    <li>Hive: <a href="https://en.wikipedia.org/wiki/Apache_Hive">Wikipedia</a>, <a href="https://hive.apache.org/">hive.apache.org</a>.</li>
+    <li>Spark: <a href="https://apache.googlesource.com/spark">project README</a>; <a href="https://spark.apache.org/docs/latest/streaming/">Structured Streaming guide</a>.</li>
+    <li>Pig: <a href="https://apache.googlesource.com/pig/+/refs/tags/release-0.1.0/README.txt">project README</a>, <a href="https://pig.apache.org/">pig.apache.org</a>.</li>
+    <li>Airflow: <a href="https://airflow.apache.org/docs/apache-airflow/stable/">documentation</a>; <a href="https://airflow.apache.org/docs/apache-airflow/2.3.3/">2.3.3</a>.</li>
+    <li>Cloud Composer and its new name: <a href="https://docs.cloud.google.com/composer/docs">Google Cloud docs</a>.</li>
+    <li>Docker containers and images: <a href="https://docs.docker.com/get-started/">Docker get-started guide</a>.</li>
+    <li>Kubernetes: <a href="https://kubernetes.io/">kubernetes.io</a>; <a href="https://opensource.apple.com/projects/kubernetes">project summary</a>.</li>
+    <li>Jenkins: <a href="https://github.com/jenkinsci">jenkinsci on GitHub</a>.</li>
+    <li>GitHub Actions: <a href="https://docs.github.com/en/actions/get-started/quickstart">quickstart</a>.</li>
+    <li>DataOps: <a href="https://www.ibm.com/topics/dataops">IBM</a>; <a href="https://en.wikipedia.org/wiki/DataOps">Wikipedia</a>.</li>
+    <li>Denodo: <a href="https://www.denodo.com/en/data-management/data-virtualization">Denodo</a>; <a href="https://research.isg-one.com/analyst-perspectives/denodo-provides-a-logical-approach-to-data-management">ISG Research</a>; <a href="https://www.datamanagementblog.com/intelligent-caching-in-data-virtualization/">Denodo blog</a>.</li>
+    <li>SAS: <a href="https://support.sas.com/software/products/sas-studio/faq/SAS_whatis.htm">SAS FAQ</a>; <a href="https://kb.ndsu.edu/page.php?id=101582">NDSU IT knowledge base</a>.</li>
+    <li>Tableau: <a href="https://www.tableau.com/why-tableau/what-is-tableau">What is Tableau</a>; <a href="https://help.tableau.com/current/tableau/en-us/tableau_product_overview.htm">product overview</a>.</li>
+    <li>Power BI: <a href="https://learn.microsoft.com/en-us/power-bi/fundamentals/power-bi-overview">Microsoft Learn overview</a>.</li>
+    <li>ThoughtSpot: <a href="https://www.phdata.io/blog/what-is-thoughtspot-everything-you-need-to-know">phData overview</a>.</li>
+    <li>Dash: <a href="https://plotly.com/products/">Plotly</a>.</li>
+    <li>D3: <a href="https://d3js.org/">d3js.org</a>; <a href="https://en.wikipedia.org/wiki/D3.js">Wikipedia</a>.</li>
+    <li>React: <a href="https://react.dev/">react.dev</a>.</li>
+    <li>Airbyte and Fivetran: <a href="https://airbyte.com/compare/airbyte-vs-fivetran">Airbyte</a>; <a href="https://estuary.dev/blog/airbyte-vs-fivetran/">Estuary</a>.</li>
+    <li>Amazon Redshift: <a href="https://docs.aws.amazon.com/redshift/latest/dg/welcome.html">AWS documentation</a>.</li>
+    <li>Flink: <a href="https://flink.apache.org/flink-architecture.html">flink.apache.org</a>.</li>
+    <li>dbt: <a href="https://en.wikipedia.org/wiki/Data_build_tool">Wikipedia</a>.</li>
+    <li>Dagster and Prefect: <a href="https://dagster.io/blog/what-is-dagster">Dagster</a>; <a href="https://pypi.org/project/prefect/">Prefect on PyPI</a>.</li>
+    <li>Terraform: <a href="https://developer.hashicorp.com/terraform/tutorials/aws-get-started/infrastructure-as-code">HashiCorp tutorial</a>.</li>
+    <li>Trino: <a href="https://www.starburst.io/trino/">Starburst</a>; <a href="https://oreilly.com/library/view/trino-the-definitive/9781098137229/ch01.html">O'Reilly, chapter 1</a>.</li>
+    <li>R: <a href="https://www.r-project.org/">r-project.org</a>.</li>
+    <li>Looker: <a href="https://cloud.google.com/looker">Google Cloud</a>; <a href="https://cube.dev/events/replacing-looker-with-cube-and-superset">Cube</a>.</li>
+    <li>Superset: <a href="https://superset.apache.org/">superset.apache.org</a>; <a href="https://preset.io/blog/apache-superset-as-a-looker-alternative/">Preset</a>.</li>
+    <li>APIs: <a href="https://developer.mozilla.org/en-US/docs/Glossary/API">MDN glossary</a>. Tile leakage: <a href="https://arxiv.org/abs/1909.06539">Bussola et al.</a></li>
+  </ol>
+
+  <footer><a href="../">Apps and demos</a></footer>
+</div>
+<script type="module" src="plate.js"></script>
+</body>
+</html>

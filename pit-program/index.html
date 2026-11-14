@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit Program: How a Podracer Works</title>
+<!-- site:head -->
+<meta name="description" content="A film podracer taken apart: a cutaway sorting each part into real engineering or movie magic, a test track where differential thrust steers and tow cables go slack, and the g-forces a pilot would face.">
+<link rel="canonical" href="https://jkastl.github.io/pit-program/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Apps and demos">
+<meta property="og:title" content="Pit Program: How a Podracer Works">
+<meta property="og:description" content="A film podracer taken apart: a cutaway sorting each part into real engineering or movie magic, a test track where differential thrust steers and tow cables go slack, and the g-forces a pilot would face.">
+<meta property="og:url" content="https://jkastl.github.io/pit-program/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "CreativeWork",
+ "name": "Pit Program: How a Podracer Works",
+ "description": "A film podracer taken apart: a cutaway sorting each part into real engineering or movie magic, a test track where differential thrust steers and tow cables go slack, and the g-forces a pilot would face.",
+ "url": "https://jkastl.github.io/pit-program/",
+ "datePublished": "2026-10-15",
+ "inLanguage": "en",
+ "isPartOf": {
+  "@type": "WebSite",
+  "name": "Apps and demos",
+  "url": "https://jkastl.github.io/"
+ }
+}</script>
+<script src="../shared/stats.js" defer></script>
+<!-- /site:head -->
+<style>
+  :root {
+    --paper: #f3ead6;
+    --card: #fbf6ea;
+    --ink: #1b1a17;
+    --muted: #5a5348;
+    --red: #c1271d;
+    --green: #1f5b3a;
+    --amber: #d58a12;
+    --line: #1b1a17;
+    --ground: #e7d3a8;
+    --ground-dot: #cdb27c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17171a;
+      --card: #212126;
+      --ink: #efe8d8;
+      --muted: #aaa293;
+      --red: #ef5a4c;
+      --green: #4fbf83;
+      --amber: #f0ae3c;
+      --line: #efe8d8;
+      --ground: #2b2721;
+      --ground-dot: #463e31;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 17px/1.5 "Archivo Narrow", "Arial Narrow", "Roboto Condensed", "Helvetica Neue", Arial, sans-serif;
+  }
+  .checker {
+    height: 14px;
+    background: repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / 14px 14px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  .home { font-size: 14px; margin: 10px 0 0; }
+  a { color: var(--red); }
+  h1, h2, h3, .oswald { font-family: "Oswald", "Bebas Neue", Impact, "Arial Narrow Bold", sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+  header.mast { text-align: center; padding: 18px 0 8px; border-bottom: 4px double var(--line); }
+  .kicker { font-family: "Oswald", sans-serif; font-size: 14px; letter-spacing: .25em; color: var(--muted); }
+  h1 { font-size: clamp(38px, 9vw, 78px); line-height: .95; margin: 6px 0; font-style: italic; }
+  h1 span { color: var(--red); }
+  .stripe { display: flex; justify-content: center; gap: 6px; margin: 10px 0; }
+  .stripe i { width: 60px; height: 6px; display: block; background: var(--red); transform: skewX(-30deg); }
+  .stripe i:nth-child(2) { background: var(--green); }
+  .stripe i:nth-child(3) { background: var(--amber); }
+  .lede { max-width: 680px; margin: 8px auto 0; font-size: 19px; }
+  section { padding: 28px 0 8px; border-bottom: 2px solid var(--line); }
+  h2 { font-size: 30px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; font-style: italic; }
+  .roundel {
+    flex: none; width: 44px; height: 44px; border-radius: 50%;
+    border: 3px solid var(--line); background: var(--card);
+    display: grid; place-items: center; font-style: normal; font-size: 22px;
+  }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .card { background: var(--card); border: 2px solid var(--line); box-shadow: 5px 5px 0 var(--line); padding: 14px; }
+
+  /* Cutaway */
+  .cut { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .cut { grid-template-columns: 1fr; } }
+  #cutaway { width: 100%; height: auto; display: block; }
+  #cutaway .part { cursor: pointer; }
+  #cutaway .part:hover .shape, #cutaway .part.on .shape { stroke: var(--red); stroke-width: 3; }
+  #cutaway .part:focus { outline: none; }
+  #cutaway .part:focus-visible .shape { stroke: var(--amber); stroke-width: 4; }
+  #cutaway text { font-family: "Oswald", sans-serif; font-size: 13px; fill: var(--ink); pointer-events: none; }
+  .tag { display: inline-block; font-family: "Oswald", sans-serif; font-size: 13px; padding: 1px 8px; border: 2px solid currentColor; text-transform: uppercase; letter-spacing: .06em; }
+  .tag.real { color: var(--green); }
+  .tag.stretch { color: var(--amber); }
+  .tag.magic { color: var(--red); }
+  .partlist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .partlist button {
+    font: 600 14px "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .04em;
+    background: var(--card); color: var(--ink); border: 2px solid var(--line); padding: 4px 9px; cursor: pointer;
+  }
+  .partlist button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  #spec h3 { margin: 4px 0 6px; font-size: 24px; }
+  #spec dl { margin: 10px 0 0; }
+  #spec dt { font-family: "Oswald", sans-serif; text-transform: uppercase; font-size: 13px; letter-spacing: .08em; color: var(--muted); margin-top: 10px; }
+  #spec dd { margin: 2px 0 0; }
+
+  /* Sim */
+  .sim { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .sim { grid-template-columns: 1fr; } }
+  canvas#track { width: 100%; aspect-ratio: 4 / 3; display: block; border: 2px solid var(--line); background: var(--ground); touch-action: none; }
+  .ctl label { display: block; font-family: "Oswald", sans-serif; text-transform: uppercase; font-size: 14px; letter-spacing: .05em; margin-top: 10px; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--red); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .btn {
+    font: 600 15px "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .05em;
+    padding: 7px 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer;
+    box-shadow: 3px 3px 0 var(--line); user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  .btn:active, .btn.held { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+  .btn.go { background: var(--red); color: #fff; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-family: "Oswald", sans-serif; text-transform: uppercase; font-size: 14px; }
+  .gauges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 12px; }
+  .gauge { border: 2px solid var(--line); padding: 4px 8px; background: var(--paper); }
+  .gauge b { display: block; font: 700 22px "Oswald", sans-serif; }
+  .gauge small { font-family: "Oswald", sans-serif; text-transform: uppercase; color: var(--muted); letter-spacing: .06em; }
+  #status { margin-top: 10px; min-height: 3em; font-style: italic; }
+  .tips { font-size: 15px; color: var(--muted); margin-top: 8px; }
+
+  /* Calculator */
+  .calc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .calc { grid-template-columns: 1fr; } }
+  .big { font: 700 44px/1 "Oswald", sans-serif; color: var(--red); }
+  .scale { margin-top: 10px; }
+  .scale div { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--muted); padding: 3px 0; font-size: 15px; }
+  .scale div.hit { font-weight: 600; color: var(--red); }
+
+  /* Scorecard */
+  table.score { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.score th, table.score td { border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: left; vertical-align: top; }
+  table.score th { font-family: "Oswald", sans-serif; text-transform: uppercase; font-size: 13px; letter-spacing: .08em; color: var(--muted); }
+  @media (max-width: 560px) { table.score .hide-sm { display: none; } }
+  footer { padding: 18px 0 30px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="checker"></div>
+<div class="wrap">
+  <p class="home"><a href="../">&larr; Apps and demos</a></p>
+  <header class="mast">
+    <div class="kicker">Official pit program &middot; technical edition</div>
+    <h1>How a <span>Podracer</span> Works</h1>
+    <div class="stripe"><i></i><i></i><i></i></div>
+    <p class="lede">The racing pod from the Star Wars prequel is a chariot rebuilt as a jet: a tiny cockpit towed on cables behind two enormous engines that are held side by side by a beam of energy. Here it is taken apart, part by part, with each piece sorted into <span class="tag real">real</span>, <span class="tag stretch">stretched</span>, or <span class="tag magic">movie magic</span>, and a test track where you can feel why the real versions would be a handful.</p>
+  </header>
+
+  <section id="cutaway-sec">
+    <h2><span class="roundel">1</span>The cutaway</h2>
+    <p class="sub">A generic racer, drawn for this page. Tap a part, or pick one from the list.</p>
+    <div class="cut">
+      <div class="card">
+        <svg id="cutaway" viewBox="0 0 640 380" role="group" aria-label="Cutaway of a podracer seen from above">
+          <defs>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="1" opacity=".35"/>
+            </pattern>
+          </defs>
+          <g style="color: var(--ink)">
+            <!-- binder -->
+            <g class="part" data-part="binder" tabindex="0" role="button" aria-label="Energy binder">
+              <rect class="shape" x="196" y="96" width="248" height="22" fill="transparent" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>
+              <path d="M200 107 Q 240 95 280 107 T 360 107 T 440 107" fill="none" stroke="var(--amber)" stroke-width="3"/>
+              <text x="320" y="88" text-anchor="middle">ENERGY BINDER</text>
+            </g>
+            <!-- engines -->
+            <g class="part" data-part="engines" tabindex="0" role="button" aria-label="Twin engines">
+              <path class="shape" d="M120 30 L196 30 L206 60 L206 230 L186 262 L130 262 L110 230 L110 60 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <path class="shape" d="M444 30 L520 30 L530 60 L530 230 L510 262 L454 262 L434 230 L434 60 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <ellipse cx="158" cy="34" rx="34" ry="8" fill="url(#hatch)" stroke="var(--line)"/>
+              <ellipse cx="482" cy="34" rx="34" ry="8" fill="url(#hatch)" stroke="var(--line)"/>
+              <rect x="128" y="70" width="60" height="120" fill="url(#hatch)" stroke="var(--line)" stroke-width="1"/>
+              <rect x="452" y="70" width="60" height="120" fill="url(#hatch)" stroke="var(--line)" stroke-width="1"/>
+              <path d="M138 262 L150 296 L166 296 L178 262" fill="var(--amber)" opacity=".7"/>
+              <path d="M462 262 L474 296 L490 296 L502 262" fill="var(--amber)" opacity=".7"/>
+              <text x="158" y="136" text-anchor="middle" transform="rotate(-90 158 136)">ENGINE L</text>
+              <text x="482" y="136" text-anchor="middle" transform="rotate(-90 482 136)">ENGINE R</text>
+            </g>
+            <!-- vanes -->
+            <g class="part" data-part="vanes" tabindex="0" role="button" aria-label="Split vanes and air brakes">
+              <path class="shape" d="M110 200 L82 214 L82 240 L110 230 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <path class="shape" d="M206 200 L234 214 L234 240 L206 230 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <path class="shape" d="M434 200 L406 214 L406 240 L434 230 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <path class="shape" d="M530 200 L558 214 L558 240 L530 230 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <text x="58" y="258">VANES</text>
+            </g>
+            <!-- cables -->
+            <g class="part" data-part="cables" tabindex="0" role="button" aria-label="Control cables">
+              <path class="shape" d="M158 262 Q 220 300 300 330" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+              <path class="shape" d="M482 262 Q 420 300 340 330" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+              <path d="M158 262 Q 220 300 300 330 M482 262 Q 420 300 340 330" fill="none" stroke="transparent" stroke-width="16"/>
+              <text x="228" y="290" transform="rotate(26 228 290)">CABLE</text>
+            </g>
+            <!-- cockpit -->
+            <g class="part" data-part="cockpit" tabindex="0" role="button" aria-label="Cockpit pod">
+              <path class="shape" d="M296 322 Q 320 308 344 322 L 352 360 Q 320 376 288 360 Z" fill="var(--card)" stroke="var(--line)" stroke-width="2"/>
+              <circle cx="320" cy="342" r="9" fill="url(#hatch)" stroke="var(--line)"/>
+              <text x="362" y="352">COCKPIT</text>
+            </g>
+            <!-- repulsors -->
+            <g class="part" data-part="repulsors" tabindex="0" role="button" aria-label="Repulsorlifts">
+              <circle class="shape" cx="158" cy="210" r="13" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+              <circle class="shape" cx="482" cy="210" r="13" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+              <circle class="shape" cx="320" cy="364" r="6" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+              <text x="560" y="180">REPULSOR</text>
+              <path d="M495 206 L556 184" stroke="var(--line)" stroke-width="1"/>
+            </g>
+            <!-- intakes -->
+            <g class="part" data-part="intakes" tabindex="0" role="button" aria-label="Intakes">
+              <rect class="shape" x="120" y="14" width="76" height="16" fill="transparent" stroke="var(--line)" stroke-width="1.5"/>
+              <rect class="shape" x="444" y="14" width="76" height="16" fill="transparent" stroke="var(--line)" stroke-width="1.5"/>
+              <text x="24" y="26">INTAKES</text>
+              <path d="M84 22 L118 22" stroke="var(--line)" stroke-width="1"/>
+            </g>
+            <text x="12" y="372" style="font-size:11px">DIRECTION OF TRAVEL &uarr;</text>
+          </g>
+        </svg>
+      </div>
+      <div class="card" id="spec" aria-live="polite"></div>
+    </div>
+    <div class="partlist" id="partlist"></div>
+  </section>
+
+  <section id="sim-sec">
+    <h2><span class="roundel">2</span>The test track</h2>
+    <p class="sub">A top-down toy model, not a flight model. Two throttles steer by pushing the engines unevenly; the cockpit trails on cables that can pull but never push. Turn the binder off to see what it is for.</p>
+    <div class="sim">
+      <div><canvas id="track" width="640" height="480" aria-label="Top-down test track"></canvas></div>
+      <div class="card ctl">
+        <label for="thrL">Left throttle <span id="thrLv">50</span>%</label>
+        <input id="thrL" type="range" min="0" max="100" value="50">
+        <label for="thrR">Right throttle <span id="thrRv">50</span>%</label>
+        <input id="thrR" type="range" min="0" max="100" value="50">
+        <div class="chk"><input id="link" type="checkbox"><label for="link" style="margin:0">Link throttles</label></div>
+        <div class="chk"><input id="binder" type="checkbox" checked><label for="binder" style="margin:0">Energy binder on</label></div>
+        <div class="row">
+          <button class="btn" id="brakeL" type="button">Brake L</button>
+          <button class="btn" id="brakeR" type="button">Brake R</button>
+          <button class="btn" id="cut" type="button">Cut both</button>
+          <button class="btn go" id="reset" type="button">Reset</button>
+        </div>
+        <div class="gauges">
+          <div class="gauge"><small>Speed</small><b id="gSpd">0</b></div>
+          <div class="gauge"><small>Turn rate</small><b id="gYaw">0</b></div>
+          <div class="gauge"><small>Cable</small><b id="gCab">taut</b></div>
+          <div class="gauge"><small>Engine gap</small><b id="gGap">100%</b></div>
+        </div>
+        <p id="status">Push the throttles up and go.</p>
+        <p class="tips">Keys: Q / A left throttle, E / D right, Z / C brakes, space cuts both. Things to try: hold one brake to turn hard; slam both throttles to zero and watch the cables go slack as the cockpit coasts into the engines; switch the binder off at speed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="calc-sec">
+    <h2><span class="roundel">3</span>The pilot's problem</h2>
+    <p class="sub">Whatever lifts the thing, a human still rides in it. Two numbers decide whether they can: how hard a turn pulls, and how far the pod travels before they can react.</p>
+    <div class="calc">
+      <div class="card ctl">
+        <label for="spd">Speed: <span id="spdv"></span> km/h</label>
+        <input id="spd" type="range" min="50" max="900" step="10" value="400">
+        <label for="rad">Turn radius: <span id="radv"></span> m</label>
+        <input id="rad" type="range" min="20" max="2000" step="10" value="300">
+        <label for="rt">Reaction time: <span id="rtv"></span> s</label>
+        <input id="rt" type="range" min="0.15" max="1" step="0.05" value="0.25">
+      </div>
+      <div class="card">
+        <div class="oswald" style="color:var(--muted);font-size:14px">Sideways pull in the turn</div>
+        <div class="big" id="gOut"></div>
+        <div style="font-size:15px">lateral g = v&sup2; &divide; (r &times; 9.81), with v in m/s</div>
+        <div class="scale" id="gScale"></div>
+        <div class="oswald" style="color:var(--muted);font-size:14px;margin-top:14px">Distance covered before the pilot reacts</div>
+        <div class="big" id="dOut"></div>
+        <div style="font-size:15px">d = v &times; reaction time</div>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:12px">The reference points are rough, typical figures: racing drivers in top open-wheel series see peaks around 5 to 6 g sideways in fast corners, with neck training to match, while trained fighter pilots in g-suits handle around 9 g, but head-to-seat, not sideways. An open cockpit with no harness on the drawing would be the first thing an engineer changed.</p>
+  </section>
+
+  <section id="score-sec">
+    <h2><span class="roundel">4</span>The scorecard</h2>
+    <p class="sub">The whole machine in one table.</p>
+    <div class="card" style="overflow-x:auto">
+      <table class="score" id="score">
+        <thead><tr><th>Part</th><th>Verdict</th><th class="hide-sm">Closest real thing</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px">The pattern: everything that <em>moves</em> the pod forward or <em>steers</em> it borrows from real machines (jets, tow lines, split flaps, the chariot), and everything that lets it <em>exist at all</em> (hovering without a cushion, holding two engines together without a strut) is invented. Take away the two inventions and swap in their real fixes, a rigid crossbar and wheels or skids, and you get something close to a jet-powered dragster with a towed seat: buildable, but nobody would want to sit in it.</p>
+  </section>
+
+  <footer>A fan explainer about a fictional vehicle, drawn for this page; not affiliated with the film or its makers. The sim is a toy with made-up constants, meant to show behaviour, not numbers. &middot; <a href="../">Apps and demos</a></footer>
+</div>
+<div class="checker"></div>
+
+<script>
+const PARTS = {
+  engines: {
+    name: "Twin engines", verdict: "stretch",
+    does: "Two huge engines, mounted side by side well ahead of the pilot, provide all the thrust. They are most of the vehicle's length and mass.",
+    real: "Turbojets and ramjets. A turbojet compresses air with a turbine-driven compressor, burns fuel in it, and throws it out the back; a ramjet skips the compressor and relies on speed to ram the air in.",
+    hard: "A ramjet makes no thrust standing still, so it needs another way to get up to speed. A turbojet a metre or two off a desert floor would swallow sand, and grit erodes compressor blades fast. Engines this size also burn fuel at a rate that leaves little room for a race of several laps."
+  },
+  intakes: {
+    name: "Intakes", verdict: "real",
+    does: "The open fronts of the engines gulp air. On the drawing they sit right at the leading edge, facing the oncoming wind.",
+    real: "Jet engine inlets. Real ones are shaped carefully so the air arrives slowed down and even, and supersonic designs use cones or ramps to manage shock waves.",
+    hard: "Low to the ground, an intake is also a vacuum cleaner. Real aircraft that use rough strips add screens, raised inlets, or deflectors, all of which cost thrust."
+  },
+  binder: {
+    name: "Energy binder", verdict: "magic",
+    does: "A crackling beam locks the two engines together at a fixed spacing, so they act like one rigid unit instead of two machines drifting apart.",
+    real: "Nothing like it exists. Its real job is done by a spreader bar or crossbeam: a rigid strut, as on a pair of towing horses' yoke or the pylons tying two engines to one wing.",
+    hard: "Holding two heavy, vibrating objects at an exact gap, in both pull and push, with no contact is not something any known field does. A strut does it for the price of some weight and drag, which is why every real twin-engine machine has one."
+  },
+  cables: {
+    name: "Control cables", verdict: "real",
+    does: "Long cables tie the cockpit to the engines. They tow it, and they carry the pilot's throttle and brake commands forward.",
+    real: "Tow ropes for gliders and water skiers, and the control wiring of any fly-by-wire aircraft.",
+    hard: "A cable can only pull. If the engines slow faster than the cockpit, the cockpit overruns, the cable goes slack, then snaps tight again with a jolt. That whiplash, at speed, is what makes towed loads so hard to manage. Try it on the test track."
+  },
+  cockpit: {
+    name: "Cockpit pod", verdict: "real",
+    does: "A small shell holding one pilot and two control levers, trailing behind the engines rather than sitting between them.",
+    real: "The chariot. The whole layout is a two-horse chariot with jets in place of horses, which is clearly the point of the race scene.",
+    hard: "Putting the pilot behind and between two jet exhausts means heat, noise, and debris. With the pod hung on cables it has its own momentum, so every change of speed or direction reaches the pilot a moment late and with a swing."
+  },
+  repulsors: {
+    name: "Repulsorlifts", verdict: "magic",
+    does: "Antigravity units in the engines and the pod hold everything a metre or so off the ground, with no wheels, fans, or track.",
+    real: "Hovercraft (a fan-blown air cushion under a skirt), maglev trains (magnets, but only over a special track), and ground effect (wings flying very low ride on a cushion of compressed air).",
+    hard: "Each real version has a catch the fictional one ignores. A hovercraft needs a skirt and a big lift fan and steers poorly; maglev needs the track; ground effect needs speed and wings. Hovering over open sand and rock with none of those is the single biggest invention in the vehicle."
+  },
+  vanes: {
+    name: "Split vanes and air brakes", verdict: "real",
+    does: "Panels on the engines open into the airflow to add drag on one side, helping the pod turn, or on both sides to slow down.",
+    real: "Split flaps used as air brakes. The Space Shuttle's rudder split open as a speed brake, and the B-2 bomber steers with split drag rudders at its wingtips.",
+    hard: "This part actually works. Drag on one side yaws a vehicle toward that side, and it is a sound way to steer something with no tail. The catch is only that it bleeds speed every time you use it."
+  }
+};
+const ORDER = ["engines", "intakes", "binder", "cables", "cockpit", "repulsors", "vanes"];
+const VERDICT = { real: "Real analogue", stretch: "Real, stretched", magic: "Movie magic" };
+const CLOSEST = {
+  engines: "Turbojet / ramjet", intakes: "Jet inlets", binder: "A rigid crossbar",
+  cables: "Glider tow rope", cockpit: "Two-horse chariot", repulsors: "Hovercraft, maglev", vanes: "Split speed brakes"
+};
+
+const spec = document.getElementById("spec");
+const list = document.getElementById("partlist");
+function showPart(key) {
+  const p = PARTS[key];
+  spec.innerHTML = `<span class="tag ${p.verdict}">${VERDICT[p.verdict]}</span>
+    <h3>${p.name}</h3>
+    <dl><dt>What it does in the film</dt><dd>${p.does}</dd>
+    <dt>Real thing it echoes</dt><dd>${p.real}</dd>
+    <dt>Why the real version would struggle</dt><dd>${p.hard}</dd></dl>`;
+  document.querySelectorAll("#cutaway .part").forEach(g => g.classList.toggle("on", g.dataset.part === key));
+  list.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.part === key));
+}
+ORDER.forEach(k => {
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.part = k; b.textContent = PARTS[k].name;
+  b.addEventListener("click", () => showPart(k));
+  list.appendChild(b);
+});
+document.querySelectorAll("#cutaway .part").forEach(g => {
+  g.addEventListener("click", () => showPart(g.dataset.part));
+  g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showPart(g.dataset.part); } });
+});
+showPart("engines");
+
+const tbody = document.querySelector("#score tbody");
+ORDER.forEach(k => {
+  const p = PARTS[k];
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${p.name}</td><td><span class="tag ${p.verdict}">${VERDICT[p.verdict]}</span></td><td class="hide-sm">${CLOSEST[k]}</td>`;
+  tbody.appendChild(tr);
+});
+
+/* ---------- calculator ---------- */
+const spd = document.getElementById("spd"), rad = document.getElementById("rad"), rt = document.getElementById("rt");
+const REF = [
+  [1, "Everyday hard braking in a car, roughly"],
+  [2, "Brisk roller-coaster turn"],
+  [5, "Racing-car corner peak"],
+  [9, "Fighter pilot limit, with g-suit, head-to-seat"],
+  [15, "Beyond sustained human tolerance"]
+];
+function calc() {
+  const v = spd.value / 3.6, r = +rad.value, t = +rt.value;
+  const g = v * v / (r * 9.81);
+  document.getElementById("spdv").textContent = spd.value;
+  document.getElementById("radv").textContent = r;
+  document.getElementById("rtv").textContent = t.toFixed(2);
+  document.getElementById("gOut").textContent = (g < 10 ? g.toFixed(1) : Math.round(g)) + " g";
+  document.getElementById("dOut").textContent = Math.round(v * t) + " m";
+  let hit = 0;
+  REF.forEach((ref, i) => { if (g >= ref[0]) hit = i; });
+  document.getElementById("gScale").innerHTML = REF.map((ref, i) =>
+    `<div class="${i === hit && g >= REF[0][0] ? "hit" : ""}"><span>${ref[1]}</span><span>${ref[0]} g</span></div>`).join("");
+}
+[spd, rad, rt].forEach(el => el.addEventListener("input", calc));
+calc();
+
+/* ---------- sim ---------- */
+const cv = document.getElementById("track"), ctx = cv.getContext("2d");
+const thrL = document.getElementById("thrL"), thrR = document.getElementById("thrR");
+const link = document.getElementById("link"), binder = document.getElementById("binder");
+const status = document.getElementById("status");
+const HALF = 18;          // half spacing of engines, world units
+const CABLE = 46;         // cable rest length
+let S, brakes = { L: false, R: false };
+
+function reset() {
+  S = {
+    x: 0, y: 0, h: -Math.PI / 2, v: 0, w: 0,   // engine unit centre, heading, speed, yaw rate
+    gap: 1, gapV: 0,                            // engine spacing factor (1 = nominal)
+    px: 0, py: CABLE, pvx: 0, pvy: 0,           // cockpit
+    slack: false, crashed: false, pylons: [], t: 0
+  };
+  for (let i = 0; i < 40; i++) {
+    const a = Math.random() * Math.PI * 2, d = 150 + Math.random() * 1600;
+    S.pylons.push([Math.cos(a) * d, Math.sin(a) * d]);
+  }
+  status.textContent = "Push the throttles up and go.";
+}
+reset();
+
+function syncLabels() {
+  document.getElementById("thrLv").textContent = thrL.value;
+  document.getElementById("thrRv").textContent = thrR.value;
+}
+thrL.addEventListener("input", () => { if (link.checked) thrR.value = thrL.value; syncLabels(); });
+thrR.addEventListener("input", () => { if (link.checked) thrL.value = thrR.value; syncLabels(); });
+link.addEventListener("change", () => { if (link.checked) { thrR.value = thrL.value; syncLabels(); } });
+binder.addEventListener("change", () => {
+  status.textContent = binder.checked
+    ? "Binder back on: the engines are one rigid unit again."
+    : "Binder off. Nothing now holds the gap between the engines; any difference in thrust pulls them apart or together.";
+});
+document.getElementById("reset").addEventListener("click", () => { reset(); thrL.value = thrR.value = 50; binder.checked = true; syncLabels(); });
+document.getElementById("cut").addEventListener("click", () => { thrL.value = thrR.value = 0; syncLabels(); });
+
+function holdBtn(id, side) {
+  const b = document.getElementById(id);
+  const on = e => { e.preventDefault(); brakes[side] = true; b.classList.add("held"); };
+  const off = () => { brakes[side] = false; b.classList.remove("held"); };
+  b.addEventListener("pointerdown", on);
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev => b.addEventListener(ev, off));
+}
+holdBtn("brakeL", "L"); holdBtn("brakeR", "R");
+
+window.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type === "range") return;
+  const k = e.key.toLowerCase();
+  const bump = (el, d) => { el.value = Math.max(0, Math.min(100, +el.value + d)); if (link.checked) { thrL.value = thrR.value = el.value; } syncLabels(); };
+  if (k === "q") bump(thrL, 5); else if (k === "a") bump(thrL, -5);
+  else if (k === "e") bump(thrR, 5); else if (k === "d") bump(thrR, -5);
+  else if (k === "z") { brakes.L = true; } else if (k === "c") { brakes.R = true; }
+  else if (k === " " && e.target === document.body) { e.preventDefault(); thrL.value = thrR.value = 0; syncLabels(); }
+});
+window.addEventListener("keyup", e => {
+  const k = e.key.toLowerCase();
+  if (k === "z") brakes.L = false; if (k === "c") brakes.R = false;
+});
+
+function step(dt) {
+  if (S.crashed) return;
+  S.t += dt;
+  const L = thrL.value / 100, R = thrR.value / 100;
+  const bL = brakes.L ? 1 : 0, bR = brakes.R ? 1 : 0;
+  const THR = 260, DRAG = 0.9, BRAKE = 1.6;
+  // forward dynamics of the engine unit
+  const thrust = THR * (L + R) / 2;
+  // big intakes act as air brakes when the engines are throttled back
+  const drag = S.v * (DRAG + Math.pow(1 - (L + R) / 2, 2) * 1.5 + (bL + bR) * BRAKE * 0.5) * 0.6;
+  S.v += (thrust - drag) * dt;
+  if (S.v < 0) S.v = 0;
+  // yaw: differential thrust and differential brake drag. Positive torque turns right (clockwise on screen).
+  const torque = (L - R) * 3.2 + (bR - bL) * S.v * 0.012;
+  S.w += (torque - S.w * 2.2) * dt;
+  S.h += S.w * dt;
+  // binder: gap dynamics
+  if (binder.checked) {
+    S.gapV += (-(S.gap - 1) * 30 - S.gapV * 8) * dt;
+  } else {
+    // nothing holds the gap: thrust difference and buffeting push it around
+    const shove = (L - R) * 0.6 + Math.sin(S.t * 3.1) * 0.25 * (S.v / 200);
+    S.gapV += (shove + (S.gap - 1) * 0.6) * dt;
+    S.w += Math.sin(S.t * 2.3) * (S.v / 300) * dt * 2;
+  }
+  S.gap += S.gapV * dt;
+  const fx = Math.cos(S.h), fy = Math.sin(S.h);
+  S.x += fx * S.v * dt; S.y += fy * S.v * dt;
+  // cockpit: point mass, low drag, tension-only cable to rear of engine unit
+  const ax = S.x - fx * 10, ay = S.y - fy * 10;
+  let dx = ax - S.px, dy = ay - S.py;
+  const dist = Math.hypot(dx, dy) || 1;
+  let fxp = -S.pvx * 0.45, fyp = -S.pvy * 0.45;
+  if (dist > CABLE) {
+    const k = (dist - CABLE) * 60;
+    fxp += dx / dist * k; fyp += dy / dist * k;
+    // cable damping along its length
+    const rel = (S.pvx * dx + S.pvy * dy) / dist;
+    const evx = fx * S.v, evy = fy * S.v;
+    const relE = (evx * dx + evy * dy) / dist;
+    fxp += dx / dist * (relE - rel) * 4; fyp += dy / dist * (relE - rel) * 4;
+    S.slack = false;
+  } else {
+    if (!S.slack && S.v > 20) status.textContent = "Cables slack: the engines slowed faster than the cockpit, so the cockpit is catching up to them.";
+    S.slack = true;
+  }
+  S.pvx += fxp * dt; S.pvy += fyp * dt;
+  S.px += S.pvx * dt; S.py += S.pvy * dt;
+  // cockpit overrunning into the engines
+  const cdx = S.px - S.x, cdy = S.py - S.y;
+  if (Math.hypot(cdx, cdy) < 14) crash("The cockpit coasted into the back of the engines. Cables only pull: when the engines slowed harder than the pod, nothing held it back.");
+  if (S.gap > 1.9) crash("The engines drifted apart until the cables tore free. That is the job the binder (or, in real life, a rigid crossbar) does.");
+  if (S.gap < 0.35) crash("The engines swung together and collided. Without something rigid between them, their spacing has no reason to stay put.");
+}
+function crash(msg) {
+  S.crashed = true; S.v = 0; S.w = 0;
+  status.textContent = "Crash. " + msg + " Press Reset.";
+}
+
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function draw() {
+  const W = cv.width, H = cv.height;
+  const C = { ground: css("--ground"), dot: css("--ground-dot"), ink: css("--ink"), red: css("--red"), amber: css("--amber"), card: css("--card"), green: css("--green") };
+  ctx.fillStyle = C.ground; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  const sc = 2.2;
+  ctx.translate(W / 2, H * 0.55);
+  ctx.scale(sc, sc);
+  ctx.translate(-S.x, -S.y);
+  // ground speckle on a world grid
+  ctx.fillStyle = C.dot;
+  const g = 24, x0 = Math.floor((S.x - W / sc) / g) * g, y0 = Math.floor((S.y - H / sc) / g) * g;
+  for (let x = x0; x < S.x + W / sc; x += g) for (let y = y0; y < S.y + H / sc; y += g) {
+    const j = ((Math.sin(x * 12.9 + y * 78.2) * 43758.5) % 1 + 1) % 1;
+    ctx.fillRect(x + j * 14, y + ((j * 7) % 1) * 14, 1.6, 1.6);
+  }
+  // pylons
+  S.pylons.forEach(([px, py]) => {
+    ctx.fillStyle = C.red; ctx.beginPath(); ctx.arc(px, py, 3, 0, 7); ctx.fill();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = .6; ctx.stroke();
+  });
+  const fx = Math.cos(S.h), fy = Math.sin(S.h), rx = -fy, ry = fx;
+  const off = HALF * S.gap;
+  const eL = [S.x - rx * off, S.y - ry * off], eR = [S.x + rx * off, S.y + ry * off];
+  const back = [S.x - fx * 10, S.y - fy * 10];
+  // cables
+  ctx.strokeStyle = S.slack ? C.amber : C.ink; ctx.lineWidth = .9;
+  [eL, eR].forEach(e => {
+    ctx.beginPath();
+    const sx = e[0] - fx * 10, sy = e[1] - fy * 10;
+    ctx.moveTo(sx, sy);
+    if (S.slack) {
+      const mx = (sx + S.px) / 2 + rx * 5 * (e === eL ? -1 : 1), my = (sy + S.py) / 2 + ry * 5 * (e === eL ? -1 : 1);
+      ctx.quadraticCurveTo(mx, my, S.px, S.py);
+    } else ctx.lineTo(S.px, S.py);
+    ctx.stroke();
+  });
+  // binder
+  if (binder.checked) {
+    ctx.strokeStyle = C.amber; ctx.lineWidth = 1.4; ctx.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12, wob = Math.sin(i * 2 + S.t * 30) * 1.2;
+      const x = eL[0] + (eR[0] - eL[0]) * t + fx * (4 + wob), y = eL[1] + (eR[1] - eL[1]) * t + fy * (4 + wob);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  // engines
+  const L = thrL.value / 100, R = thrR.value / 100;
+  [[eL, L, brakes.L], [eR, R, brakes.R]].forEach(([e, th, br]) => {
+    ctx.save(); ctx.translate(e[0], e[1]); ctx.rotate(S.h);
+    if (th > 0 && !S.crashed) { ctx.fillStyle = C.amber; ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(-10, -3); ctx.lineTo(-10 - 14 * th, 0); ctx.lineTo(-10, 3); ctx.fill(); ctx.globalAlpha = 1; }
+    ctx.fillStyle = C.card; ctx.strokeStyle = C.ink; ctx.lineWidth = .9;
+    ctx.beginPath(); ctx.rect(-10, -4.5, 22, 9); ctx.fill(); ctx.stroke();
+    if (br) { ctx.strokeStyle = C.red; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-6, -4.5); ctx.lineTo(-10, -9); ctx.moveTo(-6, 4.5); ctx.lineTo(-10, 9); ctx.stroke(); }
+    ctx.restore();
+  });
+  // cockpit
+  ctx.fillStyle = S.crashed ? C.red : C.card; ctx.strokeStyle = C.ink; ctx.lineWidth = .9;
+  ctx.beginPath(); ctx.arc(S.px, S.py, 4.5, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  // gauges
+  document.getElementById("gSpd").textContent = Math.round(S.v);
+  document.getElementById("gYaw").textContent = (S.w * 57.3).toFixed(0) + "°/s";
+  document.getElementById("gCab").textContent = S.slack ? "slack" : "taut";
+  document.getElementById("gCab").style.color = S.slack ? C.amber : "";
+  document.getElementById("gGap").textContent = Math.round(S.gap * 100) + "%";
+  document.getElementById("gGap").style.color = Math.abs(S.gap - 1) > .25 ? C.red : "";
+}
+let last = performance.now();
+function loop(now) {
+  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const n = 4; for (let i = 0; i < n; i++) step(dt / n);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+syncLabels();
+</script>
+</body>
+</html>
