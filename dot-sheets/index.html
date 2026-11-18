@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#121212">
+  <title>Dot Sheets</title>
+  <meta name="description" content="Turn any picture into a printable dot-by-letter page for FlowArt-style dot markers, using the colors from the kits you own or colors matched to the picture.">
+  <link rel="canonical" href="https://jkastl.github.io/dot-sheets/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Apps and demos">
+  <meta property="og:title" content="Dot Sheets">
+  <meta property="og:description" content="Turn any picture into a printable dot-by-letter page for FlowArt-style dot markers, using the colors from the kits you own or colors matched to the picture.">
+  <meta property="og:url" content="https://jkastl.github.io/dot-sheets/">
+  <meta name="twitter:card" content="summary">
+  <script src="../shared/stats.js" defer></script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23121212'/%3E%3Ccircle cx='10' cy='10' r='4.5' fill='%23f5863e'/%3E%3Ccircle cx='22' cy='10' r='4.5' fill='%2343c0b2'/%3E%3Ccircle cx='10' cy='22' r='4.5' fill='%23765fa8'/%3E%3Ccircle cx='22' cy='22' r='4.5' fill='%23f0739f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="style.css">
+  <style id="page-size">@page { size: 215.9mm 279.4mm; margin: 0; }</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#top">
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="10" r="4.5" fill="#f5863e"/><circle cx="22" cy="10" r="4.5" fill="#43c0b2"/><circle cx="10" cy="22" r="4.5" fill="#765fa8"/><circle cx="22" cy="22" r="4.5" fill="#f0739f"/></svg>
+        <span>Dot Sheets</span>
+      </a>
+      <nav class="topnav" aria-label="Sections">
+        <a href="#how">How it works</a>
+        <a href="/">All apps</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top" class="app">
+    <aside class="side" aria-label="Settings">
+      <!-- 1. Picture -->
+      <section class="panel step" aria-labelledby="pic-h">
+        <h2 class="panel-title" id="pic-h"><span class="num-badge">1</span> Picture</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/*">
+          <span class="drop-main">Drop a picture here, paste one, or <u>browse</u></span>
+          <span class="drop-sub">It never leaves your computer.</span>
+        </label>
+        <div class="controls samples">
+          <span class="lbl">Or try</span>
+          <button type="button" class="btn mini" data-sample="hills">Hills</button>
+          <button type="button" class="btn mini" data-sample="fox">Fox</button>
+          <button type="button" class="btn mini" data-sample="bloom">Bloom</button>
+        </div>
+        <div class="thumbs" id="thumbs" hidden>
+          <figure>
+            <div class="crop-wrap" id="crop-wrap">
+              <canvas id="src-canvas" aria-label="Your picture. Drag across it to crop."></canvas>
+              <div class="crop-box" id="crop-box" hidden></div>
+            </div>
+            <figcaption>Original <button type="button" class="linkish" id="crop-reset" hidden>reset crop</button><span class="lbl" id="crop-hint"> · drag to crop</span></figcaption>
+          </figure>
+          <figure>
+            <canvas id="flat-canvas" aria-label="The simplified picture"></canvas>
+            <figcaption>Simplified</figcaption>
+          </figure>
+        </div>
+        <div class="ctls one">
+          <label class="ctl">Detail <output id="detail-out"></output>
+            <input type="range" id="detail" min="0" max="100" value="35"></label>
+          <label class="ctl">Colors <output id="colors-out"></output>
+            <input type="range" id="colors" min="2" max="16" value="8"></label>
+          <label class="ctl">Cartoon punch <output id="boost-out"></output>
+            <input type="range" id="boost" min="0" max="100" value="45"></label>
+          <label class="ctl">Outlines <output id="lines-out"></output>
+            <input type="range" id="lines" min="0" max="100" value="50"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="blank-white"> Leave white areas blank (no dots)</label>
+      </section>
+
+      <!-- 2. Colors -->
+      <section class="panel step" aria-labelledby="col-h">
+        <h2 class="panel-title" id="col-h"><span class="num-badge">2</span> Colors</h2>
+        <div class="seg" role="group" aria-label="Where the colors come from" id="source">
+          <button type="button" data-v="markers" aria-pressed="true">My markers</button>
+          <button type="button" data-v="image" aria-pressed="false">Match the picture</button>
+        </div>
+        <p class="panel-sub" id="source-note"></p>
+
+        <div id="markers-ui">
+          <details class="sets" id="sets-details" open>
+            <summary>Kits I have <span class="lbl" id="sets-count"></span></summary>
+            <div class="set-list" id="set-list"></div>
+            <div class="custom">
+              <p class="lbl">Other markers</p>
+              <div id="custom-list"></div>
+              <div class="controls add-custom">
+                <input type="color" id="custom-color" value="#3fa7d6" aria-label="New marker color">
+                <input type="text" id="custom-name" placeholder="Name, e.g. Crayola Teal" maxlength="32" aria-label="New marker name">
+                <button type="button" class="btn mini" id="custom-add">Add</button>
+              </div>
+            </div>
+          </details>
+          <div class="seg" role="group" aria-label="How many of your markers to use" id="choose">
+            <button type="button" data-v="best" aria-pressed="true">Best for this picture</button>
+            <button type="button" data-v="all" aria-pressed="false">All checked colors</button>
+          </div>
+        </div>
+
+        <div class="key-edit" id="key-edit" hidden>
+          <div class="key-head">
+            <p class="panel-title">Key</p>
+            <label class="lbl">Letters
+              <select id="letters">
+                <option value="flowart">B D F G H V X Z (like the kits)</option>
+                <option value="alpha">A B C D E F…</option>
+              </select>
+            </label>
+          </div>
+          <ol class="key-rows" id="key-rows"></ol>
+          <p class="lbl" id="key-note"></p>
+        </div>
+      </section>
+
+      <!-- 3. Page -->
+      <section class="panel step" aria-labelledby="page-h">
+        <h2 class="panel-title" id="page-h"><span class="num-badge">3</span> Page</h2>
+        <div class="seg" role="group" aria-label="Page style" id="mode">
+          <button type="button" data-v="dots" aria-pressed="true">Dot by letter</button>
+          <button type="button" data-v="fill" aria-pressed="false">Color by letter</button>
+        </div>
+        <p class="panel-sub" id="mode-note"></p>
+        <div class="grid-2">
+          <label class="lbl">Paper
+            <select id="paper-size">
+              <option value="letter">US Letter</option>
+              <option value="a4">A4</option>
+              <option value="legal">US Legal</option>
+            </select>
+          </label>
+          <label class="lbl">Orientation
+            <select id="orientation">
+              <option value="auto">Fit the picture</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </label>
+          <label class="lbl" data-for="dots">Dot size
+            <select id="dot-size">
+              <option value="fine">Fine (more dots)</option>
+              <option value="medium" selected>Medium, like the kits</option>
+              <option value="large">Large (quicker)</option>
+              <option value="jumbo">Jumbo (bingo daubers)</option>
+            </select>
+          </label>
+          <label class="lbl">Printer
+            <select id="printer">
+              <option value="mono">Black &amp; white</option>
+              <option value="color">Color</option>
+            </select>
+          </label>
+          <label class="lbl">Letter shade
+            <select id="ink">
+              <option value="#9a9a9a">Light (hides under ink)</option>
+              <option value="#6f6f6f" selected>Medium</option>
+              <option value="#3c3c3c">Dark (faint printers)</option>
+            </select>
+          </label>
+          <label class="lbl">Margin
+            <select id="margin">
+              <option value="8">8 mm (newer printers)</option>
+              <option value="12.7" selected>½ inch (safe for most)</option>
+              <option value="19">¾ inch (older printers)</option>
+            </select>
+          </label>
+        </div>
+        <label class="lbl title-field">Title (optional)
+          <input type="text" id="title" maxlength="60" placeholder="Leave blank for no title">
+        </label>
+        <div class="checks">
+          <label class="check" data-for="dots"><input type="checkbox" id="guides"> Faint shape outlines</label>
+          <label class="check" data-for="dots"><input type="checkbox" id="rings"> Show dot size rings</label>
+          <label class="check"><input type="checkbox" id="footer" checked> Scale-check ruler</label>
+        </div>
+      </section>
+    </aside>
+
+    <section class="stage-area" aria-label="Preview">
+      <div class="stage-bar">
+        <div class="seg" role="group" aria-label="Preview" id="view">
+          <button type="button" data-v="print" aria-pressed="true">Printable page</button>
+          <button type="button" data-v="finished" aria-pressed="false">Finished look</button>
+        </div>
+        <span class="status" id="status" role="status" aria-live="polite"></span>
+        <div class="actions">
+          <button type="button" class="btn" id="dl-svg" disabled>SVG</button>
+          <button type="button" class="btn" id="dl-png" disabled>PNG</button>
+          <button type="button" class="btn primary" id="print" disabled>Print…</button>
+        </div>
+      </div>
+      <div class="paper-wrap" id="paper-wrap">
+        <div class="empty" id="empty">
+          <p class="empty-big">Add a picture to make a page.</p>
+          <p>Faces, pets and simple scenes work best. Crop close to the subject: the page boils it down to a handful of flat, bold shapes, like a cartoon of the photo.</p>
+        </div>
+        <div class="paper" id="paper" hidden></div>
+      </div>
+      <p class="print-tip" id="print-tip" hidden>In the print dialog choose your paper size, <strong>Scale: 100%</strong> (or “Actual size”) and <strong>Margins: None</strong> or Default. The page already has its own margins. Check that the ruler at the bottom measures 50 mm.</p>
+    </section>
+  </main>
+
+  <section class="how" id="how" aria-labelledby="how-h">
+    <h2 class="section-h" id="how-h">How it works</h2>
+    <div class="how-grid">
+      <div>
+        <h3>Like the kits</h3>
+        <p>Dot-by-letter kits such as Lifelines FlowArt print a scene as rows of tiny gray letters. You pick a marker for each letter, color in the key at the top, then cover every letter with a dot: press firmly on big letters and tap lightly on small ones. The picture shows up as you go. This page makes those sheets from your own pictures.</p>
+      </div>
+      <div>
+        <h3>From photo to cartoon</h3>
+        <p>The picture is shrunk, its colors are pushed a little brighter, and an edge-preserving filter flattens texture while keeping outlines. Then the colors are boiled down to a few, and every speck smaller than the Detail setting is merged into its neighbor. What's left is a handful of flat, bold shapes.</p>
+      </div>
+      <div>
+        <h3>Your markers or the picture's</h3>
+        <p><strong>My markers</strong> picks the best few colors from the kits you tick, so the page matches what's in your drawer. <strong>Match the picture</strong> uses whatever colors suit the picture best, and the key suggests the closest marker you own. You can change any letter's color or merge two letters afterwards. Kit colors were sampled from product photos, so they're close, not exact.</p>
+      </div>
+      <div>
+        <h3>Laying the dots</h3>
+        <p>Like the kits, the dots run in rows that follow each shape's outline. A row of small dots traces every edge, and bigger dots fill the middles in rings. Letters are sized to the dot they ask for, with a little white space between them so each one reads clearly.</p>
+      </div>
+      <div>
+        <h3>Printing</h3>
+        <p>The page is drawn as vector shapes and text, so it prints sharp on any printer and stays small enough for an older USB printer to take quickly. The margins are built in. The ruler at the bottom tells you whether the print came out at the right size. Black-and-white printing is the default: the key's circles are left blank for you to test-dot each marker.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site">
+    Dot Sheets is not made by or affiliated with Lifelines. FlowArt is their trademark. · v1.0.0 · 2026-11-18 · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/dot-sheets">Source</a>
+  </footer>
+
+  <div id="print-root" aria-hidden="true"></div>
+
+  <script src="js/color.js"></script>
+  <script src="js/palettes.js"></script>
+  <script src="js/simplify.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/edit.js"></script>
+  <script src="js/sheet.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
