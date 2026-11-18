@@ -25,7 +25,9 @@
     mode: 'dots', paperSize: 'letter', orientation: 'auto',
     printer: 'mono', ink: '#3c3c3c', margin: '12.7', title: '', guides: false, rings: false, footer: true,
     view: 'print',
-    owned: ['landscapes'], off: {}, custom: [],
+    // The kits this site's owner has: three Mini Express pads.
+    owned: ['snow-day', 'in-full-bloom', 'paws-and-purrs'], off: {}, custom: [],
+    kitsVersion: 2,
   };
   const S = JSON.parse(JSON.stringify(DEFAULTS));
   let returning = false;
@@ -37,6 +39,10 @@
       else if (k in S) S[k] = saved[k];
       else if (PER_FORMAT.includes(k) && !saved.full) S.full[k] = saved[k]; // saved before the mini format
     }
+    // Version 1 defaulted to Landscapes. A list still exactly that was never really chosen, so it
+    // moves to the new default.
+    if (!saved.kitsVersion && JSON.stringify(saved.owned) === '["landscapes"]') S.owned = DEFAULTS.owned.slice();
+    S.kitsVersion = DEFAULTS.kitsVersion;
   } catch (e) { /* private mode or bad JSON: defaults */ }
   S.view = 'print';
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { /* ignore */ } };

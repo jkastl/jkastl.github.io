@@ -32,7 +32,8 @@ Then:
    - **My markers**: tick the kits you own: 17 full-size FlowArt Dot-by-Letter kits and 6 Mini
      Express pads (Snow Day, In Full Bloom, Paws and Purrs, Cozy Comforts, Nature Walk, Merry
      Moments) are built in. Mini Express pads print a fixed letter for each color, and a page
-     made from their markers keeps those letters. The page
+     made from their markers keeps those letters. Snow Day, In Full Bloom and Paws and Purrs are ticked by
+     default. The page
      uses the best few of their colors for this picture, or all of them. Click a color dot to drop
      one marker (dried out, lost), or add any other marker by color and name.
    - **Match the picture**: the colors that suit the picture best, whatever you own. The key
