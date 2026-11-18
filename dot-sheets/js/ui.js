@@ -33,6 +33,7 @@
     for (const k of Object.keys(saved)) {
       if (k === 'full' || k === 'mini') Object.assign(S[k], saved[k]);
       else if (k in S) S[k] = saved[k];
+      else if (PER_FORMAT.includes(k) && !saved.full) S.full[k] = saved[k]; // saved before the mini format
     }
   } catch (e) { /* private mode or bad JSON: defaults */ }
   S.view = 'print';
@@ -460,6 +461,7 @@
    * key edit names its slot. */
   function changed(stage, wait, which) {
     save();
+    gen++; // a run in flight is now stale; its slots stay dirty for the next one
     for (const i of which || [0, 1, 2, 3]) slots[i].dirty = Math.max(slots[i].dirty, LEVEL[stage]);
     clearTimeout(timer);
     timer = setTimeout(run, wait || 30);
@@ -482,10 +484,10 @@
         const sl = slots[i];
         if (!sl.seg && sl.dirty < LEVEL.simplify) sl.dirty = LEVEL.simplify;
         if (sl.dirty <= LEVEL.render) continue;
-        const level = sl.dirty;
+        // The slot stays dirty until its work lands, so a newer run redoes work this one drops.
+        const ok = await process(sl, i, sl.dirty, my);
+        if (!ok) return;
         sl.dirty = LEVEL.render;
-        const ok = await process(sl, i, level, my);
-        if (!ok) { sl.dirty = Math.max(sl.dirty, level); return; }
         if (i === active) showSlot();
       }
       if (my !== gen) return;
@@ -714,6 +716,7 @@
     $('page-size').textContent = `@page { size: ${pageSize.w}mm ${pageSize.h}mm; margin: 0; }`;
     ['print', 'dl-svg', 'dl-png'].forEach(id => { $(id).disabled = false; });
     $('print-tip').hidden = false;
+    if (cur().segE) renderKeyEditor(); // the letter set may have changed
     let n = 0, colors = 0;
     for (const i of used) {
       const sl = slots[i];
