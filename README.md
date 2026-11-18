@@ -6,10 +6,11 @@ filtered by tags.
 **[jkastl.github.io](https://jkastl.github.io/)**
 
 No build step, no dependencies. The index is one file, [`index.html`](index.html), served from
-`main`. Most apps live in their own repos. Three live in this one, each in its own folder with its own
+`main`. Most apps live in their own repos. Four live in this one, each in its own folder with its own
 README and tests, run by GitHub Actions:
 
 - [Agent Triage Simulator](agent-triage/) in `agent-triage/`
+- [Dot Sheets](dot-sheets/) in `dot-sheets/`
 - [Slide Pyramid](slide-pyramid/) in `slide-pyramid/`
 - [Stain Drift](stain-drift/) in `stain-drift/`
 
