@@ -23,13 +23,15 @@
     detail: 35, boost: 45, lines: 50, paper: false,
     source: 'markers', choose: 'best',
     mode: 'dots', paperSize: 'letter', orientation: 'auto',
-    printer: 'mono', ink: '#6f6f6f', margin: '12.7', title: '', guides: false, rings: false, footer: true,
+    printer: 'mono', ink: '#3c3c3c', margin: '12.7', title: '', guides: false, rings: false, footer: true,
     view: 'print',
     owned: ['landscapes'], off: {}, custom: [],
   };
   const S = JSON.parse(JSON.stringify(DEFAULTS));
+  let returning = false;
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    returning = Object.keys(saved).length > 0;
     for (const k of Object.keys(saved)) {
       if (k === 'full' || k === 'mini') Object.assign(S[k], saved[k]);
       else if (k in S) S[k] = saved[k];
@@ -279,7 +281,13 @@
     return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * s.width,
       Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * s.height];
   };
-  wrap.addEventListener('pointerdown', e => { if (!cur().src) return; drag = toSrc(e); wrap.setPointerCapture(e.pointerId); });
+  let cropBefore = null;
+  wrap.addEventListener('pointerdown', e => {
+    if (!cur().src) return;
+    drag = toSrc(e);
+    cropBefore = JSON.stringify(cur().crop);
+    wrap.setPointerCapture(e.pointerId);
+  });
   wrap.addEventListener('pointermove', e => {
     if (!drag) return;
     const [x, y] = toSrc(e);
@@ -292,7 +300,7 @@
     const sl = cur();
     if (sl.crop && (sl.crop.w < sl.src.width * 0.05 || sl.crop.h < sl.src.height * 0.05)) sl.crop = null;
     showCrop();
-    changed('simplify', 0, [active]);
+    if (JSON.stringify(sl.crop) !== cropBefore) changed('simplify', 0, [active]); // a plain click changes nothing
   });
   $('crop-reset').addEventListener('click', () => { cur().crop = null; showCrop(); changed('simplify', 0, [active]); });
 
@@ -445,7 +453,14 @@
       : 'One picture on a full 8½ × 11 in page, like the full-size kits.';
   }
   function onFormat() {
-    if (!mini()) active = 0;
+    if (!mini()) {
+      // The full page shows page 1. If page 1 is empty, bring the picture being looked at there.
+      if (!slots[0].src) {
+        const from = slots[active].src ? active : slots.findIndex(sl => sl.src);
+        if (from > 0) [slots[0], slots[from]] = [slots[from], slots[0]];
+      }
+      active = 0;
+    }
     controls.forEach(c => c.sync());
     syncFormat();
     showSlot();
@@ -504,7 +519,11 @@
   async function process(sl, i, level, my) {
     if (level >= LEVEL.simplify) {
       const p = S.source === 'markers' ? pool() : null;
-      if (p && !p.length) { status('Tick at least one kit, or add a marker, or switch to “Match the picture”.'); return false; }
+      if (p && !p.length) {
+        renderEmpty();
+        status('Tick at least one kit, or add a marker, or switch to “Match the picture”.');
+        return false;
+      }
       status('Simplifying the picture' + label(i) + '…', true);
       const res = await call('simplify', {
         img: srcPixels(sl),
@@ -601,7 +620,7 @@
     const suggest = S.source === 'markers' ? null : markers;
     const sLabs = suggest ? suggest.map(m => DC.hexToLab(m.hex)) : null;
     let n = 0;
-    return sl.segE.palette.map(c => {
+    const entries = sl.segE.palette.map(c => {
       if (c.paper) return null;
       const letter = letters[n] || String(n + 1);
       n++;
@@ -617,8 +636,29 @@
           sub = `closest: ${mk.name} (${mk.set})${near.dE > 12 ? ', not close' : ''}`;
         }
       }
-      return { letter, hex: c.hex, name, sub, ink: DC.inkOn(c.hex), key: c.key };
+      return { letter, hex: c.hex, name, sub, ink: DC.inkOn(c.hex), key: c.key, L: c.lab[0] };
     });
+    return distinctNames(entries);
+  }
+
+  /* On a black-and-white print the names are all that tell two letters apart, so no two may
+   * match: two oranges become "Light orange" and "Dark orange", three or more get numbers too. */
+  function distinctNames(entries) {
+    const groups = new Map();
+    entries.forEach(e => { if (e) { const k = e.name.toLowerCase(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); } });
+    for (const list of groups.values()) {
+      if (list.length < 2) continue;
+      list.sort((a, b) => b.L - a.L);
+      const base = list[0].name.replace(/^(Pale|Light|Dark) /i, '');
+      const low = base.charAt(0).toLowerCase() + base.slice(1);
+      if (list.length === 2) {
+        list[0].name = 'Light ' + low;
+        list[1].name = 'Dark ' + low;
+      } else {
+        list.forEach((e, i) => { e.name = `${base} ${i + 1}${i === 0 ? ' (lightest)' : i === list.length - 1 ? ' (darkest)' : ''}`; });
+      }
+    }
+    return entries;
   }
 
   function renderKeyEditor() {
@@ -725,7 +765,7 @@
     }
     const what = S.mode === 'dots' ? 'dots' : 'shapes';
     status(mini()
-      ? `${used.length} of 4 mini pages · ${n.toLocaleString()} ${what} · up to ${colors} colors · cut along the dashed lines`
+      ? `${used.length} of 4 minis · ${n.toLocaleString()} ${what} · ≤${colors} colors`
       : `${n.toLocaleString()} ${what} · ${colors} colors · ${DotSheet.PAGES[slots[0].geo.page.paper].label} ${slots[0].geo.page.orientation}`);
   }
 
@@ -801,5 +841,7 @@
   });
 
   renderSets();
+  // Returning visitors have already picked their kits: keep the long list folded away.
+  if (returning && S.owned.length) $('sets-details').open = false;
   renderSlotBar();
 })();

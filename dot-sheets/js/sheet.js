@@ -235,12 +235,11 @@
         : `translate(${r2(c.x)} ${r2(c.y)})`;
       parts.push(`<g transform="${t}">${inner(p)}</g>`);
     });
-    // Cut lines: dashed through the middle, stopping short of the paper edge (the printer can't
-    // reach it anyway), plus ticks in the margins to line up a paper cutter.
+    // Cut lines: dashed through the middle, stopping at the margin (an old printer can't reach
+    // closer to the edge). Extend them with a ruler before cutting.
     const m = o.margin == null ? 12.7 : o.margin;
     parts.push(`<g stroke="#9a9a9a" stroke-width="0.2" fill="none" stroke-dasharray="1.2 1.6">`
       + `<path d="M${r2(W / 2)} ${r2(m)}V${r2(H - m)}M${r2(m)} ${r2(H / 2)}H${r2(W - m)}"/></g>`);
-    parts.push(`<g stroke="#666" stroke-width="0.25"><path d="M${r2(W / 2)} ${r2(m - 6)}v4M${r2(W / 2)} ${r2(H - m + 2)}v4M${r2(m - 6)} ${r2(H / 2)}h4M${r2(W - m + 2)} ${r2(H / 2)}h4"/></g>`);
     if (o.ruler) {
       const x = W / 2 + 4, y = H / 2 - 1.5;
       parts.push(`<g stroke="#999" stroke-width="0.2" fill="none"><path d="M${r2(x)} ${r2(y)}h50M${r2(x)} ${r2(y - 1.2)}v1.2M${r2(x + 50)} ${r2(y - 1.2)}v1.2"/></g>`);

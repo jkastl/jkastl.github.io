@@ -43,8 +43,8 @@ Then:
    orientation, dot size, margin, letter shade, a title, faint shape outlines and dot-size rings
    are all settings.
 
-**Finished look** previews the page fully dotted. **Print…**, **SVG** and **PNG** (300 dpi) save
-the printable page, or the finished look if that's what's showing.
+**Finished look** previews the page fully dotted. **Print…** always prints the printable page.
+**SVG** and **PNG** (300 dpi) save whichever view is showing.
 
 ## Printing on an older printer
 
@@ -58,8 +58,9 @@ The page is built for a desktop and a basic USB printer:
 - A 50 mm ruler in the footer shows whether the print came out scaled. Print at 100% / Actual size.
 - **Black & white** (the default) prints only grays: the key circles are left blank to test-dot
   each marker, like the kits. **Color** fills them in as a reminder.
-- **Letter shade** trades readability for ink: light gray hides under the ink, dark suits a faint
-  or worn cartridge.
+- **Letter shade** defaults to dark gray, which a black-and-white printer prints crisply. Lighter
+  grays hide better under pale markers but get halftoned into ragged dots on older printers. Black
+  is for a faint or worn cartridge.
 
 ## How it works
 
