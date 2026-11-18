@@ -317,3 +317,26 @@ test('simplify: lines use the darkest pool color in pool mode', () => {
   assert.ok(seg.palette.some(c => c.hex === '#080a09'), 'black marker used for outlines');
   assert.ok(seg.palette.filter(c => !c.paper).length <= 4);
 });
+
+test('simplify: pool mode keeps a white muzzle apart from a pale teal background', () => {
+  // Teal background, orange head, white lower face with a dark nose: like the fox sample.
+  const LAND = ['#765fa8', '#5f422f', '#26b158', '#f5863e', '#f0739f', '#cb212e', '#43c0b2', '#2c86c8']
+    .map((hex, i) => ({ id: 'l' + i, hex }));
+  const rand = DC.rng(3);
+  const img = makeImg(240, 240, (x, y) => {
+    const dx = x - 120, dy = y - 120, nz = (rand() - 0.5) * 16;
+    let c = [110, 190, 190];
+    if (dx * dx + dy * dy < 85 * 85) c = y > 125 ? [250, 248, 244] : [225, 110, 40];
+    if (Math.hypot(dx, dy - 50) < 9) c = [30, 20, 20];
+    return [c[0] + nz, c[1] + nz, c[2] + nz];
+  });
+  for (const colors of [5, 8]) {
+    const seg = DS.simplify(img, { pool: LAND, colors, featurePx: 7.5, seed: 7 });
+    checkSeg(seg);
+    const at = (x, y) => seg.palette[seg.index[y * 240 + x]];
+    assert.notEqual(at(80, 150).hex, at(10, 10).hex, `muzzle and background share ${at(10, 10).hex}`);
+    assert.notEqual(at(80, 150).hex, at(120, 80).hex, 'muzzle and head differ');
+    assert.ok(at(120, 170).lab[0] < 40, 'nose stays dark');
+    assert.ok(seg.palette.filter(c => !c.paper).length <= colors);
+  }
+});

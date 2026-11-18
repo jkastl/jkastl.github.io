@@ -623,51 +623,93 @@
     return sel.sort((a, b) => a - b);
   }
 
-  // Map k clusters onto markers: each cluster prefers its nearest marker (markerDist2 on its fitted
-  // center, weighted by area), but two clusters that touch in the picture and differ clearly in
-  // the photo pay a penalty, proportional to their shared boundary, for getting the same marker.
-  // So a white cup on an orange table does not become an orange cup on an orange table.
-  // Solved by iterated conditional modes from the nearest-marker start. Returns cluster -> marker.
-  function mapClusters(idx, w, h, centers, k, fitted, mlabs) {
-    const M = mlabs.length, n = w * h;
+  // Map k clusters onto markers (indices into `cand`). Each cluster prefers its nearest marker
+  // (markerDist2 on its fitted center, weighted by area), but two clusters that touch in the
+  // picture and differ clearly in the photo pay a penalty, proportional to their shared boundary
+  // (weighted by saliency, so the subject's structure counts most), for getting the same marker:
+  // white cheeks next to a teal background, or a white cup on an orange table, move to the next
+  // best distinct marker instead of melting into their surroundings. At most `budget` inks may
+  // be used (paper is free; `forced` is always counted). Iterated conditional modes from the
+  // nearest marker in `init`, smallest clusters first, so the background keeps its marker and the
+  // subject part moves.
+  function mapClusters(idx, w, h, centers, k, fitted, cand, opt) {
+    const M = cand.length, n = w * h, sal = opt.sal;
     const cnt = new Float64Array(k), adj = new Float64Array(k * k);
     for (let p = 0; p < n; p++) {
       const c = idx[p]; cnt[c]++;
-      if ((p % w) < w - 1) { const d = idx[p + 1]; if (d !== c) { adj[c * k + d]++; adj[d * k + c]++; } }
-      if (p + w < n) { const d = idx[p + w]; if (d !== c) { adj[c * k + d]++; adj[d * k + c]++; } }
+      const sw = 0.05 + sal[p] * sal[p]; // boundaries in the subject count, background ones barely
+      if ((p % w) < w - 1) { const d = idx[p + 1]; if (d !== c) { adj[c * k + d] += sw; adj[d * k + c] += sw; } }
+      if (p + w < n) { const d = idx[p + w]; if (d !== c) { adj[c * k + d] += sw; adj[d * k + c] += sw; } }
     }
     const U = new Float64Array(k * M);
     for (let c = 0; c < k; c++) for (let j = 0; j < M; j++) {
-      const f = fitted[c], q = mlabs[j];
+      const f = fitted[c], q = cand[j].lab;
       U[c * M + j] = cnt[c] * markerDist2(f[0], f[1], f[2], q[0], q[1], q[2]);
     }
-    const lenScale = Math.max(w, h) / 10;
-    const Pn = new Float64Array(k * k);
+    const lenScale = 3 * Math.max(w, h) / 10, GLOB = 1, ORD = 0.3;
+    // Pn: cost when i and j share a marker. Touching pairs pay by boundary; any two clearly
+    // different tones pay a little too (by the smaller one's size), so a spare ink goes to the
+    // tone that loses most by sharing (light fur vs mid fur), not left unused.
+    const Pn = new Float64Array(k * k), Pr = new Float64Array(k * k);
     for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) {
-      if (i === j || !adj[i * k + j]) continue;
+      if (i === j) continue;
       const dE = Math.hypot(centers[i * 3] - centers[j * 3], centers[i * 3 + 1] - centers[j * 3 + 1], centers[i * 3 + 2] - centers[j * 3 + 2]);
-      const ex = dE - 18;
-      if (ex > 0) Pn[i * k + j] = adj[i * k + j] * ex * ex * lenScale;
+      const ex = dE - 14, mn = Math.min(cnt[i], cnt[j]);
+      if (ex > 0) Pn[i * k + j] = (adj[i * k + j] * lenScale + GLOB * mn) * ex * ex;
+      Pr[i * k + j] = ORD * mn;
     }
-    const map = new Uint8Array(k);
+    // Pair cost for markers a (of i) and b (of j): sharing, or swapping the light/dark order of two
+    // clearly different tones (dark stripes drawn lighter than the fur around them).
+    const ML = cand.map(c => c.lab[0]);
+    const pair = (i, j, a, b) => {
+      if (a === b) return Pn[i * k + j];
+      const dl = fitted[j][0] - fitted[i][0];
+      if (dl > 8 && ML[a] > ML[b] + 3) { const r = ML[a] - ML[b]; return Pr[i * k + j] * r * r; }
+      if (dl < -8 && ML[b] > ML[a] + 3) { const r = ML[b] - ML[a]; return Pr[i * k + j] * r * r; }
+      return 0;
+    };
+    // Only markers reasonably close to a cluster are options for it (no green hair).
+    const allowed = new Uint8Array(k * M);
     for (let c = 0; c < k; c++) {
-      let b = 0;
-      for (let j = 1; j < M; j++) if (U[c * M + j] < U[c * M + b]) b = j;
+      let b = Infinity;
+      for (let j = 0; j < M; j++) if (U[c * M + j] < b) b = U[c * M + j];
+      for (let j = 0; j < M; j++) allowed[c * M + j] = U[c * M + j] <= 2.2 * b + 400 * cnt[c] ? 1 : 0;
+    }
+    const init = opt.init || cand.map((_, j) => j);
+    const map = new Int32Array(k);
+    for (let c = 0; c < k; c++) {
+      let b = init[0];
+      for (const j of init) if (U[c * M + j] < U[c * M + b]) b = j;
       map[c] = b;
     }
+    const users = new Int32Array(M);
+    for (let c = 0; c < k; c++) users[map[c]]++;
+    const isInk = (j) => !cand[j].paper;
+    const inkCount = () => {
+      let t = 0;
+      for (let j = 0; j < M; j++) if (isInk(j) && (users[j] > 0 || j === opt.forced)) t++;
+      return t;
+    };
     const order = [];
     for (let c = 0; c < k; c++) order.push(c);
-    order.sort((a, b) => cnt[b] - cnt[a] || a - b);
-    for (let round = 0; round < 12; round++) {
+    order.sort((a, b) => cnt[a] - cnt[b] || a - b);
+    for (let round = 0; round < 16; round++) {
       let changed = false;
       for (const c of order) {
-        let bj = map[c], bv = Infinity;
+        const cur = map[c];
+        users[cur]--;
+        const base = inkCount();
+        let bj = cur, bv = Infinity;
         for (let j = 0; j < M; j++) {
+          // Budget: a marker nobody (else) uses yet costs one more ink.
+          if (isInk(j) && users[j] === 0 && j !== opt.forced && base >= opt.budget) continue;
+          if (!allowed[c * M + j] && j !== cur) continue;
           let v = U[c * M + j];
-          for (let o = 0; o < k; o++) if (map[o] === j && o !== c) v += Pn[c * k + o];
-          if (v < bv - 1e-9) { bv = v; bj = j; }
+          for (let o = 0; o < k; o++) if (o !== c) v += pair(c, o, j, map[o]);
+          if (v < bv - 1e-9 || (j === cur && v <= bv + 1e-9)) { bv = v; bj = j; }
         }
-        if (bj !== map[c]) { map[c] = bj; changed = true; }
+        users[bj]++;
+        if (bj !== cur) { map[c] = bj; changed = true; }
       }
       if (!changed) break;
     }
@@ -946,15 +988,22 @@
         fsamp[i * 3] = tl[0]; fsamp[i * 3 + 1] = tl[1]; fsamp[i * 3 + 2] = tl[2];
       }
       const selIdx = choosePool(cand, fsamp, m, colors, choose, darkest);
-      const sel = selIdx.map(i => cand[i]);
-      lineIdx = darkest >= 0 ? selIdx.indexOf(darkest) : -1;
-      // Cluster first (about 2x colors), then map cluster centers to the chosen markers.
+      // Cluster first (about 2x colors), then map cluster centers to markers: starting from the
+      // chosen subset, a cluster may move to any pool marker while the ink budget allows, when
+      // that keeps it apart from a touching, clearly different cluster.
       const km = kmeans(samp, m, clamp(colors * 2, 6, 24), rand);
       idx = assignNearest(lab, n, km.centers, km.k);
       const fc = [];
       for (let c = 0; c < km.k; c++) fc.push(fit(km.centers[c * 3], km.centers[c * 3 + 1], km.centers[c * 3 + 2], [0, 0, 0]));
-      const remap = mapClusters(idx, w, h, km.centers, km.k, fc, sel.map(c => c.lab));
-      for (let p = 0; p < n; p++) idx[p] = remap[idx[p]];
+      const cmap = mapClusters(idx, w, h, km.centers, km.k, fc, cand,
+        { init: selIdx, budget: choose === 'all' ? Infinity : colors, forced: darkest, sal });
+      const usedC = new Set(cmap);
+      if (darkest >= 0) usedC.add(darkest);
+      const selC = Array.from(usedC).sort((a, b) => a - b);
+      const sel = selC.map(i => cand[i]);
+      const pos = new Map(selC.map((c, i) => [c, i]));
+      for (let p = 0; p < n; p++) idx[p] = pos.get(cmap[idx[p]]);
+      lineIdx = darkest >= 0 ? pos.get(darkest) : -1;
       labs = sel.map(c => c.lab); isPaper = sel.map(c => c.paper); poolIds = sel.map(c => c.id);
       poolHex = sel.map(c => c.hex);
     }
