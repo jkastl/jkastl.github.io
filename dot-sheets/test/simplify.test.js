@@ -99,7 +99,7 @@ function checkSeg(seg, opts = {}) {
   }
   // Minimum area.
   if (opts.detail !== undefined && regions.length > 1) {
-    const min = DS.minRegionArea(w, h, opts.detail);
+    const min = DS.minRegionArea(w, h, opts.detail, opts.featurePx);
     for (const r of regions) assert.ok(r.area >= min, `region of ${r.area} < min ${min}`);
   }
   // Preview shows the palette color.
@@ -121,9 +121,9 @@ test('simplify: invariants on a textured scene across detail levels', () => {
 });
 
 test('simplify: lower detail gives fewer regions', () => {
-  const img = scene(200, 150);
-  const lo = DS.simplify(img, { detail: 0 }).regions.length;
-  const hi = DS.simplify(img, { detail: 1 }).regions.length;
+  const img = scene(400, 300);
+  const lo = DS.simplify(img, { detail: 0, lines: 0, featurePx: 2 }).regions.length;
+  const hi = DS.simplify(img, { detail: 1, lines: 0, featurePx: 2 }).regions.length;
   assert.ok(lo < hi, `${lo} < ${hi}`);
 });
 
@@ -254,4 +254,66 @@ test('simplify: works without options and accepts plain arrays', () => {
   const img = scene(30, 20);
   const seg = DS.simplify({ width: 30, height: 20, data: Array.from(img.data) });
   checkSeg(seg);
+});
+
+// City-block distance from each pixel to the nearest pixel of another region (image edge is not a
+// boundary); returns the max per region.
+function regionThickness(seg) {
+  const { width: w, height: h, region } = seg, n = w * h;
+  const d = new Int32Array(n).fill(1 << 30), q = [];
+  for (let p = 0; p < n; p++) {
+    const x = p % w, r = region[p];
+    if ((x > 0 && region[p - 1] !== r) || (x < w - 1 && region[p + 1] !== r) || (p >= w && region[p - w] !== r) || (p + w < n && region[p + w] !== r)) { d[p] = 1; q.push(p); }
+  }
+  for (let i = 0; i < q.length; i++) {
+    const p = q[i], x = p % w;
+    for (const nb of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w]) {
+      if (nb >= 0 && nb < n && region[nb] === region[p] && d[nb] > d[p] + 1) { d[nb] = d[p] + 1; q.push(nb); }
+    }
+  }
+  const mx = new Array(seg.regions.length).fill(0);
+  for (let p = 0; p < n; p++) if (d[p] < (1 << 30) && d[p] > mx[region[p]]) mx[region[p]] = d[p];
+  return mx;
+}
+
+test('simplify: featurePx removes slivers too thin to hold a dot', () => {
+  // Blue stripes 2, 3 and 4 px wide and a red one 16 px wide, 14 px apart, on a plain background.
+  const img = makeImg(162, 120, (x) => {
+    const u = x % 81;
+    return u < 2 || (u >= 16 && u < 19) || (u >= 33 && u < 37) ? [20, 20, 120] : u >= 51 && u < 67 ? [200, 30, 30] : [240, 230, 200];
+  });
+  for (const featurePx of [6, 9]) {
+    const seg = DS.simplify(img, { featurePx, lines: 0, detail: 1 });
+    checkSeg(seg, { detail: 1, featurePx });
+    const r = Math.floor((featurePx - 1) / 2);
+    regionThickness(seg).forEach((t, i) => {
+      if (t > 0) assert.ok(t >= r + 1, `region ${i} only ${t} px from its edge (featurePx ${featurePx})`);
+    });
+  }
+  // The thin blue stripes are gone, the 16 px red ones survive.
+  const seg = DS.simplify(img, { featurePx: 6, lines: 0, detail: 1 });
+  assert.ok(seg.palette[seg.index[60 * 162 + 59]].lab[1] > 30, 'red stripe kept');
+  for (const x of [1, 17, 35]) assert.ok(seg.palette[seg.index[60 * 162 + x]].lab[0] > 70, `thin stripe at ${x} removed`);
+});
+
+test('simplify: lines draw features in the darkest color (free mode)', () => {
+  const img = scene(240, 180);
+  const seg = DS.simplify(img, { lines: 1, detail: 0.35 });
+  checkSeg(seg, { detail: 0.35 });
+  const eye = seg.palette[seg.index[Math.round(0.4 * 180) * 240 + Math.round(0.44 * 240)]];
+  const darkest = seg.palette.reduce((a, c) => (c.lab[0] < a.lab[0] ? c : a));
+  assert.equal(eye, darkest);
+  assert.ok(darkest.lab[0] < 30);
+  assert.ok(seg.palette.filter(c => !c.paper).length <= 8, 'line color counts against colors');
+  const off = DS.simplify(img, { lines: 0, colors: 3 });
+  checkSeg(off);
+  assert.ok(off.palette.filter(c => !c.paper).length <= 3);
+});
+
+test('simplify: lines use the darkest pool color in pool mode', () => {
+  const img = scene(240, 180);
+  const seg = DS.simplify(img, { pool: POOL, colors: 4, lines: 0.8 });
+  checkSeg(seg);
+  assert.ok(seg.palette.some(c => c.hex === '#080a09'), 'black marker used for outlines');
+  assert.ok(seg.palette.filter(c => !c.paper).length <= 4);
 });

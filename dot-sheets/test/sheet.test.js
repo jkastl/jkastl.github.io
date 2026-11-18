@@ -168,3 +168,31 @@ test('edit: colorName gives sensible names', () => {
   assert.equal(n('#2c86c8'), 'Blue');
   assert.equal(n('#5f422f'), 'Brown');
 });
+
+test('mini sheet: four cells tile a Letter page; outer edges keep the printer margin', () => {
+  const cells = DotSheet.miniCells(12.7);
+  assert.equal(cells.length, 4);
+  assert.ok(Math.abs(DotSheet.MINI.w * 2 - 215.9) < 1e-9 && Math.abs(DotSheet.MINI.h * 2 - 279.4) < 1e-9);
+  assert.deepEqual(cells[0].margins, { t: 12.7, b: 6, l: 12.7, r: 6 });
+  assert.deepEqual(cells[3].margins, { t: 6, b: 12.7, l: 6, r: 12.7 });
+  // Rotated pages: the page's top is the cell's right edge.
+  assert.deepEqual(DotSheet.miniMargins(1, true, 12.7), { t: 12.7, r: 6, b: 6, l: 12.7 });
+});
+
+test('mini sheet: a landscape page is rotated into its cell, empty cells are skipped', () => {
+  const M = DotSheet.MINI;
+  const mk = (i, wide) => ({
+    geometry: DotSheet.geometry({ size: wide ? { w: M.h, h: M.w } : M, margins: DotSheet.miniMargins(i, wide, 12.7), compact: true, aspect: wide ? 1.5 : 0.8, keyCount: 5 }),
+    key: [{ letter: 'F', hex: '#f00', name: 'Red' }], mode: 'dots', view: 'print', printer: 'mono',
+    dots: [{ x: 1, y: 1, s: 0, c: 0 }], sizes: [1],
+  });
+  const svg = DotSheet.sheet4([mk(0, false), null, mk(2, true), null], { margin: 12.7, ruler: true });
+  assert.match(svg, /^<svg[^>]+width="215.9mm" height="279.4mm"/);
+  assert.equal((svg.match(/rotate\(90\)/g) || []).length, 1);
+  assert.equal((svg.match(/>F<\/text>/g) || []).length, 4); // a key letter + one dot on each page
+  assert.ok(svg.includes('stroke-dasharray'), 'cut lines');
+  for (const i of [0, 2]) {
+    const g = mk(i, i === 2).geometry;
+    assert.ok(g.image.x >= g.content.x - 1e-9 && g.image.x + g.image.w <= g.page.w - 6 + 1e-9);
+  }
+});

@@ -19,8 +19,18 @@
  * d_k = inset + r_0, d_k + (r_k + r_k+1 + gap), ... The outermost row(s) use the smallest dot so
  * edges read crisply; inner rows of thick regions step up to bigger dots. Each closed row is spaced
  * so it divides evenly (no seam). Leftover space (collapsed cores, medial-axis seams) is filled
- * deepest-first with the biggest dot that fits. Style 'stipple': one traced edge row, then a
- * Poisson-disc (Bridson) fill per size level, biggest first.
+ * deepest-first with the biggest dot that fits; in a region's core only its top size and the one
+ * below go in, so big flat areas stay tidy rows of one size. Thin stripes become a single line of
+ * smallest dots along their ridge. Style 'stipple': one traced edge row, then a Poisson-disc
+ * (Bridson) fill per size level, biggest first.
+ *
+ * dots opts: mmPerPx (required), sizes [1.6, 2.4, 3.4] (dot radii mm, 1-4 levels, any order),
+ * gap 0.35, edgeInset 0.15, density 0.85 (1 = as tight as gap allows; scales the target row and
+ * in-row spacing by 1/sqrt(density)), seed 1, skipPaper true, style 'flow' | 'stipple',
+ * edgeRows 1 (rows of smallest dots before stepping up), coreSpread 1 (sizes below the top allowed
+ * in a core fill), thinParts true (dot lines along thin parts of bigger regions).
+ * Every dot keeps `gap` clear of every other dot and its disc `edgeInset` inside its region, except
+ * smallest dots on tiny/thin parts, which only need 30% of their disc on their region.
  *
  * Classic script: attaches to globalThis.DotLayout, so the page, a Web Worker
  * (importScripts('color.js', 'layout.js')) and Node (require) all load the same file.
@@ -296,6 +306,8 @@
     const edgeRows = Math.max(0, Math.round(num(opts.edgeRows, 1)));
     const rand = DC.rng(num(opts.seed, 1));
     const EPS = 0.04; // px of slack against interpolation error
+    // Fill sizes allowed in a region's core: its top level and this many below it.
+    const coreSpread = Math.max(0, Math.round(num(opts.coreSpread, 1)));
 
     const A = analyze(seg);
     const { w, h, nreg, maxD, cIdx } = A;
@@ -326,7 +338,6 @@
     // so a big level is only used where it gets a proper ring, not a lone dot.
     const maxLv = new Int8Array(nreg).fill(-1);
     const core = new Float64Array(nreg).fill(Infinity);
-    const coreMin = lv => lv >= nl - 1 ? 0 : lv; // placeholder, replaced below
     const sched = new Array(nreg).fill(null);
     for (let r = 0; r < nreg; r++) {
       if (skip[r] || maxD[r] < rad[0] + inset) continue;
@@ -389,11 +400,11 @@
       return true;
     }
 
-    // 1. Tiny and thin regions (can't hold the smallest dot anywhere): a smallest dot at the most
-    //    interior point if the region covers >= 30% of that dot's disc, then more along the
-    //    region's ridge wherever the disc is >= 30% covered, so a thin stripe becomes a single line
-    //    of dots. These are the only dots allowed to stick out of their region. Placed first so they
-    //    always get room.
+    // 1. Tiny and thin regions (can't hold the smallest dot anywhere): smallest dots along the
+    //    region's ridge, starting at its most interior point, wherever the region covers >= 30% of
+    //    the dot's disc. A small blob gets a single dot in its middle (if its area is >= 30% of the
+    //    disc), a thin stripe becomes a single line of dots, a hairline gets none. These are the
+    //    only dots allowed to stick out of their region. Placed first so they always get room.
     const disc = Math.PI * rad[0] * rad[0], MIN_COVER = 0.3;
     const tiny = [];
     for (let r = 0; r < nreg; r++) if (!skip[r] && maxLv[r] < 0 && A.area[r] >= MIN_COVER * disc) tiny.push(r);
@@ -401,11 +412,11 @@
     for (const r of tiny) {
       // The pole is the deepest ridge pixel nearest the centroid, so thinLine starts there and
       // works outward; a stripe gets evenly spaced dots from its middle to both ends.
-      thinLine(r, Infinity, MIN_COVER, true);
+      thinLine(r, Infinity, MIN_COVER);
       if (count[r]) continue;
       for (const p of deepestPixels(A, r, 64)) {
         const x = p % w + 0.5, y = ((p / w) | 0) + 0.5;
-        if (clearAt(x, y, 0, 0)) { add(x, y, 0, r); break; }
+        if (clearAt(x, y, 0, 0) && cover(x, y, r) >= MIN_COVER) { add(x, y, 0, r); break; }
       }
     }
 
@@ -423,9 +434,9 @@
       }
       return n / disc;
     }
-    // Smallest dots along the ridge (local maxima of depth across the shape) of region r where the
+    // Smallest dots along the ridge (local maxima of depth) of region r where the
     // depth is below `below`, each covering >= minCover of its disc with region pixels.
-    function thinLine(r, below, minCover, firstFree) {
+    function thinLine(r, below, minCover) {
       const W = A.W, D = A.D, R = A.R;
       const dpx = (x, y) => (x < 0 || y < 0 || x >= w || y >= h || R[y * w + x] !== r) ? 0 : D[(2 * y + 1) * W + 2 * x + 1];
       const { start, list } = A.pixels();
@@ -433,16 +444,18 @@
       for (let i = start[r]; i < start[r + 1]; i++) {
         const p = list[i], x = p % w, y = (p / w) | 0, d = dpx(x, y);
         if (d >= below) continue;
-        if ((d >= dpx(x - 1, y) && d >= dpx(x + 1, y)) || (d >= dpx(x, y - 1) && d >= dpx(x, y + 1))) cand.push(p);
+        // Ridge = depth not exceeded by any of the 8 neighbours (the medial axis of a thin part;
+        // excludes pixel-staircase bumps and the axes running into corners).
+        let ridge = d > 0;
+        for (let dy = -1; dy <= 1 && ridge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && dpx(x + dx, y + dy) > d) { ridge = false; break; }
+        if (ridge) cand.push(p);
       }
       const c2 = p => { const ex = p % w + 0.5 - A.cx[r], ey = ((p / w) | 0) + 0.5 - A.cy[r]; return ex * ex + ey * ey; };
       cand.sort((a, b) => dpx(b % w, (b / w) | 0) - dpx(a % w, (a / w) | 0) || c2(a) - c2(b) || a - b);
       const same = (2 * rad[0] + gap) * fac;
       for (const p of cand) {
         const x = p % w + 0.5, y = ((p / w) | 0) + 0.5;
-        // A region's first dot only needs the whole-region area test (done by the caller).
-        const ok = firstFree && !count[r] ? true : cover(x, y, r) >= minCover;
-        if (ok && clearAt(x, y, 0, same)) add(x, y, 0, r);
+        if (clearAt(x, y, 0, same) && cover(x, y, r) >= minCover) add(x, y, 0, r);
       }
     }
 
@@ -483,17 +496,24 @@
         if (ok) break;
       }
       if (cnt < 2) { single(); return; }
-      for (let m = 0; m < cnt; m++) tryPlace(P[2 * m], P[2 * m + 1], lv, 0);
+      // A dot blocked (where rows from opposite sides meet) may slide a little along its row.
+      const P2 = positions(cnt * 5, 5 * phase - 2);
+      for (let m = 0; m < cnt; m++) {
+        if (tryPlace(P[2 * m], P[2 * m + 1], lv, 0)) continue;
+        for (const o of [1, 3, 0, 4]) if (tryPlace(P2[10 * m + 2 * o], P2[10 * m + 2 * o + 1], lv, 0)) break;
+      }
 
+      // Points at arc length (m + phase) * len / cnt, m = 0..cnt-1 (phase may be any real).
       function positions(cnt, phase) {
         const out = new Float64Array(2 * cnt);
-        let seg = 0;
         for (let m = 0; m < cnt; m++) {
-          const s = (m + phase) * len / cnt;
-          while (seg < n - 1 && cum[seg + 1] < s) seg++;
-          const j = (seg + 1) % n, l = cum[seg + 1] - cum[seg], t = l > 0 ? (s - cum[seg]) / l : 0;
-          out[2 * m] = xs[seg] + (xs[j] - xs[seg]) * t;
-          out[2 * m + 1] = ys[seg] + (ys[j] - ys[seg]) * t;
+          let s = ((m + phase) * len / cnt) % len;
+          if (s < 0) s += len;
+          let lo = 0, hi = n - 1;
+          while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (cum[mid] <= s) lo = mid; else hi = mid - 1; }
+          const j = (lo + 1) % n, l = cum[lo + 1] - cum[lo], t = l > 0 ? (s - cum[lo]) / l : 0;
+          out[2 * m] = xs[lo] + (xs[j] - xs[lo]) * t;
+          out[2 * m + 1] = ys[lo] + (ys[j] - ys[lo]) * t;
         }
         return out;
       }
@@ -540,7 +560,8 @@
       for (let y = 0, p = 0; y < h; y++) {
         const o = (2 * y + 1) * W + 1;
         for (let x = 0; x < w; x++, p++) {
-          if (D[o + 2 * x] >= need && maxLv[R[p]] >= lv && !skip[R[p]]) cand.push(p);
+          const r = R[p], dd = D[o + 2 * x];
+          if (dd >= need && maxLv[r] >= lv && !skip[r] && (dd < core[r] || lv >= maxLv[r] - coreSpread)) cand.push(p);
         }
       }
       if (shuffle) {

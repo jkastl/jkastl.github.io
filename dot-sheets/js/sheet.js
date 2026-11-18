@@ -23,56 +23,93 @@
   }
   const r2 = v => Math.round(v * 100) / 100;
 
+  // Header sizes (mm). A mini (quarter-sheet) page uses the compact set.
+  const HEAD = {
+    full: { keyRow: 15, title: 9, minCell: 22, circle: 3, letter: 4.6, name: 2.4, titleFont: 5.6, hint: 2.6 },
+    compact: { keyRow: 10.5, title: 6.5, minCell: 15, circle: 2.3, letter: 3.6, name: 1.9, titleFont: 4, hint: 2 },
+  };
+  const FOOT_H = 6;     // mm for the footer (ruler + credit)
+  const GAP = 4;        // mm between blocks
+
   // Key layout: entries per row and rows, for n entries across width w.
-  function keyGrid(n, w) {
-    const minCell = 22; // mm: a test circle plus a short color name
-    const perRow = Math.max(1, Math.min(n, Math.floor(w / minCell)));
+  function keyGrid(n, w, minCell) {
+    const perRow = Math.max(1, Math.min(n, Math.floor(w / (minCell || HEAD.full.minCell))));
     const rows = Math.ceil(n / perRow);
     // Balance rows: 10 entries on 2 rows go 5 + 5, not 8 + 2.
     const balanced = Math.ceil(n / rows);
     return { perRow: balanced, rows, cell: w / balanced };
   }
 
-  const KEY_ROW = 15;   // mm per key row: circle + name
-  const TITLE_H = 9;    // mm for the title line
-  const FOOT_H = 6;     // mm for the footer (ruler + credit)
-  const GAP = 4;        // mm between blocks
+  // A US Letter sheet cut in four: each mini page is 4.25 x 5.5 in, like a FlowArt Mini pad.
+  const MINI = { w: PAGES.letter.w / 2, h: PAGES.letter.h / 2 };
 
   /* Where everything goes.
    *   paper: 'letter' | 'a4' | 'legal'; orientation: 'portrait' | 'landscape' | 'auto'
    *   margin: mm (an older printer can't reach the last ~6 mm of the sheet, so keep it >= 8)
    *   aspect: picture width / height; keyCount: entries in the key; title: bool; footer: bool
+   *   For a mini page instead: size: {w, h} and margins: {t, r, b, l}, plus compact: true.
    */
   function geometry(o) {
-    const base = PAGES[o.paper] || PAGES.letter;
-    let orient = o.orientation || 'auto';
-    if (orient === 'auto') orient = (o.aspect || 1) > 1.15 ? 'landscape' : 'portrait';
-    const pw = orient === 'landscape' ? base.h : base.w;
-    const ph = orient === 'landscape' ? base.w : base.h;
+    let pw, ph, orient;
+    if (o.size) {
+      pw = o.size.w; ph = o.size.h; orient = pw > ph ? 'landscape' : 'portrait';
+    } else {
+      const base = PAGES[o.paper] || PAGES.letter;
+      orient = o.orientation || 'auto';
+      if (orient === 'auto') orient = (o.aspect || 1) > 1.15 ? 'landscape' : 'portrait';
+      pw = orient === 'landscape' ? base.h : base.w;
+      ph = orient === 'landscape' ? base.w : base.h;
+    }
     const m = o.margin == null ? 12.7 : o.margin;
-    const cw = pw - 2 * m;
-    const kg = keyGrid(Math.max(1, o.keyCount || 1), cw);
-    let y = m;
+    const mg = o.margins || { t: m, r: m, b: m, l: m };
+    const H = o.compact ? HEAD.compact : HEAD.full;
+    const cw = pw - mg.l - mg.r;
+    const kg = keyGrid(Math.max(1, o.keyCount || 1), cw, H.minCell);
+    let y = mg.t;
     const titleY = y;
-    if (o.title) y += TITLE_H;
+    if (o.title) y += H.title;
     const keyY = y;
-    y += kg.rows * KEY_ROW + GAP;
-    const footH = o.footer === false ? 0 : FOOT_H;
-    const availH = ph - m - footH - (footH ? GAP / 2 : 0) - y;
+    y += kg.rows * H.keyRow + (o.compact ? GAP / 2 : GAP);
+    const footH = o.footer ? FOOT_H : 0;
+    const availH = ph - mg.b - footH - (footH ? GAP / 2 : 0) - y;
     const aspect = o.aspect || 1;
     let iw = cw, ih = cw / aspect;
     if (ih > availH) { ih = availH; iw = ih * aspect; }
-    const ix = m + (cw - iw) / 2;
+    const ix = mg.l + (cw - iw) / 2;
     const iy = y + (availH - ih) / 2;
     return {
-      page: { w: pw, h: ph, orientation: orient, paper: o.paper || 'letter' },
-      margin: m,
-      content: { x: m, y: m, w: cw, h: ph - 2 * m },
-      title: o.title ? { x: m, y: titleY, w: cw, h: TITLE_H } : null,
-      key: { x: m, y: keyY, w: cw, rows: kg.rows, perRow: kg.perRow, cell: kg.cell },
+      page: { w: pw, h: ph, orientation: orient, paper: o.size ? 'mini' : (o.paper || 'letter') },
+      margin: Math.min(mg.t, mg.r, mg.b, mg.l),
+      head: H,
+      content: { x: mg.l, y: mg.t, w: cw, h: ph - mg.t - mg.b },
+      title: o.title ? { x: mg.l, y: titleY, w: cw, h: H.title } : null,
+      key: { x: mg.l, y: keyY, w: cw, rows: kg.rows, perRow: kg.perRow, cell: kg.cell },
       image: { x: ix, y: iy, w: iw, h: ih },
-      footer: footH ? { x: m, y: ph - m - footH, w: cw, h: footH } : null,
+      footer: footH ? { x: mg.l, y: ph - mg.b - footH, w: cw, h: footH } : null,
     };
+  }
+
+  /* The four cells of a 4-up Letter sheet. The outer edges keep the printer margin; the edges at
+   * the cut lines only need a little white space. */
+  /* Margins for a mini page in cell i. Landscape pages are drawn turned a quarter turn clockwise,
+   * so their top margin is the cell's right edge, their left margin the cell's top, and so on. */
+  function miniMargins(i, landscape, margin) {
+    const m = miniCells(margin)[i].margins;
+    return landscape ? { t: m.r, r: m.b, b: m.l, l: m.t } : m;
+  }
+
+  function miniCells(margin) {
+    const m = margin == null ? 12.7 : margin, inner = 6;
+    const cells = [];
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 2; c++) {
+        cells.push({
+          x: c * MINI.w, y: r * MINI.h,
+          margins: { t: r ? inner : m, b: r ? m : inner, l: c ? inner : m, r: c ? m : inner },
+        });
+      }
+    }
+    return cells;
   }
 
   // Font size (mm) for a letter inside a dot of radius r (mm). Bold caps are ~0.72 em tall.
@@ -81,24 +118,25 @@
   function keySvg(g, key, o) {
     const out = [];
     const { x, y, cell, perRow } = g.key;
+    const H = g.head || HEAD.full;
     // Like the kits: a circle you dot with the marker you pick, then the letter it stands for.
     // A color printer fills the circle in (the plan); black-and-white leaves it blank to test-dot.
-    const circleR = 3;
+    const circleR = H.circle;
     key.forEach((k, i) => {
       const row = Math.floor(i / perRow), col = i % perRow;
       const rowCount = Math.min(perRow, key.length - row * perRow);
       const x0 = x + (perRow - rowCount) * cell / 2; // center a short last row
-      const cx = x0 + col * cell + cell / 2 - 3.2;
-      const cy = y + row * KEY_ROW + circleR + 1;
+      const cx = x0 + col * cell + cell / 2 - circleR;
+      const cy = y + row * H.keyRow + circleR + 1;
       const filled = o.view === 'finished' || o.printer === 'color';
       out.push(filled
         ? `<circle cx="${r2(cx)}" cy="${r2(cy)}" r="${circleR}" fill="${k.hex}" stroke="#555" stroke-width="0.2"/>`
         : `<circle cx="${r2(cx)}" cy="${r2(cy)}" r="${circleR}" fill="none" stroke="#555" stroke-width="0.3"/>`);
-      out.push(`<text x="${r2(cx + circleR + 1.3)}" y="${r2(cy)}" dy="0.36em" font-size="4.6" font-weight="700" fill="#333">${esc(k.letter)}</text>`);
+      out.push(`<text x="${r2(cx + circleR * 1.4)}" y="${r2(cy)}" dy="0.36em" font-size="${H.letter}" font-weight="700" fill="#333">${esc(k.letter)}</text>`);
       if (k.name) {
-        const maxChars = Math.max(6, Math.floor(cell / 1.35));
+        const maxChars = Math.max(6, Math.floor(cell / (H.name * 0.56)));
         const name = k.name.length > maxChars ? k.name.slice(0, maxChars - 1) + '…' : k.name;
-        out.push(`<text x="${r2(cx + 2)}" y="${r2(cy + circleR + 3.6)}" text-anchor="middle" font-size="2.4" fill="#444">${esc(name)}</text>`);
+        out.push(`<text x="${r2(cx + circleR * 0.7)}" y="${r2(cy + circleR + H.name * 1.5)}" text-anchor="middle" font-size="${H.name}" fill="#444">${esc(name)}</text>`);
       }
     });
     return out.join('');
@@ -134,20 +172,27 @@
    * }
    */
   function build(o) {
+    const { w: pw, h: ph } = o.geometry.page;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${r2(pw)}mm" height="${r2(ph)}mm" viewBox="0 0 ${r2(pw)} ${r2(ph)}" font-family="${FONT}">`
+      + `<rect width="${r2(pw)}" height="${r2(ph)}" fill="#fff"/>` + inner(o) + `</svg>`;
+  }
+
+  // The page's contents without the <svg> wrapper, so mini pages can be placed on a sheet.
+  function inner(o) {
     const g = o.geometry;
-    const { w: pw, h: ph } = g.page;
+    const H = g.head || HEAD.full;
     const ink = o.letterInk || '#6f6f6f';
     const keyList = o.key.map((k, i) => k && Object.assign({ index: i }, k)).filter(Boolean);
     const parts = [];
-    parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${pw}mm" height="${ph}mm" viewBox="0 0 ${pw} ${ph}" font-family="${FONT}">`);
-    parts.push(`<rect width="${pw}" height="${ph}" fill="#fff"/>`);
-
     if (g.title && o.title) {
-      parts.push(`<text x="${r2(g.title.x)}" y="${r2(g.title.y + 5.6)}" font-size="5.6" font-weight="700" fill="#222">${esc(o.title)}</text>`);
-      const hint = o.mode === 'fill'
-        ? 'Color each shape with the marker for its letter.'
-        : 'Cover each letter with a dot: press firmly for big letters, tap lightly for small ones.';
-      parts.push(`<text x="${r2(g.title.x + g.title.w)}" y="${r2(g.title.y + 5.6)}" text-anchor="end" font-size="2.6" fill="#555">${esc(hint)}</text>`);
+      const ty = r2(g.title.y + H.titleFont);
+      parts.push(`<text x="${r2(g.title.x)}" y="${ty}" font-size="${H.titleFont}" font-weight="700" fill="#222">${esc(o.title)}</text>`);
+      if (!o.compact && !g.page.paper.startsWith('mini')) {
+        const hint = o.mode === 'fill'
+          ? 'Color each shape with the marker for its letter.'
+          : 'Cover each letter with a dot: press firmly for big letters, tap lightly for small ones.';
+        parts.push(`<text x="${r2(g.title.x + g.title.w)}" y="${ty}" text-anchor="end" font-size="${H.hint}" fill="#555">${esc(hint)}</text>`);
+      }
     }
     parts.push(keySvg(g, keyList, { printer: o.printer, view: o.view, letterInk: ink }));
 
@@ -159,7 +204,40 @@
     parts.push(`</g>`);
 
     parts.push(footerSvg(g, o));
-    parts.push(`</svg>`);
+    return parts.join('');
+  }
+
+  /* A Letter sheet with four mini pages and cut marks.
+   * pages: up to 4 build options (or null for an empty cell), each with a mini geometry.
+   * ruler: draw the 50 mm scale check in the middle gutter.
+   */
+  function sheet4(pages, opts) {
+    const o = opts || {};
+    const W = PAGES.letter.w, H = PAGES.letter.h;
+    const cells = miniCells(o.margin);
+    const parts = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="${FONT}">`,
+      `<rect width="${W}" height="${H}" fill="#fff"/>`];
+    pages.forEach((p, i) => {
+      if (!p) return;
+      const c = cells[i];
+      // A landscape mini page is turned a quarter turn clockwise to fit its portrait cell.
+      const t = p.geometry.page.w > p.geometry.page.h
+        ? `translate(${r2(c.x + MINI.w)} ${r2(c.y)}) rotate(90)`
+        : `translate(${r2(c.x)} ${r2(c.y)})`;
+      parts.push(`<g transform="${t}">${inner(p)}</g>`);
+    });
+    // Cut lines: dashed through the middle, stopping short of the paper edge (the printer can't
+    // reach it anyway), plus ticks in the margins to line up a paper cutter.
+    const m = o.margin == null ? 12.7 : o.margin;
+    parts.push(`<g stroke="#9a9a9a" stroke-width="0.2" fill="none" stroke-dasharray="1.2 1.6">`
+      + `<path d="M${r2(W / 2)} ${r2(m)}V${r2(H - m)}M${r2(m)} ${r2(H / 2)}H${r2(W - m)}"/></g>`);
+    parts.push(`<g stroke="#666" stroke-width="0.25"><path d="M${r2(W / 2)} ${r2(m - 6)}v4M${r2(W / 2)} ${r2(H - m + 2)}v4M${r2(m - 6)} ${r2(H / 2)}h4M${r2(W - m + 2)} ${r2(H / 2)}h4"/></g>`);
+    if (o.ruler) {
+      const x = W / 2 + 4, y = H / 2 - 1.5;
+      parts.push(`<g stroke="#999" stroke-width="0.2" fill="none"><path d="M${r2(x)} ${r2(y)}h50M${r2(x)} ${r2(y - 1.2)}v1.2M${r2(x + 50)} ${r2(y - 1.2)}v1.2"/></g>`);
+      parts.push(`<text x="${r2(x + 52)}" y="${r2(y)}" font-size="1.8" fill="#999">50 mm at 100%</text>`);
+    }
+    parts.push('</svg>');
     return parts.join('');
   }
 
@@ -238,7 +316,7 @@
     return out.join('');
   }
 
-  Object.assign(S, { PAGES, geometry, build, letterFont, keyGrid });
+  Object.assign(S, { PAGES, MINI, geometry, miniCells, miniMargins, build, inner, sheet4, letterFont, keyGrid });
 })(typeof globalThis.DotSheet === 'object' ? globalThis.DotSheet : (globalThis.DotSheet = {}));
 
 if (typeof module === 'object' && module.exports) module.exports = globalThis.DotSheet;

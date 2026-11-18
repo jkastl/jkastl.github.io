@@ -64,6 +64,23 @@ input[type="text"] {
 }
 .crop-wrap { overflow: hidden; border-radius: 6px; }
 
+/* ---------- mini-page slots ---------- */
+.slots { display: grid; gap: 0.5rem; }
+.slot-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.slot {
+  position: relative; aspect-ratio: 4.25 / 5.5; display: grid; place-items: center;
+  background: var(--page); border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+  color: var(--muted); font-size: 1.3rem; padding: 3px; overflow: hidden;
+}
+.slot canvas { max-width: 100%; max-height: 100%; border-radius: 3px; }
+.slot.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.slot.empty { border-style: dashed; }
+.slot-n {
+  position: absolute; left: 3px; top: 3px; font-size: 0.68rem; font-weight: 700; line-height: 1;
+  background: rgba(0, 0, 0, 0.65); color: #fff; padding: 2px 4px; border-radius: 3px;
+}
+.sets-hint { margin: 0.4rem 0 0; }
+
 /* ---------- colors ---------- */
 .sets summary { cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
 .set-list { display: grid; gap: 0.2rem; margin: 0.5rem 0 0.75rem; max-height: 17rem; overflow-y: auto; scrollbar-width: thin; }

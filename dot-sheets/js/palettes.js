@@ -74,6 +74,8 @@
   // distinct even printed 2 mm tall in pale gray. Past 8 colors we keep picking unlike shapes.
   const LETTERS = {
     flowart: 'BDFGHVXZKMNPRSTW'.split(''),
+    // Mini pads use five: F G H X Z.
+    mini: 'FGHXZBDVKMNPRSTW'.split(''),
     alpha: 'ABCDEFGHJKLMNPRSTUVWXYZ'.split(''),
   };
 

@@ -39,6 +39,18 @@
       <!-- 1. Picture -->
       <section class="panel step" aria-labelledby="pic-h">
         <h2 class="panel-title" id="pic-h"><span class="num-badge">1</span> Picture</h2>
+        <div class="seg" role="group" aria-label="Sheet format" id="format">
+          <button type="button" data-v="full" aria-pressed="true">Full page</button>
+          <button type="button" data-v="mini" aria-pressed="false">4 minis per sheet</button>
+        </div>
+        <p class="panel-sub" id="format-note"></p>
+        <div class="slots" id="slots" hidden>
+          <div class="slot-btns" id="slot-btns" role="group" aria-label="Mini pages"></div>
+          <div class="controls">
+            <button type="button" class="btn mini" id="slot-fill">Use this picture on all 4</button>
+            <button type="button" class="btn mini ghost" id="slot-clear">Clear this page</button>
+          </div>
+        </div>
         <label class="drop" id="drop">
           <input type="file" id="file" accept="image/*">
           <span class="drop-main">Drop a picture here, paste one, or <u>browse</u></span>
@@ -88,6 +100,7 @@
         <div id="markers-ui">
           <details class="sets" id="sets-details" open>
             <summary>Kits I have <span class="lbl" id="sets-count"></span></summary>
+            <p class="lbl sets-hint">Not sure which kit you have? Match the colored dots on your marker caps to the rows below. Click a dot to skip a marker you don’t have.</p>
             <div class="set-list" id="set-list"></div>
             <div class="custom">
               <p class="lbl">Other markers</p>
@@ -107,10 +120,11 @@
 
         <div class="key-edit" id="key-edit" hidden>
           <div class="key-head">
-            <p class="panel-title">Key</p>
+            <p class="panel-title" id="key-title">Key</p>
             <label class="lbl">Letters
               <select id="letters">
                 <option value="flowart">B D F G H V X Z (like the kits)</option>
+                <option value="mini">F G H X Z (like the Minis)</option>
                 <option value="alpha">A B C D E F…</option>
               </select>
             </label>
@@ -129,14 +143,14 @@
         </div>
         <p class="panel-sub" id="mode-note"></p>
         <div class="grid-2">
-          <label class="lbl">Paper
+          <label class="lbl" data-for="full">Paper
             <select id="paper-size">
               <option value="letter">US Letter</option>
               <option value="a4">A4</option>
               <option value="legal">US Legal</option>
             </select>
           </label>
-          <label class="lbl">Orientation
+          <label class="lbl" data-for="full">Orientation
             <select id="orientation">
               <option value="auto">Fit the picture</option>
               <option value="portrait">Portrait</option>

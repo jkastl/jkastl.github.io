@@ -1,8 +1,11 @@
 /* Dot Sheets page: picture in, printable page out.
  *
- * Three stages, each redone only when its inputs change:
- *   simplify (picture + detail/colors/markers)  ->  key edits  ->  layout (page + dot size)  ->  render
- * The first two heavy stages run in a Web Worker when the page is served over http(s).
+ * Two formats: one full Letter page, or a Letter sheet holding four mini pages to cut apart (like
+ * a FlowArt Mini pad). Each mini page is a "slot" with its own picture, crop and key edits; the
+ * full page uses slot 1. For each slot the pipeline is
+ *   simplify (picture + detail/colors/markers)  ->  key edits  ->  layout (page + dot size)
+ * and the sheet is rendered from all slots. Each step is redone only when its inputs change. The
+ * two heavy steps run in a Web Worker when the page is served over http(s).
  */
 (function () {
   'use strict';
@@ -11,26 +14,41 @@
 
   // ---------- settings, remembered between visits ----------
   const STORE = 'dot-sheets.v1';
+  // Settings that differ between a full page and a mini page.
+  const PER_FORMAT = ['colors', 'dotSize', 'letters'];
   const DEFAULTS = {
-    detail: 35, colors: 8, boost: 45, lines: 50, paper: false,
-    source: 'markers', choose: 'best', letters: 'flowart',
-    mode: 'dots', paperSize: 'letter', orientation: 'auto', dotSize: 'medium',
+    format: 'full',
+    full: { colors: 8, dotSize: 'medium', letters: 'flowart' },
+    mini: { colors: 5, dotSize: 'fine', letters: 'mini' },
+    detail: 35, boost: 45, lines: 50, paper: false,
+    source: 'markers', choose: 'best',
+    mode: 'dots', paperSize: 'letter', orientation: 'auto',
     printer: 'mono', ink: '#6f6f6f', margin: '12.7', title: '', guides: false, rings: false, footer: true,
     view: 'print',
     owned: ['landscapes'], off: {}, custom: [],
   };
-  let S = Object.assign({}, DEFAULTS);
-  try { Object.assign(S, JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) { /* private mode */ }
+  const S = JSON.parse(JSON.stringify(DEFAULTS));
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    for (const k of Object.keys(saved)) {
+      if (k === 'full' || k === 'mini') Object.assign(S[k], saved[k]);
+      else if (k in S) S[k] = saved[k];
+    }
+  } catch (e) { /* private mode or bad JSON: defaults */ }
   S.view = 'print';
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { /* ignore */ } };
+  const get = k => (PER_FORMAT.includes(k) ? S[S.format][k] : S[k]);
+  const set = (k, v) => { if (PER_FORMAT.includes(k)) S[S.format][k] = v; else S[k] = v; };
+  const mini = () => S.format === 'mini';
 
-  // Dot radii (mm) per size level. "Medium" matches the kits: about 2.5 to 4.5 mm dots.
+  // Dot radii (mm) per size level. "Medium" matches the full-size kits: about 2.5 to 4.5 mm dots.
   const DOT_SIZES = {
     fine: [0.95, 1.3, 1.7],
     medium: [1.25, 1.7, 2.2],
     large: [1.6, 2.2, 2.9],
     jumbo: [3.0, 4.2, 5.5],
   };
+  const MAX_SIDE = 480;
 
   // ---------- worker, with a same-thread fallback ----------
   let worker = null, seq = 0;
@@ -70,17 +88,13 @@
       op === 'simplify' ? DotSimplify.simplify(args.img, args.opts) : runLayout(args.seg, args.opts));
   }
 
-  // ---------- state ----------
-  let src = null;            // canvas holding the loaded picture (long side <= 1600)
-  let crop = null;           // {x, y, w, h} in src pixels
-  let srcName = '';
-  let seg = null;            // straight from simplify
-  let segE = null;           // after key edits
-  let lay = null;            // { dots | labels, outlines }
-  let geo = null;
-  let edits = {};            // key edits, by palette key (marker id or hex)
-  let svgText = '';
-  let gen = 0;
+  // ---------- slots ----------
+  const LEVEL = { render: 1, layout: 2, edits: 3, simplify: 4 };
+  const newSlot = () => ({ src: null, crop: null, name: '', edits: {}, seg: null, segE: null, lay: null, geo: null, dirty: 0 });
+  const slots = [newSlot(), newSlot(), newSlot(), newSlot()];
+  let active = 0;
+  const cur = () => slots[active];
+  const usedSlots = () => (mini() ? [0, 1, 2, 3] : [0]).filter(i => slots[i].src);
 
   // ---------- markers ----------
   function pool() {
@@ -97,13 +111,12 @@
         out.push({ id: set.id + ':' + i, hex: c.hex, name: c.name, set: set.name, est: !!c.est });
       });
     }
-    S.custom.forEach((c, i) => {
+    S.custom.forEach(c => {
       if (c.off) return;
       out.push({ id: 'custom:' + c.id, hex: c.hex, name: c.name || 'Custom', set: 'Other markers' });
     });
     return out;
   }
-  const poolById = () => new Map(pool().map(p => [p.id, p]));
   const keyOf = p => (p.paper ? 'paper' : p.poolId || p.hex);
 
   function renderSets() {
@@ -136,9 +149,9 @@
         b.setAttribute('aria-pressed', String(!off.includes(i)));
         b.addEventListener('click', e => {
           e.preventDefault();
-          const cur = new Set(S.off[set.id] || []);
-          cur.has(i) ? cur.delete(i) : cur.add(i);
-          S.off[set.id] = [...cur];
+          const now = new Set(S.off[set.id] || []);
+          now.has(i) ? now.delete(i) : now.add(i);
+          S.off[set.id] = [...now];
           if (!S.owned.includes(set.id)) S.owned = [...S.owned, set.id];
           changed('simplify');
           renderSets();
@@ -160,7 +173,7 @@
       const row = document.createElement('div');
       row.className = 'custom-row';
       const sw = document.createElement('span');
-      sw.className = 'chip-dot' + (c.off ? ' off' : '');
+      sw.className = 'chip-dot';
       sw.style.background = c.hex;
       const nm = document.createElement('span');
       nm.textContent = c.name || c.hex;
@@ -183,7 +196,7 @@
 
   // ---------- picture input ----------
   const MAX_SRC = 1600;
-  function loadCanvas(cv, name) {
+  function toSrcCanvas(cv) {
     const s = Math.min(1, MAX_SRC / Math.max(cv.width, cv.height));
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.round(cv.width * s));
@@ -191,12 +204,14 @@
     const ctx = c.getContext('2d');
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(cv, 0, 0, c.width, c.height);
-    src = c; crop = null; srcName = name || '';
-    edits = {};
-    drawSrcThumb();
-    $('thumbs').hidden = false;
+    return c;
+  }
+  function loadCanvas(cv, name) {
+    const sl = cur();
+    Object.assign(sl, newSlot(), { src: toSrcCanvas(cv), name: name || '' });
+    showSlot();
     $('empty').hidden = true;
-    changed('simplify');
+    changed('simplify', 0, [active]);
   }
 
   function loadFile(file) {
@@ -214,15 +229,15 @@
     img.src = url;
   }
 
-  $('file').addEventListener('change', e => loadFile(e.target.files[0]));
+  $('file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
-  drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  drop.addEventListener('drop', e => { e.stopPropagation(); loadFile(e.dataTransfer.files[0]); });
   document.addEventListener('dragover', e => e.preventDefault());
   document.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
   document.addEventListener('paste', e => {
-    const item = [...(e.clipboardData || {}).items || []].find(i => i.type.startsWith('image/'));
+    const item = [...((e.clipboardData || {}).items || [])].find(i => i.type.startsWith('image/'));
     if (item) loadFile(item.getAsFile());
   });
   document.querySelectorAll('[data-sample]').forEach(b => b.addEventListener('click', () => {
@@ -231,74 +246,134 @@
 
   // Thumbnail of the original, with drag-to-crop.
   const srcCv = $('src-canvas');
-  function drawSrcThumb() {
-    const s = Math.min(1, 360 / Math.max(src.width, src.height));
-    srcCv.width = Math.round(src.width * s); srcCv.height = Math.round(src.height * s);
-    srcCv.getContext('2d').drawImage(src, 0, 0, srcCv.width, srcCv.height);
-    showCrop();
+  function showSlot() {
+    const sl = cur();
+    $('thumbs').hidden = !sl.src;
+    $('key-edit').hidden = !sl.segE;
+    if (sl.src) {
+      const s = Math.min(1, 360 / Math.max(sl.src.width, sl.src.height));
+      srcCv.width = Math.round(sl.src.width * s); srcCv.height = Math.round(sl.src.height * s);
+      srcCv.getContext('2d').drawImage(sl.src, 0, 0, srcCv.width, srcCv.height);
+      showCrop();
+    }
+    if (sl.segE) { drawFlat(sl); renderKeyEditor(); }
+    else { const f = $('flat-canvas'); f.width = 1; f.height = 1; }
+    renderSlotBar();
   }
   function showCrop() {
-    const box = $('crop-box');
-    $('crop-reset').hidden = !crop;
-    $('crop-hint').hidden = !!crop;
-    if (!crop) { box.hidden = true; return; }
+    const sl = cur(), box = $('crop-box');
+    $('crop-reset').hidden = !sl.crop;
+    $('crop-hint').hidden = !!sl.crop;
+    if (!sl.crop) { box.hidden = true; return; }
     box.hidden = false;
-    box.style.left = (crop.x / src.width * 100) + '%';
-    box.style.top = (crop.y / src.height * 100) + '%';
-    box.style.width = (crop.w / src.width * 100) + '%';
-    box.style.height = (crop.h / src.height * 100) + '%';
+    box.style.left = (sl.crop.x / sl.src.width * 100) + '%';
+    box.style.top = (sl.crop.y / sl.src.height * 100) + '%';
+    box.style.width = (sl.crop.w / sl.src.width * 100) + '%';
+    box.style.height = (sl.crop.h / sl.src.height * 100) + '%';
   }
   let drag = null;
   const wrap = $('crop-wrap');
   const toSrc = e => {
-    const r = srcCv.getBoundingClientRect();
-    return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * src.width,
-      Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * src.height];
+    const r = srcCv.getBoundingClientRect(), s = cur().src;
+    return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * s.width,
+      Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * s.height];
   };
-  wrap.addEventListener('pointerdown', e => { if (!src) return; drag = toSrc(e); wrap.setPointerCapture(e.pointerId); });
+  wrap.addEventListener('pointerdown', e => { if (!cur().src) return; drag = toSrc(e); wrap.setPointerCapture(e.pointerId); });
   wrap.addEventListener('pointermove', e => {
     if (!drag) return;
     const [x, y] = toSrc(e);
-    crop = { x: Math.min(x, drag[0]), y: Math.min(y, drag[1]), w: Math.abs(x - drag[0]), h: Math.abs(y - drag[1]) };
+    cur().crop = { x: Math.min(x, drag[0]), y: Math.min(y, drag[1]), w: Math.abs(x - drag[0]), h: Math.abs(y - drag[1]) };
     showCrop();
   });
   wrap.addEventListener('pointerup', () => {
     if (!drag) return;
     drag = null;
-    if (crop && (crop.w < src.width * 0.05 || crop.h < src.height * 0.05)) crop = null;
+    const sl = cur();
+    if (sl.crop && (sl.crop.w < sl.src.width * 0.05 || sl.crop.h < sl.src.height * 0.05)) sl.crop = null;
     showCrop();
-    changed('simplify');
+    changed('simplify', 0, [active]);
   });
-  $('crop-reset').addEventListener('click', () => { crop = null; showCrop(); changed('simplify'); });
+  $('crop-reset').addEventListener('click', () => { cur().crop = null; showCrop(); changed('simplify', 0, [active]); });
 
-  function srcPixels() {
-    const c = crop || { x: 0, y: 0, w: src.width, h: src.height };
+  function srcPixels(sl) {
+    const c = sl.crop || { x: 0, y: 0, w: sl.src.width, h: sl.src.height };
     const w = Math.max(1, Math.round(c.w)), h = Math.max(1, Math.round(c.h));
     const cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d');
-    ctx.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, w, h);
-    const d = ctx.getImageData(0, 0, w, h);
-    return { width: w, height: h, data: d.data };
+    ctx.drawImage(sl.src, c.x, c.y, c.w, c.h, 0, 0, w, h);
+    return { width: w, height: h, data: ctx.getImageData(0, 0, w, h).data };
   }
 
-  // ---------- controls ----------
-  function bindRange(id, key, fmt, stage) {
-    const el = $(id), out = $(id + '-out');
-    el.value = S[key];
-    const show = () => { out.textContent = fmt(+el.value); };
-    show();
-    el.addEventListener('input', () => { S[key] = +el.value; show(); changed(stage, 250); });
+  // ---------- the four mini-page slots ----------
+  function renderSlotBar() {
+    const bar = $('slots');
+    bar.hidden = !mini();
+    if (!mini()) return;
+    const btns = $('slot-btns');
+    btns.textContent = '';
+    slots.forEach((sl, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'slot' + (i === active ? ' on' : '') + (sl.src ? '' : ' empty');
+      b.setAttribute('aria-pressed', String(i === active));
+      b.setAttribute('aria-label', `Mini page ${i + 1}${sl.src ? ': ' + (sl.name || 'picture') : ', empty'}`);
+      if (sl.src) {
+        const c = document.createElement('canvas');
+        const s = 64 / Math.max(sl.src.width, sl.src.height);
+        c.width = Math.round(sl.src.width * s); c.height = Math.round(sl.src.height * s);
+        c.getContext('2d').drawImage(sl.src, 0, 0, c.width, c.height);
+        b.append(c);
+      } else b.append(document.createTextNode('+'));
+      const n = document.createElement('span'); n.className = 'slot-n'; n.textContent = i + 1;
+      b.append(n);
+      b.addEventListener('click', () => { active = i; showSlot(); });
+      btns.append(b);
+    });
+    $('slot-fill').disabled = !cur().src;
+    $('slot-clear').disabled = !cur().src;
   }
-  bindRange('detail', 'detail', v => v < 25 ? 'Poster' : v < 50 ? 'Bold' : v < 75 ? 'Balanced' : 'Detailed', 'simplify');
-  bindRange('colors', 'colors', v => v, 'simplify');
-  bindRange('boost', 'boost', v => v < 15 ? 'True to photo' : v < 50 ? 'Some' : v < 80 ? 'Lots' : 'Wild', 'simplify');
-  bindRange('lines', 'lines', v => v === 0 ? 'None' : v < 35 ? 'Few' : v < 70 ? 'Bold' : 'Lots', 'simplify');
+  $('slot-fill').addEventListener('click', () => {
+    const from = cur();
+    if (!from.src) return;
+    const targets = [];
+    slots.forEach((sl, i) => {
+      if (sl === from) return;
+      Object.assign(sl, newSlot(), { src: from.src, crop: from.crop && Object.assign({}, from.crop), name: from.name, edits: JSON.parse(JSON.stringify(from.edits)) });
+      targets.push(i);
+    });
+    renderSlotBar();
+    changed('simplify', 0, targets);
+  });
+  $('slot-clear').addEventListener('click', () => {
+    Object.assign(cur(), newSlot());
+    showSlot();
+    changed('render');
+  });
+
+  // ---------- controls ----------
+  const fmtRange = {
+    detail: v => (v < 25 ? 'Poster' : v < 50 ? 'Bold' : v < 75 ? 'Balanced' : 'Detailed'),
+    colors: v => v,
+    boost: v => (v < 15 ? 'True to photo' : v < 50 ? 'Some' : v < 80 ? 'Lots' : 'Wild'),
+    lines: v => (v === 0 ? 'None' : v < 35 ? 'Few' : v < 70 ? 'Bold' : 'Lots'),
+  };
+  const controls = []; // [{el, key, kind}] so a format switch can refresh them
+  function bindRange(key, stage) {
+    const el = $(key), out = $(key + '-out');
+    const show = () => { out.textContent = fmtRange[key](+el.value); };
+    el.addEventListener('input', () => { set(key, +el.value); show(); changed(stage, 250); });
+    controls.push({ sync: () => { el.value = get(key); show(); } });
+  }
+  bindRange('detail', 'simplify');
+  bindRange('colors', 'simplify');
+  bindRange('boost', 'simplify');
+  bindRange('lines', 'simplify');
 
   function bindCheck(id, key, stage) {
     const el = $(id);
-    el.checked = !!S[key];
-    el.addEventListener('change', () => { S[key] = el.checked; changed(stage); });
+    el.addEventListener('change', () => { set(key, el.checked); changed(stage); });
+    controls.push({ sync: () => { el.checked = !!get(key); } });
   }
   bindCheck('blank-white', 'paper', 'simplify');
   bindCheck('guides', 'guides', 'layout');
@@ -307,9 +382,11 @@
 
   function bindSelect(id, key, stage) {
     const el = $(id);
-    el.value = S[key];
-    if (el.value !== String(S[key])) S[key] = el.value = DEFAULTS[key];
-    el.addEventListener('change', () => { S[key] = el.value; changed(stage); });
+    el.addEventListener('change', () => { set(key, el.value); changed(stage); });
+    controls.push({ sync: () => {
+      el.value = get(key);
+      if (el.value !== String(get(key))) { el.selectedIndex = 0; set(key, el.value); }
+    } });
   }
   bindSelect('paper-size', 'paperSize', 'layout');
   bindSelect('orientation', 'orientation', 'layout');
@@ -320,26 +397,27 @@
   bindSelect('letters', 'letters', 'render');
 
   const title = $('title');
-  title.value = S.title;
   title.addEventListener('input', () => {
     const had = !!S.title.trim();
     S.title = title.value;
     changed(had === !!S.title.trim() ? 'render' : 'layout', 300);
   });
+  controls.push({ sync: () => { title.value = S.title; } });
 
   function bindSeg(id, key, stage, after) {
     const box = $(id);
-    const sync = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S[key])));
-    sync();
+    const sync = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === get(key))));
     box.addEventListener('click', e => {
       const b = e.target.closest('button');
-      if (!b || S[key] === b.dataset.v) return;
-      S[key] = b.dataset.v;
+      if (!b || get(key) === b.dataset.v) return;
+      set(key, b.dataset.v);
       sync();
       if (after) after();
       changed(stage);
     });
+    controls.push({ sync });
   }
+  bindSeg('format', 'format', 'simplify', onFormat);
   bindSeg('source', 'source', 'simplify', syncSource);
   bindSeg('choose', 'choose', 'simplify');
   bindSeg('mode', 'mode', 'layout', syncMode);
@@ -359,17 +437,30 @@
       ? 'Rows of letters that follow each shape, like the kits. Cover each letter with a dot.'
       : 'Outlined shapes with a letter in each, to color in with any markers or pencils.';
   }
+  function syncFormat() {
+    document.querySelectorAll('[data-for="full"]').forEach(el => { el.hidden = mini(); });
+    $('format-note').textContent = mini()
+      ? 'Four 4¼ × 5½ in pages on one Letter sheet, with cut marks. Use one picture four times or up to four pictures.'
+      : 'One picture on a full 8½ × 11 in page, like the full-size kits.';
+  }
+  function onFormat() {
+    if (!mini()) active = 0;
+    controls.forEach(c => c.sync());
+    syncFormat();
+    showSlot();
+  }
+  controls.forEach(c => c.sync());
   syncSource();
   syncMode();
+  syncFormat();
 
   // ---------- the pipeline ----------
-  let timer = null, dirty = 0;
-  // Each stage redoes itself and everything after it. Key edits come before layout, since a merge
-  // changes the shapes.
-  const LEVEL = { render: 1, layout: 2, edits: 3, simplify: 4 };
-  function changed(stage, wait) {
+  let timer = null, gen = 0;
+  /* Mark slots as needing work from `stage` on. Picture-wide settings affect every slot; a crop or
+   * key edit names its slot. */
+  function changed(stage, wait, which) {
     save();
-    dirty = Math.max(dirty, LEVEL[stage]);
+    for (const i of which || [0, 1, 2, 3]) slots[i].dirty = Math.max(slots[i].dirty, LEVEL[stage]);
     clearTimeout(timer);
     timer = setTimeout(run, wait || 30);
   }
@@ -381,58 +472,24 @@
   }
 
   async function run() {
-    if (!src) { dirty = 0; return; }
+    const used = usedSlots();
+    if (!used.length) { renderEmpty(); return; }
     const my = ++gen;
-    const level = dirty;
-    dirty = 0;
+    // The slot on screen goes first so its thumbnail and key update quickly.
+    const order = used.includes(active) ? [active, ...used.filter(i => i !== active)] : used;
     try {
-      if (level >= LEVEL.simplify || !seg) {
-        const p = S.source === 'markers' ? pool() : null;
-        if (p && !p.length) { status('Tick at least one kit, or add a marker, or switch to “Match the picture”.'); return; }
-        status('Simplifying the picture…', true);
-        const res = await call('simplify', {
-          img: srcPixels(),
-          opts: {
-            maxSide: MAX_SIDE, colors: S.colors, detail: S.detail / 100, boost: S.boost / 100,
-            lines: S.lines / 100, featurePx: featurePx(),
-            paper: S.paper, pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
-            choose: S.choose, seed: 7,
-          },
-        });
-        if (my !== gen) return;
-        seg = res;
-        // Keep key edits only for colors still on the page.
-        const keys = new Set(seg.palette.map(keyOf));
-        for (const k of Object.keys(edits)) {
-          if (!keys.has(k) || (edits[k].mergeInto && !keys.has(edits[k].mergeInto))) delete edits[k];
-        }
+      for (const i of order) {
+        const sl = slots[i];
+        if (!sl.seg && sl.dirty < LEVEL.simplify) sl.dirty = LEVEL.simplify;
+        if (sl.dirty <= LEVEL.render) continue;
+        const level = sl.dirty;
+        sl.dirty = LEVEL.render;
+        const ok = await process(sl, i, level, my);
+        if (!ok) { sl.dirty = Math.max(sl.dirty, level); return; }
+        if (i === active) showSlot();
       }
-      if (level >= LEVEL.edits || !segE) {
-        segE = DotEdit.apply(seg, edits, keyOf);
-        drawFlat();
-        renderKeyEditor();
-      }
-      if (level >= LEVEL.layout || !lay) {
-        geo = DotSheet.geometry({
-          paper: S.paperSize, orientation: S.orientation, margin: +S.margin,
-          aspect: segE.width / segE.height, keyCount: inkCount(), title: !!S.title.trim(), footer: S.footer,
-        });
-        const mmPerPx = geo.image.w / segE.width;
-        const needOutlines = S.mode === 'fill' || S.guides;
-        status(S.mode === 'dots' ? 'Laying out the dots…' : 'Tracing the shapes…', true);
-        const res = await call('layout', {
-          seg: segForLayout(segE),
-          opts: {
-            mode: S.mode,
-            dots: { mmPerPx, sizes: DOT_SIZES[S.dotSize], seed: 3 },
-            labels: { mmPerPx },
-            outlines: needOutlines,
-            outlinesOpts: { mmPerPx },
-          },
-        });
-        if (my !== gen) return;
-        lay = res;
-      }
+      if (my !== gen) return;
+      for (const i of used) slots[i].dirty = 0;
       render();
     } catch (err) {
       console.error(err);
@@ -440,19 +497,78 @@
     }
   }
 
+  const label = i => (mini() ? ` (page ${i + 1})` : '');
+
+  async function process(sl, i, level, my) {
+    if (level >= LEVEL.simplify) {
+      const p = S.source === 'markers' ? pool() : null;
+      if (p && !p.length) { status('Tick at least one kit, or add a marker, or switch to “Match the picture”.'); return false; }
+      status('Simplifying the picture' + label(i) + '…', true);
+      const res = await call('simplify', {
+        img: srcPixels(sl),
+        opts: {
+          maxSide: MAX_SIDE, colors: get('colors'), detail: S.detail / 100, boost: S.boost / 100,
+          lines: S.lines / 100, featurePx: featurePx(sl, i),
+          paper: S.paper, pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
+          choose: S.choose, seed: 7,
+        },
+      });
+      if (my !== gen) return false;
+      sl.seg = res;
+      // Keep key edits only for colors still on the page.
+      const keys = new Set(sl.seg.palette.map(keyOf));
+      for (const k of Object.keys(sl.edits)) {
+        const e = sl.edits[k];
+        if (!keys.has(k) || (e.mergeInto && !keys.has(e.mergeInto))) delete sl.edits[k];
+      }
+    }
+    if (level >= LEVEL.edits) sl.segE = DotEdit.apply(sl.seg, sl.edits, keyOf);
+    if (level >= LEVEL.layout) {
+      sl.geo = geometryFor(i, sl.segE.width / sl.segE.height, inkCount(sl));
+      const mmPerPx = sl.geo.image.w / sl.segE.width;
+      status((S.mode === 'dots' ? 'Laying out the dots' : 'Tracing the shapes') + label(i) + '…', true);
+      const res = await call('layout', {
+        seg: segForLayout(sl.segE),
+        opts: {
+          mode: S.mode,
+          dots: { mmPerPx, sizes: DOT_SIZES[get('dotSize')], seed: 3 },
+          labels: { mmPerPx },
+          outlines: S.mode === 'fill' || S.guides,
+          outlinesOpts: { mmPerPx },
+        },
+      });
+      if (my !== gen) return false;
+      sl.lay = res;
+    }
+    return true;
+  }
+
+  function geometryFor(i, aspect, keyCount) {
+    const title = !!S.title.trim();
+    if (mini()) {
+      // A wide picture gets a sideways mini page rather than a thin strip across a tall one.
+      const wide = aspect > 1.15;
+      const M = DotSheet.MINI;
+      return DotSheet.geometry({
+        size: wide ? { w: M.h, h: M.w } : M, margins: DotSheet.miniMargins(i, wide, +S.margin), compact: true,
+        aspect, keyCount, title, footer: false,
+      });
+    }
+    return DotSheet.geometry({
+      paper: S.paperSize, orientation: S.orientation, margin: +S.margin,
+      aspect, keyCount, title, footer: S.footer,
+    });
+  }
+
   // How many picture pixels the smallest dot (plus its gap) covers on paper. Shapes thinner than
   // this can't be drawn in dots, so simplify.js uses it as the finest feature to keep.
-  const MAX_SIDE = 480;
-  function featurePx() {
-    const c = crop || { w: src.width, h: src.height };
+  function featurePx(sl, i) {
+    const c = sl.crop || { w: sl.src.width, h: sl.src.height };
     const aspect = c.w / c.h;
     const segW = Math.min(Math.round(c.w), aspect >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * aspect));
-    const g = DotSheet.geometry({
-      paper: S.paperSize, orientation: S.orientation, margin: +S.margin, aspect,
-      keyCount: S.colors, title: !!S.title.trim(), footer: S.footer,
-    });
+    const g = geometryFor(i, aspect, get('colors'));
     const mmPerPx = g.image.w / Math.max(1, segW);
-    const sizes = S.mode === 'dots' ? DOT_SIZES[S.dotSize] : [1.6];
+    const sizes = S.mode === 'dots' ? DOT_SIZES[get('dotSize')] : [1.6];
     return Math.max(2, (2 * sizes[0] + 0.35) / mmPerPx);
   }
 
@@ -460,23 +576,30 @@
   function segForLayout(s) {
     return { width: s.width, height: s.height, index: s.index, region: s.region, regions: s.regions, palette: s.palette.map(p => ({ hex: p.hex, rgb: p.rgb, lab: p.lab, area: p.area, paper: !!p.paper, poolId: p.poolId || null })) };
   }
-  const inkCount = () => segE.palette.filter(p => !p.paper).length;
+  const inkCount = sl => sl.segE.palette.filter(p => !p.paper).length;
 
-  function drawFlat() {
+  function drawFlat(sl) {
     const cv = $('flat-canvas');
-    cv.width = segE.width; cv.height = segE.height;
-    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(segE.preview), segE.width, segE.height), 0, 0);
+    cv.width = sl.segE.width; cv.height = sl.segE.height;
+    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(sl.segE.preview), sl.segE.width, sl.segE.height), 0, 0);
+  }
+  function flatDataUrl(sl) {
+    const cv = document.createElement('canvas');
+    cv.width = sl.segE.width; cv.height = sl.segE.height;
+    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(sl.segE.preview), sl.segE.width, sl.segE.height), 0, 0);
+    return cv.toDataURL('image/png');
   }
 
   // ---------- the key ----------
   // One entry per palette index: letter, color, a name to print, and a line for the editor.
-  function keyEntries() {
-    const letters = PAL.LETTERS[S.letters] || PAL.LETTERS.flowart;
-    const byId = poolById();
-    const p = S.source === 'markers' ? null : pool();
-    const pLabs = p ? p.map(m => DC.hexToLab(m.hex)) : null;
+  function keyEntries(sl) {
+    const letters = PAL.LETTERS[get('letters')] || PAL.LETTERS.flowart;
+    const markers = pool();
+    const byId = new Map(markers.map(m => [m.id, m]));
+    const suggest = S.source === 'markers' ? null : markers;
+    const sLabs = suggest ? suggest.map(m => DC.hexToLab(m.hex)) : null;
     let n = 0;
-    return segE.palette.map(c => {
+    return sl.segE.palette.map(c => {
       if (c.paper) return null;
       const letter = letters[n] || String(n + 1);
       n++;
@@ -486,9 +609,9 @@
       else {
         name = c.name || DotEdit.colorName(c.lab);
         sub = c.hex;
-        if (pLabs && pLabs.length) {
-          const near = DC.nearest(c.lab, pLabs);
-          const mk = p[near.index];
+        if (sLabs && sLabs.length) {
+          const near = DC.nearest(c.lab, sLabs);
+          const mk = suggest[near.index];
           sub = `closest: ${mk.name} (${mk.set})${near.dE > 12 ? ', not close' : ''}`;
         }
       }
@@ -497,10 +620,12 @@
   }
 
   function renderKeyEditor() {
-    const entries = keyEntries();
+    const sl = cur();
+    const entries = keyEntries(sl);
     const ol = $('key-rows');
     ol.textContent = '';
     const markers = pool();
+    const edit = () => changed('edits', 0, [active]);
     entries.forEach(k => {
       if (!k) return;
       const li = document.createElement('li');
@@ -508,7 +633,7 @@
       const L = document.createElement('span'); L.className = 'key-letter'; L.textContent = k.letter;
       const sw = document.createElement('input');
       sw.type = 'color'; sw.value = k.hex; sw.className = 'key-sw'; sw.title = 'Pick any color for ' + k.letter;
-      sw.addEventListener('change', () => { edits[k.key] = { hex: sw.value, name: DotEdit.colorName(DC.hexToLab(sw.value)) }; changed('edits'); });
+      sw.addEventListener('change', () => { sl.edits[k.key] = { hex: sw.value, name: DotEdit.colorName(DC.hexToLab(sw.value)) }; edit(); });
       const nm = document.createElement('span'); nm.className = 'key-name';
       nm.textContent = k.name;
       const small = document.createElement('small'); small.textContent = k.sub; nm.append(small);
@@ -526,22 +651,23 @@
         others.forEach(o => { const op = document.createElement('option'); op.value = 'g:' + o.key; op.textContent = `${o.letter} (${o.name})`; g.append(op); });
         sel.append(g);
       }
-      if (edits[k.key]) { const o = document.createElement('option'); o.value = 'reset'; o.textContent = 'Undo change'; sel.append(o); }
+      if (sl.edits[k.key]) { const o = document.createElement('option'); o.value = 'reset'; o.textContent = 'Undo change'; sel.append(o); }
       sel.addEventListener('change', () => {
         const v = sel.value;
         if (v.startsWith('m:')) {
           const m = markers.find(x => x.id === v.slice(2));
-          edits[k.key] = { hex: m.hex, name: m.name, poolId: m.id };
-        } else if (v.startsWith('g:')) edits[k.key] = { mergeInto: v.slice(2) };
-        else if (v === 'reset') delete edits[k.key];
+          sl.edits[k.key] = { hex: m.hex, name: m.name, poolId: m.id };
+        } else if (v.startsWith('g:')) sl.edits[k.key] = { mergeInto: v.slice(2) };
+        else if (v === 'reset') delete sl.edits[k.key];
         else return;
-        changed('edits');
+        edit();
       });
       li.append(L, sw, nm, sel);
       ol.append(li);
     });
     $('key-edit').hidden = false;
-    const ed = Object.keys(edits).length;
+    $('key-title').textContent = mini() ? `Key, page ${active + 1}` : 'Key';
+    const ed = Object.keys(sl.edits).length;
     const note = $('key-note');
     note.textContent = ed
       ? `${ed} change${ed === 1 ? '' : 's'} made. `
@@ -549,51 +675,75 @@
     if (ed) {
       const undo = document.createElement('button');
       undo.type = 'button'; undo.className = 'linkish'; undo.textContent = 'Undo all';
-      undo.addEventListener('click', () => { edits = {}; changed('edits'); });
+      undo.addEventListener('click', () => { sl.edits = {}; edit(); });
       note.append(undo);
     }
   }
 
   // ---------- render ----------
-  function render() {
-    if (!segE || !lay) return;
-    const key = keyEntries();
-    const common = {
-      geometry: geo, key, mode: S.mode, printer: S.printer, letterInk: S.ink,
-      dots: lay.dots || [], sizes: DOT_SIZES[S.dotSize], labels: lay.labels ? lay.labels.labels || lay.labels : [],
-      outlines: lay.outlines ? lay.outlines.d : '', guides: S.guides, rings: S.rings,
+  let svgPrint = '', svgShown = '', pageSize = null;
+
+  function pageOpts(sl, view) {
+    return {
+      geometry: sl.geo, key: keyEntries(sl), mode: S.mode, view, printer: S.printer, letterInk: S.ink,
+      dots: sl.lay.dots || [], sizes: DOT_SIZES[get('dotSize')], labels: sl.lay.labels ? sl.lay.labels.labels || [] : [],
+      outlines: sl.lay.outlines ? sl.lay.outlines.d : '', guides: S.guides, rings: S.rings,
       title: S.title.trim(), credit: 'jkastl.github.io/dot-sheets', seed: 5,
+      fillPreview: view === 'finished' && S.mode === 'fill' ? flatDataUrl(sl) : null,
     };
-    svgText = DotSheet.build(Object.assign({}, common, { view: 'print' }));
-    const shown = S.view === 'print' ? svgText
-      : DotSheet.build(Object.assign({}, common, { view: 'finished', fillPreview: S.mode === 'fill' ? flatDataUrl() : null }));
-    const paper = $('paper');
-    paper.innerHTML = shown;
-    paper.hidden = false;
-    fitPaper();
-    $('print-root').innerHTML = svgText;
-    $('page-size').textContent = `@page { size: ${geo.page.w}mm ${geo.page.h}mm; margin: 0; }`;
-    ['print', 'dl-svg', 'dl-png'].forEach(id => { $(id).disabled = false; });
-    $('print-tip').hidden = false;
-    const n = S.mode === 'dots' ? (lay.dots || []).length : common.labels.length;
-    const what = S.mode === 'dots' ? 'dots' : 'shapes';
-    status(`${n.toLocaleString()} ${what} · ${inkCount()} colors · ${DotSheet.PAGES[geo.page.paper].label} ${geo.page.orientation}`);
   }
 
-  function flatDataUrl() {
-    const cv = $('flat-canvas');
-    return cv.toDataURL('image/png');
+  function sheetFor(view) {
+    if (!mini()) return DotSheet.build(pageOpts(slots[0], view));
+    const pages = slots.map(sl => (sl.src && sl.lay ? pageOpts(sl, view) : null));
+    return DotSheet.sheet4(pages, { margin: +S.margin, ruler: S.footer });
+  }
+
+  function render() {
+    const used = usedSlots().filter(i => slots[i].lay);
+    if (!used.length) { renderEmpty(); return; }
+    pageSize = mini() ? DotSheet.PAGES.letter : slots[0].geo.page;
+    svgPrint = sheetFor('print');
+    svgShown = S.view === 'print' ? svgPrint : sheetFor('finished');
+    const paper = $('paper');
+    paper.innerHTML = svgShown;
+    paper.hidden = false;
+    $('empty').hidden = true;
+    fitPaper();
+    $('print-root').innerHTML = svgPrint;
+    $('page-size').textContent = `@page { size: ${pageSize.w}mm ${pageSize.h}mm; margin: 0; }`;
+    ['print', 'dl-svg', 'dl-png'].forEach(id => { $(id).disabled = false; });
+    $('print-tip').hidden = false;
+    let n = 0, colors = 0;
+    for (const i of used) {
+      const sl = slots[i];
+      n += S.mode === 'dots' ? (sl.lay.dots || []).length : (sl.lay.labels ? sl.lay.labels.labels.length : 0);
+      colors = Math.max(colors, inkCount(sl));
+    }
+    const what = S.mode === 'dots' ? 'dots' : 'shapes';
+    status(mini()
+      ? `${used.length} of 4 mini pages · ${n.toLocaleString()} ${what} · up to ${colors} colors · cut along the dashed lines`
+      : `${n.toLocaleString()} ${what} · ${colors} colors · ${DotSheet.PAGES[slots[0].geo.page.paper].label} ${slots[0].geo.page.orientation}`);
+  }
+
+  function renderEmpty() {
+    $('paper').hidden = true;
+    $('empty').hidden = false;
+    $('print-root').innerHTML = '';
+    ['print', 'dl-svg', 'dl-png'].forEach(id => { $(id).disabled = true; });
+    $('print-tip').hidden = true;
+    status('');
   }
 
   // Fit the page in the preview box; a click zooms in for a closer look.
   let zoom = false;
   function fitPaper() {
-    if (!geo) return;
+    if (!pageSize) return;
     const wrapEl = $('paper-wrap'), paper = $('paper');
     const W = wrapEl.clientWidth - 40, H = wrapEl.clientHeight - 40;
-    const s = Math.min(W / geo.page.w, H / geo.page.h) * (zoom ? 2.6 : 1);
-    paper.style.width = Math.round(geo.page.w * s) + 'px';
-    paper.style.height = Math.round(geo.page.h * s) + 'px';
+    const s = Math.min(W / pageSize.w, H / pageSize.h) * (zoom ? 2.6 : 1);
+    paper.style.width = Math.round(pageSize.w * s) + 'px';
+    paper.style.height = Math.round(pageSize.h * s) + 'px';
     paper.classList.toggle('zoom', zoom);
     wrapEl.style.placeItems = zoom ? 'start' : 'center';
   }
@@ -611,7 +761,10 @@
   addEventListener('resize', fitPaper);
 
   // ---------- output ----------
-  const fileBase = () => (S.title.trim() || srcName || 'dot-sheet').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'dot-sheet';
+  const fileBase = () => {
+    const base = S.title.trim() || slots[0].name || cur().name || 'dot-sheet';
+    return (base.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'dot-sheet') + (mini() ? '-minis' : '');
+  };
   function download(blob, name) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -620,16 +773,16 @@
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
+  const suffix = () => (S.view === 'print' ? '' : '-finished');
   $('print').addEventListener('click', () => window.print());
   $('dl-svg').addEventListener('click', () => {
-    const text = S.view === 'print' ? svgText : $('paper').innerHTML;
-    download(new Blob([text], { type: 'image/svg+xml' }), fileBase() + (S.view === 'print' ? '' : '-finished') + '.svg');
+    download(new Blob([svgShown], { type: 'image/svg+xml' }), fileBase() + suffix() + '.svg');
   });
   $('dl-png').addEventListener('click', () => {
-    const text = S.view === 'print' ? svgText : $('paper').innerHTML;
-    const dpi = 300, w = Math.round(geo.page.w / 25.4 * dpi), h = Math.round(geo.page.h / 25.4 * dpi);
+    const dpi = 300, w = Math.round(pageSize.w / 25.4 * dpi), h = Math.round(pageSize.h / 25.4 * dpi);
     const img = new Image();
-    const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+    const url = URL.createObjectURL(new Blob([svgShown], { type: 'image/svg+xml' }));
+    const before = $('status').textContent;
     status('Making a 300 dpi PNG…', true);
     img.onload = () => {
       const cv = document.createElement('canvas');
@@ -638,11 +791,12 @@
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
       ctx.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      cv.toBlob(b => { download(b, fileBase() + (S.view === 'print' ? '' : '-finished') + '.png'); render(); }, 'image/png');
+      cv.toBlob(b => { download(b, fileBase() + suffix() + '.png'); status(before); }, 'image/png');
     };
     img.onerror = () => { URL.revokeObjectURL(url); status('Couldn’t make the PNG in this browser. Try SVG or Print.'); };
     img.src = url;
   });
 
   renderSets();
+  renderSlotBar();
 })();
