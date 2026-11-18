@@ -105,6 +105,28 @@ test('build: finished view draws colored circles, fill mode draws outlines and l
   assert.equal((fill.match(/dy="0.36em"[^>]*>B<\/text>/g) || []).length, 2); // key + one label
 });
 
+test('build: a long title shrinks to fit and drops the hint rather than overlapping it', () => {
+  const page = (title, compact) => {
+    const geometry = compact
+      ? DotSheet.geometry({ size: DotSheet.MINI, margins: DotSheet.miniMargins(0, false, 12.7), compact: true, aspect: 1, keyCount: 5, title: true })
+      : DotSheet.geometry({ paper: 'letter', aspect: 0.8, keyCount: 2, title: true, footer: true });
+    const svg = DotSheet.build({ geometry, mode: 'dots', view: 'print', printer: 'mono', key: [], dots: [], sizes: [1], title });
+    const fs = +svg.match(/font-size="([\d.]+)" font-weight="700" fill="#222"/)[1];
+    return { geometry, fs, hint: svg.includes('Cover each letter') };
+  };
+  const short = page('Rex');
+  assert.equal(short.fs, 5.6);
+  assert.ok(short.hint, 'a short title keeps the hint');
+  const mid = page('Chelsea the cat on the rug by the window');
+  assert.equal(mid.fs, 5.6);
+  assert.ok(!mid.hint, 'no room for the hint next to a 40-character title');
+  const long = 'W'.repeat(60);
+  const full = page(long), mini = page(long, true);
+  assert.ok(60 * 0.74 * full.fs <= full.geometry.title.w + 1e-6, 'full-page title inside the margins');
+  assert.ok(60 * 0.74 * mini.fs <= mini.geometry.title.w + 1e-6, 'mini title inside its page');
+  assert.ok(!mini.hint);
+});
+
 test('build: the same input gives the same page', () => {
   assert.equal(sample('dots', 'finished'), sample('dots', 'finished'));
 });

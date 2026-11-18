@@ -30,6 +30,9 @@
   };
   const FOOT_H = 6;     // mm for the footer (ruler + credit)
   const GAP = 4;        // mm between blocks
+  // Rough width of a line of bold Arial, in em, without a browser to measure it.
+  const textEm = s => [...String(s)].reduce((t, ch) => t + (ch === ' ' ? 0.28
+    : /[A-Z0-9MWmw@&%]/.test(ch) ? 0.74 : /[fijlrt.,:;'!|()\-]/.test(ch) ? 0.36 : 0.62), 0);
 
   // Key layout: entries per row and rows, for n entries across width w.
   function keyGrid(n, w, minCell) {
@@ -186,12 +189,18 @@
     const parts = [];
     if (g.title && o.title) {
       const ty = r2(g.title.y + H.titleFont);
-      parts.push(`<text x="${r2(g.title.x)}" y="${ty}" font-size="${H.titleFont}" font-weight="700" fill="#222">${esc(o.title)}</text>`);
+      // No text measuring here, so estimate widths: a long title shrinks to stay inside the
+      // margins, and the hint is left out when it would run into the title.
+      const titleW = textEm(o.title) * H.titleFont;
+      const fs = titleW > g.title.w ? r2(H.titleFont * g.title.w / titleW) : H.titleFont;
+      parts.push(`<text x="${r2(g.title.x)}" y="${ty}" font-size="${fs}" font-weight="700" fill="#222">${esc(o.title)}</text>`);
       if (!o.compact && !g.page.paper.startsWith('mini')) {
         const hint = o.mode === 'fill'
           ? 'Color each shape with the marker for its letter.'
           : 'Cover each letter with a dot: press firmly for big letters, tap lightly for small ones.';
-        parts.push(`<text x="${r2(g.title.x + g.title.w)}" y="${ty}" text-anchor="end" font-size="${H.hint}" fill="#555">${esc(hint)}</text>`);
+        if (Math.min(titleW, g.title.w) + 4 + textEm(hint) * H.hint * 0.9 <= g.title.w) { // regular weight: ~10% narrower
+          parts.push(`<text x="${r2(g.title.x + g.title.w)}" y="${ty}" text-anchor="end" font-size="${H.hint}" fill="#555">${esc(hint)}</text>`);
+        }
       }
     }
     parts.push(keySvg(g, keyList, { printer: o.printer, view: o.view, letterInk: ink }));
