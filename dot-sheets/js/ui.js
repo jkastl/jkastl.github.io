@@ -111,7 +111,7 @@
         // Two kits often share a marker; list it once.
         if (seen.some(l => DC.deltaE2000(l, lab) < 2)) return;
         seen.push(lab);
-        out.push({ id: set.id + ':' + i, hex: c.hex, name: c.name, set: set.name, est: !!c.est });
+        out.push({ id: set.id + ':' + i, hex: c.hex, name: c.name, set: set.name, est: !!c.est, letter: c.letter || null });
       });
     }
     S.custom.forEach(c => {
@@ -140,6 +140,7 @@
       name.className = 'set-name';
       name.textContent = set.name;
       if (set.metallic) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = 'metallic'; name.append(t); }
+      if (set.line) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = set.line.toLowerCase(); name.append(t); }
       const chips = document.createElement('span');
       chips.className = 'chips';
       const off = S.off[set.id] || [];
@@ -619,11 +620,31 @@
     const byId = new Map(markers.map(m => [m.id, m]));
     const suggest = S.source === 'markers' ? null : markers;
     const sLabs = suggest ? suggest.map(m => DC.hexToLab(m.hex)) : null;
+    // A Mini Express marker keeps the letter its pad prints for it (unless plain A B C is chosen);
+    // every other color takes the next unused letter in the set.
+    const kitLetter = c => {
+      if (get('letters') === 'alpha' || !c.poolId) return null;
+      const mk = byId.get(c.poolId);
+      return mk && mk.letter;
+    };
+    const taken = new Set();
+    const fixed = sl.segE.palette.map(c => {
+      const L = !c.paper && kitLetter(c);
+      if (!L || taken.has(L)) return null;
+      taken.add(L);
+      return L;
+    });
     let n = 0;
-    const entries = sl.segE.palette.map(c => {
-      if (c.paper) return null;
-      const letter = letters[n] || String(n + 1);
+    const nextLetter = () => {
+      while (n < letters.length && taken.has(letters[n])) n++;
+      const L = letters[n] || String(n + 1);
+      taken.add(L);
       n++;
+      return L;
+    };
+    const entries = sl.segE.palette.map((c, i) => {
+      if (c.paper) return null;
+      const letter = fixed[i] || nextLetter();
       const m = c.poolId ? byId.get(c.poolId) : null;
       let name, sub;
       if (m) { name = c.name || m.name; sub = m.set; }

@@ -29,7 +29,10 @@ Then:
    the number of letters, **Cartoon punch** pushes saturation and contrast first, and **Outlines**
    draws eyes, noses and edges as a single row of dark dots, the way kit pages outline a pet.
 2. **Colors.** Either
-   - **My markers**: tick the kits you own (17 FlowArt Dot-by-Letter kits are built in). The page
+   - **My markers**: tick the kits you own: 17 full-size FlowArt Dot-by-Letter kits and 6 Mini
+     Express pads (Snow Day, In Full Bloom, Paws and Purrs, Cozy Comforts, Nature Walk, Merry
+     Moments) are built in. Mini Express pads print a fixed letter for each color, and a page
+     made from their markers keeps those letters. The page
      uses the best few of their colors for this picture, or all of them. Click a color dot to drop
      one marker (dried out, lost), or add any other marker by color and name.
    - **Match the picture**: the colors that suit the picture best, whatever you own. The key
@@ -90,6 +93,10 @@ steps run in a Web Worker (`worker.js`) when the page is served over http, and o
 thread when opened from `file://`.
 
 ### Where the kit colors come from
+
+Mini Express pads (5 markers, 15 scenes, sold at Target and Walmart) aren't on lifelines.com.
+Their colors were sampled from the dotted ink in Target's close-up product photos, and their letters
+read off the key printed on their pages.
 
 Lifelines doesn't publish ink colors or names. Each kit's eight hex values were sampled from the
 colored dots on the marker caps in the product photos on lifelines.com (November 2026). A handful

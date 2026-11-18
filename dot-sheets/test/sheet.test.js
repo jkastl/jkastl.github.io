@@ -34,7 +34,10 @@ test('palettes: every kit has 8 valid, distinct colors and the kits have unique 
   for (const set of DotPalettes.SETS) {
     assert.ok(!ids.has(set.id), set.id);
     ids.add(set.id);
-    assert.equal(set.colors.length, 8, set.name);
+    assert.equal(set.colors.length, set.line === 'Mini Express' ? 5 : 8, set.name);
+    const letters = set.colors.map(c => c.letter).filter(Boolean);
+    assert.equal(new Set(letters).size, letters.length, `${set.name}: letters are unique`);
+    if (set.line === 'Mini Express') assert.equal(letters.length, 5, `${set.name}: every marker has its letter`);
     const labs = set.colors.map(c => DC.hexToLab(c.hex));
     for (let i = 0; i < labs.length; i++) {
       assert.ok(set.colors[i].name, `${set.name} color ${i} has a name`);

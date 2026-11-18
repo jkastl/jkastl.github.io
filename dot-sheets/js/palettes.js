@@ -9,12 +9,18 @@
  * Every full-size kit has 4 double-sided markers (8 colors). Kits don't fix which letter gets which
  * color: you fill in the key at the top of each page. 8-color pages use the letters B D F G H V X Z.
  *
+ * Mini Express pads (sold at Target and Walmart: 15 scenes, 5 single markers) are different: every
+ * page's key prints each letter next to a fixed color, so those entries carry `letter`, and a page
+ * made from one pad's markers keeps the pad's own letters. Their hexes were sampled from the dotted
+ * ink in Target's close-up product photos (November 2026), which is closer to real ink than a cap.
+ *
  * Classic script: attaches to globalThis.DotPalettes.
  */
 (function (P) {
   'use strict';
 
   const c = (name, hex, est) => (est ? { name, hex, est: true } : { name, hex });
+  const m = (letter, name, hex) => ({ name, hex, letter });
 
   const SETS = [
     { id: 'landscapes', name: 'Landscapes', colors: [
@@ -68,6 +74,26 @@
     { id: 'majestic-earth', name: 'Majestic Earth', metallic: true, colors: [
       c('Pale Lime', '#cbd79a'), c('Blue', '#22599e'), c('Copper', '#b86b38'), c('Gold', '#ce9b40'),
       c('Lilac', '#958ac5'), c('Green', '#388267'), c('Turquoise', '#22bee2'), c('Silver', '#c8c8d4', true)] },
+
+    // Mini Express pads: 5 markers each, letters fixed by the pad's key (dark colors first).
+    { id: 'snow-day', name: 'Snow Day', line: 'Mini Express', colors: [
+      m('B', 'Brown', '#80342f'), m('F', 'Red', '#d93737'), m('H', 'Light Blue', '#8cd2e6'),
+      m('V', 'Green', '#0fa665'), m('X', 'Navy', '#323665')] },
+    { id: 'in-full-bloom', name: 'In Full Bloom', line: 'Mini Express', colors: [
+      m('V', 'Dark Green', '#356039'), m('B', 'Pink', '#d8a1c4'), m('G', 'Gold', '#e7a53e'),
+      m('H', 'Red', '#dd3243'), m('Z', 'Light Blue', '#a1c3de')] },
+    { id: 'paws-and-purrs', name: 'Paws and Purrs', line: 'Mini Express', colors: [
+      m('B', 'Dark Brown', '#5e322a'), m('F', 'Light Blue', '#8bc8de'), m('X', 'Green', '#67ac66'),
+      m('G', 'Orange', '#e59145'), m('H', 'Peach', '#f2cdb4')] },
+    { id: 'cozy-comforts', name: 'Cozy Comforts', line: 'Mini Express', colors: [
+      m('H', 'Olive Green', '#495536'), m('Z', 'Rust Brown', '#974e3d'), m('B', 'Peach', '#edccb8'),
+      m('D', 'Lavender', '#c9bbdc'), m('V', 'Orange', '#e98e42')] },
+    { id: 'nature-walk', name: 'Nature Walk', line: 'Mini Express', colors: [
+      m('B', 'Green', '#58a547'), m('D', 'Brown', '#683128'), m('V', 'Orange', '#ef8526'),
+      m('X', 'Peach', '#f6ccb1'), m('Z', 'Light Blue', '#a2c4de')] },
+    { id: 'merry-moments', name: 'Merry Moments', line: 'Mini Express', colors: [
+      m('B', 'Red', '#cf453f'), m('X', 'Caramel', '#b0714e'), m('Z', 'Green', '#325935'),
+      m('D', 'Peach', '#f4bc97'), m('F', 'Light Blue', '#87cee2')] },
   ];
 
   // Letter sets for the key. FlowArt's 8-color pages use B D F G H V X Z: shapes that stay

@@ -185,7 +185,9 @@
     const g = o.geometry;
     const H = g.head || HEAD.full;
     const ink = o.letterInk || '#6f6f6f';
-    const keyList = o.key.map((k, i) => k && Object.assign({ index: i }, k)).filter(Boolean);
+    // The key reads in letter order, whatever order the colors were found in.
+    const keyList = o.key.map((k, i) => k && Object.assign({ index: i }, k)).filter(Boolean)
+      .sort((a, b) => String(a.letter).localeCompare(String(b.letter), 'en', { numeric: true }));
     const parts = [];
     if (g.title && o.title) {
       const ty = r2(g.title.y + H.titleFont);
