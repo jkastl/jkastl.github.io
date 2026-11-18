@@ -13,10 +13,21 @@ leaves the computer.
 
 ## What it does
 
+Two formats:
+
+- **Full page**: one picture on an 8½ × 11 in page, 8 colors and the letters B D F G H V X Z,
+  like the full-size kits.
+- **4 minis per sheet**: four 4¼ × 5½ in pages on one Letter sheet with cut marks, like FlowArt
+  Mini pads: 5 colors, the letters F G H X Z, finer dots. Each mini can hold its own picture, or
+  use one picture on all four. A wide picture's mini is turned sideways so it fills its quarter.
+
+Then:
+
 1. **Picture.** Upload, drop, or paste a picture (or try one of the three painted samples), and
    drag on the thumbnail to crop. The picture gets cut down to a few flat, bold shapes, like a
    cartoon of it. **Detail** runs from a poster of a few big shapes to a busier page. **Colors** caps
-   the number of letters, and **Cartoon punch** pushes saturation and contrast first.
+   the number of letters, **Cartoon punch** pushes saturation and contrast first, and **Outlines**
+   draws eyes, noses and edges as a single row of dark dots, the way kit pages outline a pet.
 2. **Colors.** Either
    - **My markers**: tick the kits you own (17 FlowArt Dot-by-Letter kits are built in). The page
      uses the best few of their colors for this picture, or all of them. Click a color dot to drop
@@ -54,10 +65,15 @@ The page is built for a desktop and a basic USB printer:
 
 `simplify.js` turns the picture into a segmentation: a palette index and a region id per pixel.
 It area-averages the picture down to at most 480 px, converts to CIELAB, boosts chroma and contrast,
-flattens texture with an edge-preserving filter, and clusters colors with seeded k-means++. In
-marker mode it then maps clusters onto the owned markers, picking the best subset greedily with a
-swap pass. Majority filtering and merging of every region below the Detail threshold into its
-neighbor leave only flat, bold shapes.
+and flattens texture with an edge-preserving filter. A saliency map (how far each pixel is from
+the border colors, a center bias, edge density) marks the subject, so the subject gets most of the
+colors and keeps smaller details while the background is simplified harder. Colors are clustered
+with seeded k-means++. In marker mode the clusters are then mapped onto the owned markers. The
+picture's lightness range is first stretched onto the markers', and neighboring shapes that clearly
+differ are kept on different markers. Dark feature lines (a difference-of-Gaussians filter) are
+burned in with the darkest ink. Finally every region thinner than one dot, or smaller than the
+Detail threshold, is merged into a neighbor, which leaves only flat, bold shapes. The page tells it
+how big one dot is in picture pixels, so it never keeps a shape too thin to dot.
 
 `layout.js` places the letters in millimetres on the page. Each region gets an exact Euclidean
 distance transform. Rows of dots follow iso-lines of that distance, so they run parallel to the
