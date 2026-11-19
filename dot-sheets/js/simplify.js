@@ -8,9 +8,14 @@
  * dark cartoon outlines around features), featurePx (6: dot + gap in working pixels; nothing
  * thinner survives), paper (false: every area gets a marker; true: very light neutral areas stay
  * blank paper), pool ([{id, hex}] markers the user owns, or null to pick colors from the photo),
- * choose ('best' subset of at most `colors` | 'all'), seed (1).
+ * choose ('best' subset of at most `colors` | 'all'), seed (1), background ('keep' | 'simplify': the
+ * background in its two or three main colors, in big shapes | 'color': one flat color, bgHex or,
+ * if null, the closest to the background's own; it takes one of `colors` | 'remove': blank
+ * paper), bgHex, bgPoolId (the marker bgHex came from), bgHints ([{x, y in 0..1, fg}] clicks
+ * that move a part to the subject or the background).
  * seg: {width, height, index, region, regions: [{id, index, area}], palette: [{hex, rgb, lab, area,
- * paper, poolId}] (by area, paper last), preview: RGBA}.
+ * paper, poolId}] (by area, paper last), preview: RGBA, subject: Uint8Array, 1 = subject (only
+ * when background isn't 'keep' and a subject was found)}.
  *
  * Steps: area-average downscale -> Lab -> "boost" (levels, S-curve, chroma, local contrast) ->
  * iterated bilateral filter (flattens texture, keeps edges) -> saliency (not-background-colored,
@@ -19,7 +24,10 @@
  * keeping touching shapes apart) -> label smoothing (blurred one-hot argmax, round boundaries) ->
  * merge small regions (saliency- and contrast-aware) -> burn in outlines (difference of
  * Gaussians on lightness) -> morphological opening at featurePx (no slivers) -> merge again ->
- * connected regions + palette.
+ * connected regions + palette. With a background option, a subject mask (SLIC superpixels,
+ * boundary connectivity, learned subject colors; see subjectMask) is found after the filter: it
+ * steers sampling toward the subject, then the background is replaced, flattened or left blank,
+ * and a cut-out subject gets an outline of its own.
  *
  * Classic script: attaches to globalThis.DotSimplify, so the page, a Web Worker
  * (importScripts('color.js', 'simplify.js')) and Node (require) all load the same file.
@@ -463,6 +471,12 @@
         for (let p = 0; p < n; p++) minA[region[p]] += sal[p];
         for (let r = 0; r < R; r++) minA[r] = Math.max(thr.floor, thr.base * lerp(1.5, 0.25, minA[r] / area[r]));
       } else minA.fill(Math.max(thr.floor, thr.base));
+      if (thr.bg) {
+        // A simplified background only keeps big shapes.
+        const bgA = new Float64Array(R);
+        for (let p = 0; p < n; p++) if (thr.bg[p]) bgA[region[p]]++;
+        for (let r = 0; r < R; r++) if (bgA[r] > area[r] / 2) minA[r] *= thr.bgMul;
+      }
       const small = new Uint8Array(R);
       let ns = 0;
       for (let r = 0; r < R; r++) if (area[r] < (1 + LOWC) * minA[r]) { small[r] = 1; ns++; }
@@ -868,6 +882,364 @@
     return mask;
   }
 
+  /* ---------------------------------------------------------------- subject vs background */
+
+  // SLIC superpixels: about K compact, edge-hugging patches of similar color. Returns
+  // {label: Int32Array(n), N, mean: Float64Array(N*3) Lab, cx, cy (0..1), area, bnd: Float64Array(N*4)
+  // (pixels on the top, bottom, left, right edge), adj: [[{j, len}]] shared boundary lengths}.
+  function superpixels(lab, w, h, K) {
+    const n = w * h;
+    const S = Math.max(2, Math.round(Math.sqrt(n / K)));
+    const m = 10, inv = (m * m) / (S * S);
+    const cs = [];
+    for (let y = S >> 1; y < h; y += S) for (let x = S >> 1; x < w; x += S) {
+      // Nudge each seed off an edge: lowest gradient in its 3x3 neighborhood.
+      let bx = x, by = y, bg = Infinity;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 1 || yy < 1 || xx >= w - 1 || yy >= h - 1) continue;
+        const o = (yy * w + xx) * 3, ox = 3, oy = w * 3;
+        const g = Math.abs(lab[o + ox] - lab[o - ox]) + Math.abs(lab[o + oy] - lab[o - oy]);
+        if (g < bg) { bg = g; bx = xx; by = yy; }
+      }
+      const o = (by * w + bx) * 3;
+      cs.push(lab[o], lab[o + 1], lab[o + 2], bx, by);
+    }
+    const C = cs.length / 5, c = Float64Array.from(cs);
+    const label = new Int32Array(n).fill(-1), dist = new Float32Array(n);
+    const acc = new Float64Array(C * 5), cnt = new Float64Array(C);
+    for (let it = 0; it < 8; it++) {
+      dist.fill(Infinity);
+      for (let k = 0; k < C; k++) {
+        const L = c[k * 5], A = c[k * 5 + 1], B = c[k * 5 + 2], X = c[k * 5 + 3], Y = c[k * 5 + 4];
+        const x0 = Math.max(0, Math.floor(X - S)), x1 = Math.min(w - 1, Math.ceil(X + S));
+        const y0 = Math.max(0, Math.floor(Y - S)), y1 = Math.min(h - 1, Math.ceil(Y + S));
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          const p = y * w + x, o = p * 3;
+          const dL = lab[o] - L, da = lab[o + 1] - A, db = lab[o + 2] - B, dx = x - X, dy = y - Y;
+          const d = dL * dL + da * da + db * db + (dx * dx + dy * dy) * inv;
+          if (d < dist[p]) { dist[p] = d; label[p] = k; }
+        }
+      }
+      acc.fill(0); cnt.fill(0);
+      for (let p = 0; p < n; p++) {
+        const k = label[p]; if (k < 0) continue;
+        const o = p * 3;
+        acc[k * 5] += lab[o]; acc[k * 5 + 1] += lab[o + 1]; acc[k * 5 + 2] += lab[o + 2];
+        acc[k * 5 + 3] += p % w; acc[k * 5 + 4] += (p / w) | 0; cnt[k]++;
+      }
+      for (let k = 0; k < C; k++) if (cnt[k]) for (let t = 0; t < 5; t++) c[k * 5 + t] = acc[k * 5 + t] / cnt[k];
+    }
+    // Connectivity: every 4-connected piece becomes its own patch, then pieces smaller than a
+    // quarter of a patch join a neighbor.
+    for (let p = 0; p < n; p++) if (label[p] < 0) label[p] = 0;
+    const comp = new Int32Array(n).fill(-1), stack = new Int32Array(n), sizes = [];
+    let N = 0;
+    for (let s = 0; s < n; s++) {
+      if (comp[s] !== -1) continue;
+      const l = label[s];
+      let sp = 0, sz = 0;
+      stack[sp++] = s; comp[s] = N;
+      while (sp) {
+        const p = stack[--sp]; sz++;
+        const x = p % w;
+        if (x > 0 && comp[p - 1] === -1 && label[p - 1] === l) { comp[p - 1] = N; stack[sp++] = p - 1; }
+        if (x < w - 1 && comp[p + 1] === -1 && label[p + 1] === l) { comp[p + 1] = N; stack[sp++] = p + 1; }
+        if (p >= w && comp[p - w] === -1 && label[p - w] === l) { comp[p - w] = N; stack[sp++] = p - w; }
+        if (p + w < n && comp[p + w] === -1 && label[p + w] === l) { comp[p + w] = N; stack[sp++] = p + w; }
+      }
+      sizes.push(sz); N++;
+    }
+    const minSz = Math.max(1, (S * S) >> 2), to = new Int32Array(N);
+    for (let i = 0; i < N; i++) to[i] = i;
+    const findT = i => { while (to[i] !== i) i = to[i] = to[to[i]]; return i; };
+    for (let p = 0; p < n; p++) {
+      const a = findT(comp[p]);
+      if (sizes[a] >= minSz) continue;
+      const x = p % w;
+      const nb = x > 0 ? p - 1 : p >= w ? p - w : x < w - 1 ? p + 1 : p + w < n ? p + w : -1;
+      if (nb < 0) continue;
+      const b = findT(comp[nb]);
+      if (b !== a) { to[a] = b; sizes[b] += sizes[a]; }
+    }
+    const re = new Int32Array(N).fill(-1);
+    let M = 0;
+    for (let p = 0; p < n; p++) { const r = findT(comp[p]); if (re[r] < 0) re[r] = M++; label[p] = re[r]; }
+    const mean = new Float64Array(M * 3), cx = new Float64Array(M), cy = new Float64Array(M);
+    const area = new Float64Array(M), bnd = new Float64Array(M * 4);
+    const adjM = new Map();
+    for (let p = 0; p < n; p++) {
+      const k = label[p], o = p * 3, x = p % w, y = (p / w) | 0;
+      mean[k * 3] += lab[o]; mean[k * 3 + 1] += lab[o + 1]; mean[k * 3 + 2] += lab[o + 2];
+      cx[k] += (x + 0.5) / w; cy[k] += (y + 0.5) / h; area[k]++;
+      if (y === 0) bnd[k * 4]++;
+      if (y === h - 1) bnd[k * 4 + 1]++;
+      if (x === 0) bnd[k * 4 + 2]++;
+      if (x === w - 1) bnd[k * 4 + 3]++;
+      if (x < w - 1 && label[p + 1] !== k) { const q = label[p + 1], key = Math.min(k, q) * M + Math.max(k, q); adjM.set(key, (adjM.get(key) || 0) + 1); }
+      if (y < h - 1 && label[p + w] !== k) { const q = label[p + w], key = Math.min(k, q) * M + Math.max(k, q); adjM.set(key, (adjM.get(key) || 0) + 1); }
+    }
+    for (let k = 0; k < M; k++) {
+      mean[k * 3] /= area[k]; mean[k * 3 + 1] /= area[k]; mean[k * 3 + 2] /= area[k];
+      cx[k] /= area[k]; cy[k] /= area[k];
+    }
+    const adj = Array.from({ length: M }, () => []);
+    for (const [key, len] of adjM) {
+      const a = Math.floor(key / M), b = key - a * M;
+      adj[a].push({ j: b, len }); adj[b].push({ j: a, len });
+    }
+    return { label, N: M, mean, cx, cy, area, bnd, adj, S };
+  }
+
+  // Geodesic color distance between every pair of patches: the cheapest path through touching
+  // patches, each step costing their color difference. A background is one connected stretch
+  // of similar colors (cheap to cross), the subject sits behind a strong edge. Float32Array(N*N).
+  function geodesics(sp) {
+    const N = sp.N, mean = sp.mean, G = new Float32Array(N * N).fill(Infinity);
+    const wts = sp.adj.map((list, i) => list.map(({ j }) => {
+      const d = Math.hypot(mean[i * 3] - mean[j * 3], mean[i * 3 + 1] - mean[j * 3 + 1], mean[i * 3 + 2] - mean[j * 3 + 2]);
+      return Math.max(0, d - 2); // a little slack: smooth gradients (sky, a lit wall) cost nothing
+    }));
+    // Binary heap Dijkstra from every patch.
+    const heapK = new Float64Array(N * 16 + 16), heapV = new Int32Array(N * 16 + 16);
+    const dist = new Float64Array(N);
+    for (let s = 0; s < N; s++) {
+      const row = s * N;
+      dist.fill(Infinity);
+      let hs = 0;
+      const push = (k, v) => {
+        let i = hs++;
+        while (i > 0) { const pi = (i - 1) >> 1; if (heapK[pi] <= k) break; heapK[i] = heapK[pi]; heapV[i] = heapV[pi]; i = pi; }
+        heapK[i] = k; heapV[i] = v;
+      };
+      const pop = () => {
+        const k0 = heapK[0], v0 = heapV[0], k = heapK[--hs], v = heapV[hs];
+        let i = 0;
+        for (;;) {
+          let c = 2 * i + 1;
+          if (c >= hs) break;
+          if (c + 1 < hs && heapK[c + 1] < heapK[c]) c++;
+          if (heapK[c] >= k) break;
+          heapK[i] = heapK[c]; heapV[i] = heapV[c]; i = c;
+        }
+        heapK[i] = k; heapV[i] = v;
+        popped = k0; return v0;
+      };
+      let popped = 0;
+      dist[s] = 0; push(0, s);
+      while (hs) {
+        const u = pop(), du = popped;
+        if (du > dist[u]) continue;
+        const list = sp.adj[u], wl = wts[u];
+        for (let e = 0; e < list.length; e++) {
+          const v = list[e].j, nd = du + wl[e];
+          if (nd < dist[v]) { dist[v] = nd; if (hs < heapK.length) push(nd, v); }
+        }
+      }
+      G.set(dist, row);
+    }
+    return G;
+  }
+
+  /* Which pixels are the subject. Background patches are the ones well connected to the picture's
+   * border (boundary connectivity, after Zhu et al. 2014, "Saliency optimization from robust
+   * background detection"): a patch's geodesic "soft area" and how much of it lies on the border.
+   * The bottom edge counts for less, since pets and people are usually cut off there. Patches
+   * that stand out in color from nearby background are foreground cues; a smoothness term over
+   * touching patches spreads both, and the result is thresholded and cleaned up.
+   * hints: [{x, y (0..1), fg: bool}] clicks that force a patch, and every patch connected to it
+   * by similar colors (a magic wand), to subject or background. Later hints win.
+   * Returns {fg: Uint8Array(n) 1 = subject, sp, score: Float64Array(N)}. */
+  function subjectMask(lab, w, h, hints) {
+    const n = w * h;
+    const sp = superpixels(lab, w, h, clamp(Math.round(n / 300), 60, 600));
+    const N = sp.N, G = geodesics(sp), mean = sp.mean;
+    const unit = Math.max(w, h), sideLen = [w, w, h, h];
+    const dApp = (i, j) => Math.hypot(mean[i * 3] - mean[j * 3], mean[i * 3 + 1] - mean[j * 3 + 1], mean[i * 3 + 2] - mean[j * 3 + 2]);
+    // Each patch's share of the picture's border, in units of the longer side (so aspect doesn't
+    // matter). The bottom edge, and the lower parts of the sides, count for less: people and pets
+    // are usually cut off there.
+    const border = new Float64Array(N);
+    for (let j = 0; j < N; j++) {
+      const low = lerp(1, 0.45, clamp(sp.cy[j], 0, 1));
+      border[j] = sp.bnd[j * 4] * unit / sideLen[0] + 0.3 * sp.bnd[j * 4 + 1] * unit / sideLen[1]
+        + low * (sp.bnd[j * 4 + 2] * unit / sideLen[2] + sp.bnd[j * 4 + 3] * unit / sideLen[3]);
+    }
+    const centre = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const dx = sp.cx[i] - 0.5, dy = sp.cy[i] - 0.55;
+      centre[i] = Math.exp(-(dx * dx + dy * dy) / (2 * 0.3 * 0.3));
+    }
+    const sig = 10, inv2 = 1 / (2 * sig * sig);
+    // Background weight from boundary connectivity: border length in a patch's geodesic
+    // neighborhood over the square root of that neighborhood's area. seedW scales each patch's
+    // border share (border patches that look like the subject count less).
+    const bgFrom = (seedW) => {
+      const bgw = new Float64Array(N);
+      for (let i = 0; i < N; i++) {
+        let A = 0, Lb = 0;
+        const row = i * N;
+        for (let j = 0; j < N; j++) {
+          const g = G[row + j];
+          if (g > 4 * sig) continue;
+          const s = Math.exp(-g * g * inv2);
+          A += s * sp.area[j]; Lb += s * border[j] * seedW[j];
+        }
+        const bc = Lb / Math.sqrt(A);
+        bgw[i] = 1 - Math.exp(-bc * bc / 2);
+      }
+      return bgw;
+    };
+    // Foreground weight: color contrast against nearby background, with a centre bias.
+    const fgFrom = (bgw) => {
+      const fgw = new Float64Array(N);
+      let fmax = 0;
+      for (let i = 0; i < N; i++) {
+        let s = 0, ws = 0;
+        for (let j = 0; j < N; j++) {
+          if (j === i) continue;
+          const dx = sp.cx[i] - sp.cx[j], dy = sp.cy[i] - sp.cy[j];
+          const wsp = Math.exp(-(dx * dx + dy * dy) / (2 * 0.25 * 0.25)) * sp.area[j];
+          s += dApp(i, j) * wsp * bgw[j]; ws += wsp;
+        }
+        fgw[i] = ws ? s / ws : 0;
+        if (fgw[i] > fmax) fmax = fgw[i];
+      }
+      for (let i = 0; i < N; i++) fgw[i] = (fmax ? fgw[i] / fmax : 0) * (0.5 + 0.5 * centre[i]);
+      return fgw;
+    };
+    // Hints: magic-wand from the clicked patch.
+    const fixed = new Int8Array(N).fill(-1);
+    for (const hnt of hints || []) {
+      const x = clamp(Math.floor(hnt.x * w), 0, w - 1), y = clamp(Math.floor(hnt.y * h), 0, h - 1);
+      const k = sp.label[y * w + x], v = hnt.fg ? 1 : 0;
+      for (let j = 0; j < N; j++) if (G[k * N + j] <= 6) fixed[j] = v;
+    }
+    // Minimize sum bg*s^2 + fg*(s-1)^2 + sum_adj w*(s_i - s_j)^2 by Gauss-Seidel.
+    const aw = sp.adj.map((list, i) => list.map(({ j }) => { const d = dApp(i, j); return Math.exp(-d * d / 200) + 0.1; }));
+    const solve = (fgw, bgw) => {
+      const score = new Float64Array(N);
+      for (let i = 0; i < N; i++) score[i] = fixed[i] >= 0 ? fixed[i] : fgw[i] / (fgw[i] + bgw[i] + 1e-9);
+      for (let it = 0; it < 200; it++) {
+        let delta = 0;
+        for (let i = 0; i < N; i++) {
+          if (fixed[i] >= 0) continue;
+          let num = fgw[i], den = fgw[i] + bgw[i];
+          const list = sp.adj[i], wl = aw[i];
+          for (let e = 0; e < list.length; e++) { num += wl[e] * score[list[e].j]; den += wl[e]; }
+          const v = den > 0 ? num / den : 0;
+          delta = Math.max(delta, Math.abs(v - score[i]));
+          score[i] = v;
+        }
+        if (delta < 1e-4) break;
+      }
+      return score;
+    };
+    // Threshold: Otsu on the area-weighted scores, kept to a sane range.
+    const otsu = (score) => {
+      const bins = 64, hist = new Float64Array(bins);
+      let tot = 0, sumAll = 0;
+      for (let i = 0; i < N; i++) { const b = Math.min(bins - 1, Math.floor(score[i] * bins)); hist[b] += sp.area[i]; tot += sp.area[i]; sumAll += sp.area[i] * (b + 0.5); }
+      let wB = 0, sB = 0, bestT = 0.5, bestV = -1;
+      for (let b = 0; b < bins - 1; b++) {
+        wB += hist[b]; sB += hist[b] * (b + 0.5);
+        const wF = tot - wB;
+        if (!wB || !wF) continue;
+        const mB = sB / wB, mF = (sumAll - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+        if (v > bestV) { bestV = v; bestT = (b + 1) / bins; }
+      }
+      return clamp(bestT, 0.25, 0.6);
+    };
+    // Pass 1: border prior alone.
+    let bgw = bgFrom(new Float64Array(N).fill(1));
+    let fgw = fgFrom(bgw);
+    let score = solve(fgw, bgw), T = otsu(score);
+    // Pass 2: learn the subject's and the background's colors (kernel densities over patch colors,
+    // the subject's weighted toward the middle of the picture). A border patch colored like the
+    // subject (fur running off the edge) stops counting as border, and every patch's color
+    // likelihood joins its weights. Fixes subjects that fill the frame.
+    for (let pass = 0; pass < 2; pass++) {
+      const pf = new Float64Array(N);
+      for (let i = 0; i < N; i++) {
+        let F = 1e-6, B = 1e-6;
+        for (let j = 0; j < N; j++) {
+          const d = dApp(i, j);
+          if (d > 30) continue;
+          const k = Math.exp(-d * d / (2 * 8 * 8)) * sp.area[j];
+          const conf = fixed[j] >= 0 ? (fixed[j] ? 1 : -1) : (score[j] - T) / (score[j] >= T ? 1 - T : T);
+          if (conf > 0) F += k * conf * (0.3 + 0.7 * centre[j]);
+          else B += k * -conf * (1 - 0.5 * centre[j]);
+        }
+        pf[i] = F / (F + B);
+      }
+      const seedW = new Float64Array(N);
+      for (let i = 0; i < N; i++) seedW[i] = clamp(1.6 * (1 - pf[i]), 0.1, 1);
+      const bg2 = bgFrom(seedW), fg2 = fgFrom(bg2);
+      // Colors that are almost only found in the background (fence planks walled off by dark
+      // gaps) lean to background. Only that way: a subject color is never pushed out.
+      for (let i = 0; i < N; i++) bg2[i] += 0.8 * Math.max(0, 1 - 4 * pf[i]);
+      bgw = bg2; fgw = fg2;
+      score = solve(fgw, bgw); T = otsu(score);
+    }
+    const fg = new Uint8Array(n);
+    for (let p = 0; p < n; p++) { const k = sp.label[p]; fg[p] = fixed[k] >= 0 ? fixed[k] : score[k] >= T ? 1 : 0; }
+    cleanMask(fg, w, h, sp, fixed);
+    return { fg, sp, score };
+  }
+
+  // Drop stray subject islands and fill small holes in the subject (an eye that matched the
+  // wall), unless a hint asked for exactly that.
+  function cleanMask(fg, w, h, sp, fixed) {
+    const n = w * h, region = new Int32Array(n);
+    for (let pass = 0; pass < 2; pass++) {
+      const cc = components(fg, w, h, region);
+      let biggestFg = 0;
+      for (let r = 0; r < cc.count; r++) if (cc.rIdx[r] === 1 && cc.area[r] > biggestFg) biggestFg = cc.area[r];
+      const touches = new Uint8Array(cc.count), hinted = new Uint8Array(cc.count);
+      for (let p = 0; p < n; p++) {
+        const x = p % w;
+        if (x === 0 || x === w - 1 || p < w || p >= n - w) touches[region[p]] = 1;
+        const f = fixed[sp.label[p]];
+        if (f >= 0 && f === fg[p]) hinted[region[p]] = 1;
+      }
+      const flip = new Uint8Array(cc.count);
+      for (let r = 0; r < cc.count; r++) {
+        if (hinted[r]) continue;
+        if (pass === 0 && cc.rIdx[r] === 1) flip[r] = cc.area[r] < Math.max(0.004 * n, 0.08 * biggestFg) ? 1 : 0;
+        if (pass === 1 && cc.rIdx[r] === 0) flip[r] = !touches[r] && cc.area[r] < 0.012 * n ? 1 : 0;
+      }
+      for (let p = 0; p < n; p++) if (flip[region[p]]) fg[p] ^= 1;
+    }
+  }
+
+  // A simplified background: only its two or three main colors, in big smooth shapes. Other
+  // background pixels take the nearest kept color; then the labels are smoothed with a large
+  // radius, without letting the subject's colors spill outward.
+  function simplifyBackground(idx, w, h, K, lab, fg, r) {
+    const n = w * h, cnt = new Float64Array(K), mL = new Float64Array(K * 3);
+    let nb = 0;
+    for (let p = 0; p < n; p++) if (!fg[p]) { const c = idx[p]; cnt[c]++; nb++; mL[c * 3] += lab[p * 3]; mL[c * 3 + 1] += lab[p * 3 + 1]; mL[c * 3 + 2] += lab[p * 3 + 2]; }
+    if (!nb) return;
+    const order = [];
+    for (let c = 0; c < K; c++) if (cnt[c]) { order.push(c); for (let t = 0; t < 3; t++) mL[c * 3 + t] /= cnt[c]; }
+    order.sort((a, b) => cnt[b] - cnt[a]);
+    const keep = order.filter((c, i) => i === 0 || (i < 3 && cnt[c] >= 0.15 * nb));
+    for (let p = 0; p < n; p++) {
+      if (fg[p] || keep.includes(idx[p])) continue;
+      let best = keep[0], bd = Infinity;
+      for (const c of keep) {
+        const d = (lab[p * 3] - mL[c * 3]) ** 2 + (lab[p * 3 + 1] - mL[c * 3 + 1]) ** 2 + (lab[p * 3 + 2] - mL[c * 3 + 2]) ** 2;
+        if (d < bd) { bd = d; best = c; }
+      }
+      idx[p] = best;
+    }
+    if (K + 1 > 255) return;
+    const tmp = new Uint8Array(n);
+    for (let p = 0; p < n; p++) tmp[p] = fg[p] ? K : idx[p];
+    smoothLabels(tmp, w, h, K + 1, r, 2);
+    for (let p = 0; p < n; p++) if (!fg[p] && tmp[p] !== K) idx[p] = tmp[p];
+  }
+
   /* ---------------------------------------------------------------- main */
 
   // Base minimum region area (working-resolution pixels) at this detail level: ~0.25% of the
@@ -895,6 +1267,10 @@
     const pool = Array.isArray(opts.pool) && opts.pool.length ? opts.pool : null;
     const choose = opts.choose === 'all' ? 'all' : 'best';
     const seed = opts.seed == null ? 1 : opts.seed;
+    const BG_MODES = ['keep', 'simplify', 'color', 'remove'];
+    const bgMode = BG_MODES.includes(opts.background) ? opts.background : 'keep';
+    const bgHex = bgMode === 'color' && typeof opts.bgHex === 'string' && /^#[0-9a-f]{6}$/i.test(opts.bgHex) ? opts.bgHex.toLowerCase() : null;
+    const bgPoolId = bgHex && opts.bgPoolId != null ? opts.bgPoolId : null;
     const rand = DC.rng(seed);
 
     const ds = downscale(img, maxSide);
@@ -918,7 +1294,24 @@
     // 3. Quantize, sampling mostly the subject (salient, busy, skin).
     const sal = saliency(lab, w, h, rand);
     const weight = busyWeight(lab, w, h);
+    // Background handling: find the subject, and spend the colors on it.
+    let fg = null;
+    if (bgMode !== 'keep' && n > 16) {
+      fg = subjectMask(lab, w, h, Array.isArray(opts.bgHints) ? opts.bgHints : []).fg;
+      let nf = 0;
+      for (let p = 0; p < n; p++) nf += fg[p];
+      if (nf === 0 || nf === n) fg = null; // no subject found (or nothing else): keep it all
+    }
+    if (fg) {
+      const bgW = bgMode === 'simplify' ? 0.4 : 0.02;
+      for (let p = 0; p < n; p++) {
+        if (fg[p]) sal[p] = Math.max(sal[p], 0.6);
+        else { sal[p] *= 0.2; weight[p] *= bgW; }
+      }
+    }
     for (let p = 0; p < n; p++) weight[p] *= 0.25 + 1.5 * sal[p];
+    // A background in one color takes one of the colors.
+    const inkBudget = fg && bgMode === 'color' ? Math.max(1, colors - 1) : colors;
     const samples = sampleIndices(weight, n, 6000, rand);
     const m = samples.length;
     const samp = new Float64Array(m * 3);
@@ -956,14 +1349,14 @@
         for (let p = 0; p < n; p++) q.idx[p] = remap[q.idx[p]];
         return q;
       };
-      let q = quant(colors);
+      let q = quant(inkBudget);
       if (lines > 0) {
         // Outline color: reuse the darkest ink if it is dark enough, else give up one ink for it.
         let dk = -1;
         q.labs.forEach((l, i) => { if (!q.isPaper[i] && (dk < 0 || l[0] < q.labs[dk][0])) dk = i; });
         if (dk >= 0 && q.labs[dk][0] < 28) lineIdx = dk;
         else {
-          q = quant(colors - 1);
+          q = quant(Math.max(1, inkBudget - 1));
           let d2 = -1;
           q.labs.forEach((l, i) => { if (!q.isPaper[i] && (d2 < 0 || l[0] < q.labs[d2][0])) d2 = i; });
           const tint = d2 >= 0 ? q.labs[d2] : [0, 0, 0];
@@ -987,16 +1380,16 @@
         fit(samp[i * 3], samp[i * 3 + 1], samp[i * 3 + 2], tl);
         fsamp[i * 3] = tl[0]; fsamp[i * 3 + 1] = tl[1]; fsamp[i * 3 + 2] = tl[2];
       }
-      const selIdx = choosePool(cand, fsamp, m, colors, choose, darkest);
+      const selIdx = choosePool(cand, fsamp, m, inkBudget, choose, darkest);
       // Cluster first (about 2x colors), then map cluster centers to markers: starting from the
       // chosen subset, a cluster may move to any pool marker while the ink budget allows, when
       // that keeps it apart from a touching, clearly different cluster.
-      const km = kmeans(samp, m, clamp(colors * 2, 6, 24), rand);
+      const km = kmeans(samp, m, clamp(inkBudget * 2, 6, 24), rand);
       idx = assignNearest(lab, n, km.centers, km.k);
       const fc = [];
       for (let c = 0; c < km.k; c++) fc.push(fit(km.centers[c * 3], km.centers[c * 3 + 1], km.centers[c * 3 + 2], [0, 0, 0]));
       const cmap = mapClusters(idx, w, h, km.centers, km.k, fc, cand,
-        { init: selIdx, budget: choose === 'all' ? Infinity : colors, forced: darkest, sal });
+        { init: selIdx, budget: choose === 'all' ? Infinity : inkBudget, forced: darkest, sal });
       const usedC = new Set(cmap);
       if (darkest >= 0) usedC.add(darkest);
       const selC = Array.from(usedC).sort((a, b) => a - b);
@@ -1007,11 +1400,49 @@
       labs = sel.map(c => c.lab); isPaper = sel.map(c => c.paper); poolIds = sel.map(c => c.id);
       poolHex = sel.map(c => c.hex);
     }
+    // Background: blank paper, one color, or the picture's own colors, flattened.
+    let bgIdx = -1, bgFixedHex = null;
+    if (fg && (bgMode === 'remove' || bgMode === 'color')) {
+      let L0 = 0, a0 = 0, b0 = 0, nb = 0;
+      for (let p = 0; p < n; p++) if (!fg[p]) { L0 += lab[p * 3]; a0 += lab[p * 3 + 1]; b0 += lab[p * 3 + 2]; nb++; }
+      let want; // {lab, hex, paper, poolId}
+      if (bgMode === 'remove') want = { lab: PAPER_LAB.slice(), hex: PAPER_HEX, paper: true, poolId: null };
+      else if (bgHex) want = { lab: DC.hexToLab(bgHex), hex: bgHex, paper: false, poolId: bgPoolId };
+      else {
+        const avg = [L0 / nb, a0 / nb, b0 / nb];
+        if (pool) {
+          // The owned marker closest to the background's average color.
+          let best = null, bd = Infinity;
+          for (const pc of pool) {
+            const hx = DC.rgbToHex(DC.hexToRgb(pc.hex)), ql = DC.hexToLab(hx);
+            const d = markerDist2(avg[0], avg[1], avg[2], ql[0], ql[1], ql[2]);
+            if (d < bd) { bd = d; best = { lab: ql, hex: hx, paper: false, poolId: pc.id == null ? null : pc.id }; }
+          }
+          want = best;
+        } else {
+          const hx = DC.labToHex(avg);
+          want = { lab: DC.hexToLab(hx), hex: hx, paper: false, poolId: null };
+        }
+      }
+      // Reuse an entry that is already that color (one letter per marker), else add one.
+      for (let c = 0; c < labs.length && bgIdx < 0; c++) {
+        if (want.paper ? isPaper[c] : !isPaper[c] && c !== lineIdx && (pool ? poolIds[c] === want.poolId && poolHex[c] === want.hex : false)) bgIdx = c;
+      }
+      if (bgIdx < 0) {
+        bgIdx = labs.length;
+        labs.push(want.lab); isPaper.push(want.paper); poolIds.push(want.poolId);
+        if (poolHex) poolHex.push(want.hex);
+      }
+      if (!want.paper) bgFixedHex = want.hex;
+      for (let p = 0; p < n; p++) if (!fg[p]) idx[p] = bgIdx;
+    }
     const K = labs.length;
+    if (fg && bgMode === 'simplify') simplifyBackground(idx, w, h, K, lab, fg, Math.max(3, Math.round(lerp(8, 4, detail) * sizeK)));
 
     // 4. Clean up: round boundaries, absorb small regions, draw outlines, open away slivers
     //    thinner than a dot, absorb small regions again.
     const thr = { sal, base: baseRegionArea(w, h, detail), floor: minRegionArea(w, h, detail, fp) };
+    if (fg && bgMode === 'simplify') { thr.bg = fg.map(v => 1 - v); thr.bgMul = 6; }
     const sr = Math.max(1, Math.round(lerp(3, 1, detail) * sizeK));
     const region = new Int32Array(n);
     smoothLabels(idx, w, h, K, sr, 2);
@@ -1019,6 +1450,17 @@
     let lmask = null;
     if (lines > 0 && lineIdx >= 0 && n > 4) {
       lmask = lineMask(lab, w, h, fp, lines, sal);
+      if (fg) {
+        // No outlines in the background, and around a cut-out subject a dark outline of its own.
+        const d = new Float32Array(n);
+        for (let p = 0; p < n; p++) d[p] = fg[p] ? Infinity : 0;
+        chamfer(d, w, h);
+        const cut = bgMode === 'remove' || bgMode === 'color', band = Math.max(1.5, fp * 0.95);
+        for (let p = 0; p < n; p++) {
+          if (!fg[p]) lmask[p] = 0;
+          else if (cut && d[p] <= band) lmask[p] = 1;
+        }
+      }
       for (let p = 0; p < n; p++) if (lmask[p]) idx[p] = lineIdx;
     }
     // If nothing in the picture is that wide (a tiny image), open with what fits.
@@ -1044,6 +1486,7 @@
       if (isPaper[c]) hex = PAPER_HEX;
       else if (pool) hex = poolHex[c];
       else if (c === lineIdx) hex = DC.labToHex(labs[c]); // outline color: as chosen, not averaged
+      else if (c === bgIdx && bgFixedHex) hex = bgFixedHex; // background color: as chosen
       else hex = DC.labToHex([sL[c] / sW[c], sa[c] / sW[c], sb[c] / sW[c]]);
       const rgb = DC.hexToRgb(hex);
       return { hex, rgb, lab: DC.rgbToLab(rgb[0], rgb[1], rgb[2]), area: area[c], paper: !!isPaper[c], poolId: pool && !isPaper[c] ? poolIds[c] : null };
@@ -1058,10 +1501,12 @@
       const rgb = palette[idx[p]].rgb, o = p * 4;
       preview[o] = rgb[0]; preview[o + 1] = rgb[1]; preview[o + 2] = rgb[2]; preview[o + 3] = 255;
     }
-    return { width: w, height: h, index: idx, region, regions, palette, preview };
+    const out = { width: w, height: h, index: idx, region, regions, palette, preview };
+    if (fg) out.subject = fg;
+    return out;
   }
 
-  Object.assign(S, { simplify, minRegionArea, markerDist2 });
+  Object.assign(S, { simplify, minRegionArea, markerDist2, subjectMask });
 })(typeof globalThis.DotSimplify === 'object' ? globalThis.DotSimplify : (globalThis.DotSimplify = {}));
 
 if (typeof module === 'object' && module.exports) module.exports = globalThis.DotSimplify;

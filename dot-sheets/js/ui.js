@@ -20,7 +20,7 @@
     format: 'full',
     full: { colors: 8, dotSize: 'medium', letters: 'flowart' },
     mini: { colors: 5, dotSize: 'fine', letters: 'mini' },
-    detail: 35, boost: 45, lines: 50, paper: false,
+    detail: 35, boost: 45, lines: 50, paper: false, background: 'keep', bgColor: 'auto',
     source: 'markers', choose: 'best',
     mode: 'dots', paperSize: 'letter', orientation: 'auto',
     printer: 'mono', ink: '#3c3c3c', margin: '12.7', title: '', guides: false, rings: false, footer: true,
@@ -99,7 +99,8 @@
 
   // ---------- slots ----------
   const LEVEL = { render: 1, layout: 2, edits: 3, simplify: 4 };
-  const newSlot = () => ({ src: null, crop: null, name: '', edits: {}, seg: null, segE: null, lay: null, geo: null, dirty: 0 });
+  // hints: clicks on the simplified picture that move a part to the subject or the background.
+  const newSlot = () => ({ src: null, crop: null, name: '', edits: {}, hints: [], seg: null, segE: null, lay: null, geo: null, dirty: 0 });
   const slots = [newSlot(), newSlot(), newSlot(), newSlot()];
   let active = 0;
   const cur = () => slots[active];
@@ -173,6 +174,7 @@
     }
     const n = pool().length;
     $('sets-count').textContent = `· ${S.owned.length} kit${S.owned.length === 1 ? '' : 's'}, ${n} color${n === 1 ? '' : 's'}`;
+    if (S.background === 'color') renderBgColors();
     renderCustom();
   }
 
@@ -266,8 +268,9 @@
       srcCv.getContext('2d').drawImage(sl.src, 0, 0, srcCv.width, srcCv.height);
       showCrop();
     }
-    if (sl.segE) { drawFlat(sl); renderKeyEditor(); }
+    if (sl.segE) { drawFlat(sl, flatCv.matches(':hover') && S.background !== 'keep'); renderKeyEditor(); }
     else { const f = $('flat-canvas'); f.width = 1; f.height = 1; }
+    syncBgNote();
     renderSlotBar();
   }
   function showCrop() {
@@ -307,9 +310,9 @@
     const sl = cur();
     if (sl.crop && (sl.crop.w < sl.src.width * 0.05 || sl.crop.h < sl.src.height * 0.05)) sl.crop = null;
     showCrop();
-    if (JSON.stringify(sl.crop) !== cropBefore) changed('simplify', 0, [active]); // a plain click changes nothing
+    if (JSON.stringify(sl.crop) !== cropBefore) { sl.hints = []; changed('simplify', 0, [active]); } // a plain click changes nothing
   });
-  $('crop-reset').addEventListener('click', () => { cur().crop = null; showCrop(); changed('simplify', 0, [active]); });
+  $('crop-reset').addEventListener('click', () => { cur().crop = null; cur().hints = []; showCrop(); changed('simplify', 0, [active]); });
 
   function srcPixels(sl) {
     const c = sl.crop || { x: 0, y: 0, w: sl.src.width, h: sl.src.height };
@@ -355,7 +358,7 @@
     const targets = [];
     slots.forEach((sl, i) => {
       if (sl === from) return;
-      Object.assign(sl, newSlot(), { src: from.src, crop: from.crop && Object.assign({}, from.crop), name: from.name, edits: JSON.parse(JSON.stringify(from.edits)) });
+      Object.assign(sl, newSlot(), { src: from.src, crop: from.crop && Object.assign({}, from.crop), name: from.name, edits: JSON.parse(JSON.stringify(from.edits)), hints: from.hints.map(h => Object.assign({}, h)) });
       targets.push(i);
     });
     renderSlotBar();
@@ -435,17 +438,92 @@
   }
   bindSeg('format', 'format', 'simplify', onFormat);
   bindSeg('source', 'source', 'simplify', syncSource);
+  bindSeg('background', 'background', 'simplify', syncBackground);
   bindSeg('choose', 'choose', 'simplify');
   bindSeg('mode', 'mode', 'layout', syncMode);
   bindSeg('view', 'view', 'render');
 
   function syncSource() {
     const m = S.source === 'markers';
+    if (S.background === 'color') renderBgColors();
     $('markers-ui').hidden = !m;
     $('source-note').textContent = m
       ? 'Tick the kits you have. The page uses the best of their colors for this picture.'
       : 'Uses whatever colors suit the picture. The key suggests your closest marker for each.';
   }
+  // ---------- background ----------
+  // S.bgColor: 'auto' (from the picture), 'm:<marker id>', or a '#rrggbb' of the user's choosing.
+  function renderBgColors() {
+    const sel = $('bg-color'), markers = pool();
+    sel.textContent = '';
+    const opt = (v, t, parent) => { const o = document.createElement('option'); o.value = v; o.textContent = t; (parent || sel).append(o); return o; };
+    opt('auto', S.source === 'markers' ? 'Auto: my marker closest to it' : 'Auto: from the picture');
+    if (markers.length) {
+      const g = document.createElement('optgroup'); g.label = 'My markers';
+      markers.forEach(m => opt('m:' + m.id, `${m.name} · ${m.set}`, g));
+      sel.append(g);
+    }
+    opt('custom', 'Any color…');
+    const v = S.bgColor;
+    sel.value = v.startsWith('#') ? 'custom' : v;
+    if (sel.value !== (v.startsWith('#') ? 'custom' : v)) sel.value = 'auto'; // a marker no longer owned
+    $('bg-custom').hidden = sel.value !== 'custom';
+    if (v.startsWith('#')) $('bg-custom').value = v;
+  }
+  $('bg-color').addEventListener('change', () => {
+    const v = $('bg-color').value;
+    S.bgColor = v === 'custom' ? $('bg-custom').value : v;
+    $('bg-custom').hidden = v !== 'custom';
+    changed('simplify');
+  });
+  $('bg-custom').addEventListener('change', () => { S.bgColor = $('bg-custom').value; changed('simplify'); });
+  function bgOpts() {
+    const o = { background: S.background, bgHex: null, bgPoolId: null };
+    if (S.background !== 'color') return o;
+    if (S.bgColor.startsWith('#')) o.bgHex = S.bgColor;
+    else if (S.bgColor.startsWith('m:')) {
+      const m = pool().find(x => x.id === S.bgColor.slice(2));
+      if (m) { o.bgHex = m.hex; o.bgPoolId = m.id; }
+    }
+    return o;
+  }
+  function syncBackground() {
+    const on = S.background !== 'keep';
+    $('bg-color-row').hidden = S.background !== 'color';
+    if (S.background === 'color') renderBgColors();
+    $('flat-canvas').classList.toggle('pickable', on);
+    syncBgNote();
+  }
+  function syncBgNote() {
+    const sl = cur(), on = S.background !== 'keep', note = $('bg-note');
+    note.hidden = !on;
+    $('hints-reset').hidden = !on || !sl.hints.length;
+    if (!on) return;
+    note.textContent = sl.seg && !sl.seg.subject
+      ? 'Couldn’t tell the subject from the background in this picture. Try cropping closer to it.'
+      : 'Wrong part? Click the simplified picture to move a part between subject and background. Hover it to see which is which.';
+  }
+
+  // Clicks on the simplified picture: subject <-> background, applied to that part and every
+  // similar-colored part it touches.
+  const flatCv = $('flat-canvas');
+  flatCv.addEventListener('click', e => {
+    const sl = cur();
+    if (S.background === 'keep' || !sl.seg || !sl.seg.subject) return;
+    const r = flatCv.getBoundingClientRect();
+    const x = Math.max(0, Math.min(0.9999, (e.clientX - r.left) / r.width));
+    const y = Math.max(0, Math.min(0.9999, (e.clientY - r.top) / r.height));
+    const w = sl.seg.width, h = sl.seg.height;
+    const isSubject = sl.seg.subject[Math.floor(y * h) * w + Math.floor(x * w)] === 1;
+    // A new click near an old one replaces it.
+    sl.hints = sl.hints.filter(hn => Math.hypot(hn.x - x, hn.y - y) > 0.03);
+    sl.hints.push({ x, y, fg: !isSubject });
+    changed('simplify', 0, [active]);
+  });
+  flatCv.addEventListener('mouseenter', () => { const sl = cur(); if (sl.segE && S.background !== 'keep') drawFlat(sl, true); });
+  flatCv.addEventListener('mouseleave', () => { const sl = cur(); if (sl.segE) drawFlat(sl, false); });
+  $('hints-reset').addEventListener('click', () => { cur().hints = []; changed('simplify', 0, [active]); });
+
   function syncMode() {
     const d = S.mode === 'dots';
     document.querySelectorAll('[data-for="dots"]').forEach(el => { el.hidden = !d; });
@@ -474,6 +552,7 @@
   }
   controls.forEach(c => c.sync());
   syncSource();
+  syncBackground();
   syncMode();
   syncFormat();
 
@@ -539,6 +618,7 @@
           lines: S.lines / 100, featurePx: featurePx(sl, i),
           paper: S.paper, pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
           choose: S.choose, seed: 7,
+          ...bgOpts(), bgHints: sl.hints,
         },
       });
       if (my !== gen) return false;
@@ -606,10 +686,20 @@
   }
   const inkCount = sl => sl.segE.palette.filter(p => !p.paper).length;
 
-  function drawFlat(sl) {
-    const cv = $('flat-canvas');
-    cv.width = sl.segE.width; cv.height = sl.segE.height;
-    cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(sl.segE.preview), sl.segE.width, sl.segE.height), 0, 0);
+  // showMask: dim and stripe the background, so it's clear what a click will move.
+  function drawFlat(sl, showMask) {
+    const cv = $('flat-canvas'), w = sl.segE.width, h = sl.segE.height;
+    cv.width = w; cv.height = h;
+    const px = new Uint8ClampedArray(sl.segE.preview);
+    const m = showMask && sl.seg && sl.seg.subject;
+    if (m) {
+      for (let p = 0; p < w * h; p++) {
+        if (m[p]) continue;
+        const stripe = ((p % w) + ((p / w) | 0)) % 8 < 4, o = p * 4;
+        for (let t = 0; t < 3; t++) px[o + t] = px[o + t] * 0.3 + (stripe ? 40 : 90);
+      }
+    }
+    cv.getContext('2d').putImageData(new ImageData(px, w, h), 0, 0);
   }
   function flatDataUrl(sl) {
     const cv = document.createElement('canvas');

@@ -72,7 +72,7 @@
           </figure>
           <figure>
             <canvas id="flat-canvas" aria-label="The simplified picture"></canvas>
-            <figcaption>Simplified</figcaption>
+            <figcaption>Simplified <button type="button" class="linkish" id="hints-reset" hidden>undo clicks</button></figcaption>
           </figure>
         </div>
         <div class="ctls one">
@@ -84,6 +84,21 @@
             <input type="range" id="boost" min="0" max="100" value="45"></label>
           <label class="ctl">Outlines <output id="lines-out"></output>
             <input type="range" id="lines" min="0" max="100" value="50"></label>
+        </div>
+        <div class="bg-ctl">
+          <span class="lbl" id="bg-h">Background</span>
+          <div class="seg" role="group" aria-labelledby="bg-h" id="background">
+            <button type="button" data-v="keep" aria-pressed="true">Keep</button>
+            <button type="button" data-v="simplify" aria-pressed="false">Simplify</button>
+            <button type="button" data-v="color" aria-pressed="false">One color</button>
+            <button type="button" data-v="remove" aria-pressed="false">Remove</button>
+          </div>
+          <div class="controls bg-color-row" id="bg-color-row" hidden>
+            <label class="lbl" for="bg-color">Color</label>
+            <select id="bg-color"></select>
+            <input type="color" id="bg-custom" value="#95daf4" aria-label="Background color" hidden>
+          </div>
+          <p class="lbl bg-note" id="bg-note" hidden></p>
         </div>
         <label class="check"><input type="checkbox" id="blank-white"> Leave white areas blank (no dots)</label>
       </section>
@@ -231,7 +246,7 @@
       </div>
       <div>
         <h3>From photo to cartoon</h3>
-        <p>The picture is shrunk, its colors are pushed a little brighter, and an edge-preserving filter flattens texture while keeping outlines. The subject gets most of the colors and keeps its small details, and the background is simplified harder. Eyes, noses and edges become a row of dark dots, like the outline of a pet on a kit page. Anything thinner than one dot is merged away, which leaves a handful of flat, bold shapes.</p>
+        <p>The picture is shrunk, its colors are pushed a little brighter, and an edge-preserving filter flattens texture while keeping outlines. The subject gets most of the colors and keeps its small details, and the background is simplified harder. Eyes, noses and edges become a row of dark dots, like the outline of a pet on a kit page. Anything thinner than one dot is merged away, which leaves a handful of flat, bold shapes. A messy background can be simplified, filled with one color, or left blank: the subject is found automatically, and a click on the simplified picture fixes a wrong guess.</p>
       </div>
       <div>
         <h3>Your markers or the picture's</h3>
@@ -253,7 +268,7 @@
   </section>
 
   <footer class="site">
-    Dot Sheets is not made by or affiliated with Lifelines. FlowArt is their trademark. · v1.0.0 · 2026-11-18 · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/dot-sheets">Source</a>
+    Dot Sheets is not made by or affiliated with Lifelines. FlowArt is their trademark. · v1.1.0 · 2026-11-19 · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/dot-sheets">Source</a>
   </footer>
 
   <div id="print-root" aria-hidden="true"></div>

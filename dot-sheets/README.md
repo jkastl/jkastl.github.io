@@ -28,6 +28,12 @@ Then:
    cartoon of it. **Detail** runs from a poster of a few big shapes to a busier page. **Colors** caps
    the number of letters, **Cartoon punch** pushes saturation and contrast first, and **Outlines**
    draws eyes, noses and edges as a single row of dark dots, the way kit pages outline a pet.
+   **Background** handles a messy backdrop (a fence, leaves, a cluttered room): **Keep** it,
+   **Simplify** it to its two or three main colors in big shapes, fill it with **One color** (your
+   marker closest to it, any marker you own, or any color), or **Remove** it so it stays blank
+   paper and the subject gets an outline of its own. The subject is found automatically. If it
+   guesses wrong, click the simplified thumbnail to move that part (and everything like it that
+   it touches) between subject and background. Hover the thumbnail to see which is which.
 2. **Colors.** Either
    - **My markers**: tick the kits you own: 17 full-size FlowArt Dot-by-Letter kits and 6 Mini
      Express pads (Snow Day, In Full Bloom, Paws and Purrs, Cozy Comforts, Nature Walk, Merry
@@ -77,7 +83,19 @@ with seeded k-means++. In marker mode the clusters are then mapped onto the owne
 picture's lightness range is first stretched onto the markers', and neighboring shapes that clearly
 differ are kept on different markers. Dark feature lines (a difference-of-Gaussians filter) are
 burned in with the darkest ink. Finally every region thinner than one dot, or smaller than the
-Detail threshold, is merged into a neighbor, which leaves only flat, bold shapes. The page tells it
+Detail threshold, is merged into a neighbor, which leaves only flat, bold shapes.
+
+The **Background** option first finds the subject. The filtered picture is cut into a few hundred
+SLIC superpixels, and each one gets a background score from *boundary connectivity* (Zhu et al.,
+2014): how much of the picture's border lies in its neighborhood of similar, connected colors,
+over the square root of that neighborhood's area. A background is one big connected stretch that
+runs along the border. The bottom edge and the lower sides count for less, since pets and
+people are usually cut off there. Color contrast against nearby background is the foreground
+score, and a smoothness term over touching superpixels spreads both. A second pass learns the
+subject's colors from the middle of the picture. Border patches that look like the subject (fur
+running off the edge) then stop counting as border, and colors found almost only in the
+background (planks walled off by dark gaps) lean toward background. Clicks on the thumbnail pin
+a superpixel, and every superpixel connected to it by similar colors, to subject or background. The page tells it
 how big one dot is in picture pixels, so it never keeps a shape too thin to dot.
 
 `layout.js` places the letters in millimetres on the page. Each region gets an exact Euclidean

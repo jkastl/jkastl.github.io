@@ -340,3 +340,99 @@ test('simplify: pool mode keeps a white muzzle apart from a pale teal background
     assert.ok(seg.palette.filter(c => !c.paper).length <= colors);
   }
 });
+
+// ---- background ---------------------------------------------------------------------------------
+
+// A pale, furry "dog" that runs off the bottom of the frame, in front of a wooden fence with a pile
+// of orange leaves on each side: a messy background that touches three edges.
+function petScene(w = 240, h = 240, seed = 11) {
+  const rand = DC.rng(seed);
+  return makeImg(w, h, (x, y) => {
+    const u = x / w, v = y / h, nz = (rand() - 0.5) * 30;
+    let c = (x % 30) < 3 ? [70, 40, 25] : [150 + 20 * Math.sin(y / 7), 95, 60]; // planks and gaps
+    if (v > 0.55 && rand() < 0.6) c = rand() < 0.5 ? [225, 130, 50] : [180, 80, 35]; // leaves
+    const dx = (u - 0.5) / 0.36, dy = (v - 0.72) / 0.6;
+    if (dx * dx + dy * dy < 1) {
+      c = [238, 236, 232];
+      if (Math.abs(u - 0.5) > 0.22 && v < 0.45) c = [95, 100, 110]; // dark ear patches
+      if (Math.min(Math.hypot(u - 0.42, v - 0.4), Math.hypot(u - 0.58, v - 0.4)) < 0.025) c = [35, 30, 30];
+      if (Math.hypot(u - 0.5, v - 0.52) < 0.035) c = [25, 20, 20]; // nose
+    }
+    return [c[0] + nz, c[1] + nz, c[2] + nz];
+  });
+}
+
+test('subjectMask: finds a subject that runs off the bottom, in front of a busy background', () => {
+  const img = petScene();
+  const seg = DS.simplify(img, { background: 'remove', lines: 0, featurePx: 4 });
+  const m = seg.subject, w = seg.width, h = seg.height;
+  assert.ok(m instanceof Uint8Array && m.length === w * h);
+  const at = (u, v) => m[Math.floor(v * h) * w + Math.floor(u * w)];
+  // Inside the subject (including the bottom edge it runs off) vs. fence and leaves.
+  for (const [u, v] of [[0.5, 0.3], [0.5, 0.7], [0.5, 0.98], [0.35, 0.6], [0.62, 0.45]]) assert.equal(at(u, v), 1, `subject at ${u},${v}`);
+  for (const [u, v] of [[0.05, 0.05], [0.95, 0.1], [0.5, 0.04], [0.04, 0.8], [0.96, 0.85]]) assert.equal(at(u, v), 0, `background at ${u},${v}`);
+});
+
+test('simplify: background "remove" leaves the background as blank paper', () => {
+  const img = petScene();
+  for (const pool of [null, POOL]) {
+    const seg = DS.simplify(img, { background: 'remove', pool, featurePx: 4 });
+    checkSeg(seg);
+    const paper = seg.palette.findIndex(c => c.paper);
+    assert.ok(paper >= 0, 'has paper');
+    const at = (u, v) => seg.index[Math.floor(v * seg.height) * seg.width + Math.floor(u * seg.width)];
+    assert.equal(at(0.05, 0.05), paper);
+    assert.equal(at(0.95, 0.9), paper);
+    assert.notEqual(at(0.5, 0.7), paper, 'the subject still gets dots');
+    assert.ok(seg.palette.filter(c => !c.paper).length <= 8, 'paper is free: the subject keeps every color');
+  }
+});
+
+test('simplify: background "color" fills it with the chosen color, and that color counts', () => {
+  const img = petScene();
+  for (const [pool, hex, id] of [[null, '#3fa7d6', null], [POOL, POOL[1].hex, POOL[1].id]]) {
+    const seg = DS.simplify(img, { background: 'color', bgHex: hex, bgPoolId: id, pool, colors: 6, featurePx: 4 });
+    checkSeg(seg);
+    const c = seg.palette[seg.index[3 * seg.width + 3]];
+    assert.equal(c.hex, hex);
+    if (pool) assert.equal(c.poolId, id);
+    assert.ok(seg.palette.filter(p => !p.paper).length <= 6, 'within the color budget');
+  }
+  // Auto: a pool marker near the background's own color.
+  const auto = DS.simplify(img, { background: 'color', pool: POOL, featurePx: 4 });
+  const bg = auto.palette[auto.index[3 * auto.width + 3]];
+  assert.ok(bg.poolId, 'auto picks an owned marker');
+});
+
+test('simplify: background "simplify" flattens the background into a few big shapes', () => {
+  const img = petScene();
+  const count = (seg) => {
+    const ids = new Set();
+    for (let p = 0; p < seg.index.length; p++) if (!seg.subject || !seg.subject[p]) ids.add(seg.region[p]);
+    return ids.size;
+  };
+  const keep = DS.simplify(img, { background: 'keep', featurePx: 4, detail: 0.6 });
+  const simp = DS.simplify(img, { background: 'simplify', featurePx: 4, detail: 0.6 });
+  checkSeg(simp);
+  assert.equal(keep.subject, undefined, 'keep does no subject detection');
+  assert.ok(count(simp) * 2 <= count(keep), `background regions ${count(simp)} vs ${count(keep)}`);
+});
+
+test('simplify: "keep" is the same as no background option', () => {
+  const img = scene();
+  const a = DS.simplify(img, { pool: POOL }), b = DS.simplify(img, { pool: POOL, background: 'keep' });
+  assert.deepEqual(a.index, b.index);
+  assert.deepEqual(a.palette, b.palette);
+});
+
+test('simplify: a click hint moves a part between subject and background', () => {
+  const img = petScene();
+  const base = DS.simplify(img, { background: 'remove', featurePx: 4 });
+  const w = base.width, h = base.height, at = (s, u, v) => s.subject[Math.floor(v * h) * w + Math.floor(u * w)];
+  assert.equal(at(base, 0.5, 0.06), 0);
+  const fixFg = DS.simplify(img, { background: 'remove', featurePx: 4, bgHints: [{ x: 0.5, y: 0.06, fg: true }] });
+  assert.equal(at(fixFg, 0.5, 0.06), 1, 'clicked background became subject');
+  const fixBg = DS.simplify(img, { background: 'remove', featurePx: 4, bgHints: [{ x: 0.5, y: 0.7, fg: false }] });
+  assert.equal(at(fixBg, 0.5, 0.7), 0, 'clicked subject became background');
+  checkSeg(fixBg);
+});
