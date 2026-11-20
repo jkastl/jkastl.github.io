@@ -340,3 +340,191 @@ test('simplify: pool mode keeps a white muzzle apart from a pale teal background
     assert.ok(seg.palette.filter(c => !c.paper).length <= colors);
   }
 });
+
+// ---- background ---------------------------------------------------------------------------------
+
+// A pale, furry "dog" that runs off the bottom of the frame, in front of a wooden fence with a pile
+// of orange leaves on each side: a messy background that touches three edges.
+function petScene(w = 240, h = 240, seed = 11) {
+  const rand = DC.rng(seed);
+  return makeImg(w, h, (x, y) => {
+    const u = x / w, v = y / h, nz = (rand() - 0.5) * 30;
+    let c = (x % 30) < 3 ? [70, 40, 25] : [150 + 20 * Math.sin(y / 7), 95, 60]; // planks and gaps
+    if (v > 0.55 && rand() < 0.6) c = rand() < 0.5 ? [225, 130, 50] : [180, 80, 35]; // leaves
+    const dx = (u - 0.5) / 0.36, dy = (v - 0.72) / 0.6;
+    if (dx * dx + dy * dy < 1) {
+      c = [238, 236, 232];
+      if (Math.abs(u - 0.5) > 0.22 && v < 0.45) c = [95, 100, 110]; // dark ear patches
+      if (Math.min(Math.hypot(u - 0.42, v - 0.4), Math.hypot(u - 0.58, v - 0.4)) < 0.025) c = [35, 30, 30];
+      if (Math.hypot(u - 0.5, v - 0.52) < 0.035) c = [25, 20, 20]; // nose
+    }
+    return [c[0] + nz, c[1] + nz, c[2] + nz];
+  });
+}
+
+test('subjectMask: finds a subject that runs off the bottom, in front of a busy background', () => {
+  const img = petScene();
+  const seg = DS.simplify(img, { background: 'remove', lines: 0, featurePx: 4 });
+  const m = seg.subject, w = seg.width, h = seg.height;
+  assert.ok(m instanceof Uint8Array && m.length === w * h);
+  const at = (u, v) => m[Math.floor(v * h) * w + Math.floor(u * w)];
+  // Inside the subject (including the bottom edge it runs off) vs. fence and leaves.
+  for (const [u, v] of [[0.5, 0.3], [0.5, 0.7], [0.5, 0.98], [0.35, 0.6], [0.62, 0.45]]) assert.equal(at(u, v), 1, `subject at ${u},${v}`);
+  for (const [u, v] of [[0.05, 0.05], [0.95, 0.1], [0.5, 0.04], [0.04, 0.8], [0.96, 0.85]]) assert.equal(at(u, v), 0, `background at ${u},${v}`);
+});
+
+test('simplify: background "remove" leaves the background as blank paper', () => {
+  const img = petScene();
+  for (const pool of [null, POOL]) {
+    const seg = DS.simplify(img, { background: 'remove', pool, featurePx: 4 });
+    checkSeg(seg);
+    const paper = seg.palette.findIndex(c => c.paper);
+    assert.ok(paper >= 0, 'has paper');
+    const at = (u, v) => seg.index[Math.floor(v * seg.height) * seg.width + Math.floor(u * seg.width)];
+    assert.equal(at(0.05, 0.05), paper);
+    assert.equal(at(0.95, 0.9), paper);
+    assert.notEqual(at(0.5, 0.7), paper, 'the subject still gets dots');
+    assert.ok(seg.palette.filter(c => !c.paper).length <= 8, 'paper is free: the subject keeps every color');
+  }
+});
+
+test('simplify: background "color" fills it with the chosen color, and that color counts', () => {
+  const img = petScene();
+  for (const [pool, hex, id] of [[null, '#3fa7d6', null], [POOL, POOL[1].hex, POOL[1].id]]) {
+    const seg = DS.simplify(img, { background: 'color', bgHex: hex, bgPoolId: id, pool, colors: 6, featurePx: 4 });
+    checkSeg(seg);
+    const c = seg.palette[seg.index[3 * seg.width + 3]];
+    assert.equal(c.hex, hex);
+    if (pool) assert.equal(c.poolId, id);
+    assert.ok(seg.palette.filter(p => !p.paper).length <= 6, 'within the color budget');
+  }
+  // Auto: a pool marker near the background's own color.
+  const auto = DS.simplify(img, { background: 'color', pool: POOL, featurePx: 4 });
+  const bg = auto.palette[auto.index[3 * auto.width + 3]];
+  assert.ok(bg.poolId, 'auto picks an owned marker');
+});
+
+test('simplify: background "simplify" flattens the background into a few big shapes', () => {
+  const img = petScene();
+  const count = (seg) => {
+    const ids = new Set();
+    for (let p = 0; p < seg.index.length; p++) if (!seg.subject || !seg.subject[p]) ids.add(seg.region[p]);
+    return ids.size;
+  };
+  const keep = DS.simplify(img, { background: 'keep', featurePx: 4, detail: 0.6 });
+  const simp = DS.simplify(img, { background: 'simplify', featurePx: 4, detail: 0.6 });
+  checkSeg(simp);
+  assert.equal(keep.subject, undefined, 'keep does no subject detection');
+  assert.ok(count(simp) * 2 <= count(keep), `background regions ${count(simp)} vs ${count(keep)}`);
+});
+
+test('simplify: "keep" is the same as no background option', () => {
+  const img = scene();
+  const a = DS.simplify(img, { pool: POOL }), b = DS.simplify(img, { pool: POOL, background: 'keep' });
+  assert.deepEqual(a.index, b.index);
+  assert.deepEqual(a.palette, b.palette);
+});
+
+test('simplify: a click hint moves a part between subject and background', () => {
+  const img = petScene();
+  const base = DS.simplify(img, { background: 'remove', featurePx: 4 });
+  const w = base.width, h = base.height, at = (s, u, v) => s.subject[Math.floor(v * h) * w + Math.floor(u * w)];
+  assert.equal(at(base, 0.5, 0.06), 0);
+  const fixFg = DS.simplify(img, { background: 'remove', featurePx: 4, bgHints: [{ x: 0.5, y: 0.06, fg: true }] });
+  assert.equal(at(fixFg, 0.5, 0.06), 1, 'clicked background became subject');
+  const fixBg = DS.simplify(img, { background: 'remove', featurePx: 4, bgHints: [{ x: 0.5, y: 0.7, fg: false }] });
+  assert.equal(at(fixBg, 0.5, 0.7), 0, 'clicked subject became background');
+  checkSeg(fixBg);
+});
+
+// ---- texture and zoom ---------------------------------------------------------------------------
+
+// Sky over a lawn of thin, high-contrast "blades" of grass.
+function lawn(w = 240, h = 180, seed = 5) {
+  const rand = DC.rng(seed);
+  const blade = new Float32Array(w * h);
+  for (let k = 0; k < 900; k++) { // short slanted strokes
+    let x = rand() * w, y = h * 0.35 + rand() * h * 0.65;
+    const dx = (rand() - 0.5) * 0.6, len = 6 + rand() * 10, v = rand() < 0.5 ? 1 : -1;
+    for (let t = 0; t < len; t++, x += dx, y -= 1) {
+      const xi = Math.round(x), yi = Math.round(y);
+      if (xi >= 0 && xi < w && yi >= 0 && yi < h) blade[yi * w + xi] = v;
+    }
+  }
+  return makeImg(w, h, (x, y) => {
+    if (y < h * 0.35) return [150, 190, 235];
+    const b = blade[y * w + x];
+    return b > 0 ? [120, 200, 70] : b < 0 ? [25, 80, 20] : [60, 140, 45];
+  });
+}
+
+test('simplify: texture flattens blades of grass into a few big shapes', () => {
+  const img = lawn();
+  const grassRegions = (seg) => {
+    const ids = new Set();
+    for (let y = Math.ceil(seg.height * 0.45); y < seg.height; y++) for (let x = 0; x < seg.width; x++) ids.add(seg.region[y * seg.width + x]);
+    return ids.size;
+  };
+  const off = DS.simplify(img, { texture: 0, featurePx: 3, detail: 0.7 });
+  const on = DS.simplify(img, { texture: 0.7, featurePx: 3, detail: 0.7 });
+  checkSeg(on);
+  assert.ok(grassRegions(on) * 2 <= grassRegions(off), `grass regions ${grassRegions(on)} vs ${grassRegions(off)}`);
+  // The sky/grass edge is kept: the sky is still its own color.
+  const at = (s, u, v) => s.palette[s.index[Math.floor(v * s.height) * s.width + Math.floor(u * s.width)]];
+  assert.ok(DC.deltaE76(at(on, 0.5, 0.1).lab, at(on, 0.5, 0.8).lab) > 20, 'sky and grass stay apart');
+});
+
+test('simplify: texture spares a face (eyes and mouth stay)', () => {
+  const img = scene(320, 240);
+  const seg = DS.simplify(img, { texture: 1, lines: 0.5, featurePx: 3 });
+  checkSeg(seg);
+  const at = (u, v) => seg.palette[seg.index[Math.floor(v * seg.height) * seg.width + Math.floor(u * seg.width)]];
+  assert.ok(at(0.44, 0.4).lab[0] < 40, 'left eye still dark');
+  assert.ok(at(0.56, 0.4).lab[0] < 40, 'right eye still dark');
+});
+
+test('simplify: remove + zoom crops to the subject and fills the page with it', () => {
+  // A small pet in the middle of a big, busy background.
+  const small = petScene(240, 240);
+  const W = 480, H = 400;
+  const img = makeImg(W, H, (x, y) => {
+    const sx = x - 120, sy = y - 130;
+    if (sx >= 0 && sx < 240 && sy >= 0 && sy < 240 && sy > 40) { // the pet part of the scene, minus its top
+      const o = (sy * 240 + sx) * 4;
+      const d = small.data;
+      const u = sx / 240, v = sy / 240, dx = (u - 0.5) / 0.36, dy = (v - 0.72) / 0.6;
+      if (dx * dx + dy * dy < 1) return [d[o], d[o + 1], d[o + 2]];
+    }
+    return (x % 30) < 3 ? [70, 40, 25] : [150 + 20 * Math.sin(y / 7), 95, 60];
+  });
+  const opts = { background: 'remove', featurePx: 4, lines: 0 };
+  const flat = DS.simplify(img, opts);
+  const zoomed = DS.simplify(img, Object.assign({ zoom: true, featurePxByAspect: [[0.5, 3], [1, 4], [2, 5]] }, opts));
+  checkSeg(zoomed);
+  assert.equal(flat.zoom, undefined);
+  const z = zoomed.zoom;
+  assert.ok(z && z.w < 0.8 && z.h < 0.9, 'cropped');
+  assert.ok(z.x >= 0 && z.y >= 0 && z.x + z.w <= 1.0001 && z.y + z.h <= 1.0001, 'inside the picture');
+  const share = (s) => { let f = 0; for (const v of s.subject) f += v; return f / s.subject.length; };
+  assert.ok(share(zoomed) > share(flat) * 1.5, `subject share ${share(zoomed)} vs ${share(flat)}`);
+  assert.equal(zoomed.subject.length, zoomed.width * zoomed.height);
+  // Without remove, zoom does nothing.
+  assert.equal(DS.simplify(img, { background: 'simplify', zoom: true, featurePx: 4 }).zoom, undefined);
+});
+
+test('subjectMask: a lawn under the subject is background, not part of it', () => {
+  const grass = lawn(240, 180);
+  const img = makeImg(240, 180, (x, y) => {
+    const dx = (x - 120) / 55, dy = (y - 150) / 75;
+    if (dx * dx + dy * dy < 1) {
+      if (Math.hypot(x - 105, y - 110) < 5 || Math.hypot(x - 135, y - 110) < 5) return [30, 25, 25];
+      return [235, 232, 228];
+    }
+    const o = (y * 240 + x) * 4;
+    return [grass.data[o], grass.data[o + 1], grass.data[o + 2]];
+  });
+  const seg = DS.simplify(img, { background: 'remove', featurePx: 3, texture: 0.5 });
+  const at = (u, v) => seg.subject[Math.floor(v * seg.height) * seg.width + Math.floor(u * seg.width)];
+  for (const [u, v] of [[0.08, 0.6], [0.92, 0.6], [0.1, 0.95], [0.9, 0.95], [0.5, 0.42]]) assert.equal(at(u, v), 0, `lawn at ${u},${v}`);
+  for (const [u, v] of [[0.5, 0.75], [0.5, 0.95], [0.42, 0.62]]) assert.equal(at(u, v), 1, `pet at ${u},${v}`);
+});
