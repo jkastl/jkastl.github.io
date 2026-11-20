@@ -20,6 +20,8 @@ Two formats:
 - **4 minis per sheet**: four 4¼ × 5½ in pages on one Letter sheet with cut marks, like FlowArt
   Mini pads: 5 colors, the letters F G H X Z, finer dots. Each mini can hold its own picture, or
   use one picture on all four. A wide picture's mini is turned sideways so it fills its quarter.
+  Each mini keeps its own picture settings (step 1), and **Use these settings on all 4** copies
+  the ones on screen to the others.
 
 Then:
 
@@ -30,7 +32,9 @@ Then:
    textures** flattens fine, busy texture (blades of grass, leaf litter, gravel, fur) into flat
    color while keeping the big edges, and **Outlines** draws eyes, noses and edges as a single row
    of dark dots, the way kit pages outline a pet. Every slider has − / + buttons, and once one is
-   focused the arrow keys step it (Page Up / Down, Home and End too).
+   focused the arrow keys step it (Page Up / Down, Home and End too). These picture settings,
+   Background included, belong to each picture: a new picture starts from the last ones you
+   used, and changing them redoes only the picture on screen.
    **Background** handles a messy backdrop (a fence, leaves, a cluttered room): **Keep** it,
    **Simplify** it to its two or three main colors in big shapes, fill it with **One color** (your
    marker closest to it, any marker you own, or any color), or **Remove** it so it stays blank
@@ -58,8 +62,8 @@ Then:
    orientation, dot size, margin, letter shade, a title, faint shape outlines and dot-size rings
    are all settings.
 
-**Reset settings to defaults** (under the settings) puts every setting back, but keeps your
-pictures, crops and key edits, the kits you ticked and your own markers. For a few seconds it
+**Reset settings to defaults** (under the settings) puts every setting back, each picture's
+included, but keeps your pictures, crops and key edits, the kits you ticked and your own markers. For a few seconds it
 turns into **Undo reset**.
 
 **Finished look** previews the page fully dotted. **Print…** always prints the printable page.
