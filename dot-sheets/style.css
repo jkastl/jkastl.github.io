@@ -72,6 +72,18 @@ input[type="text"] {
 .bg-color-row input[type="color"] { width: 2.4rem; height: 2.25rem; padding: 0.1rem; border: 1px solid var(--line); border-radius: 7px; background: var(--page); flex: none; }
 .bg-note { margin: 0; }
 
+/* Slider with - / + step buttons. */
+.ctl .stepper { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr auto; gap: 0.4rem; align-items: center; }
+.ctl .stepper input[type="range"] { grid-column: auto; margin: 0; min-width: 0; }
+.step-btn {
+  width: 1.7rem; height: 1.7rem; padding: 0; display: grid; place-items: center;
+  font: inherit; font-size: 1rem; line-height: 1; font-weight: 700;
+  background: var(--page); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+}
+.step-btn:hover:not(:disabled) { border-color: var(--accent); }
+.step-btn:disabled { opacity: 0.35; cursor: default; }
+.reset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; padding: 0 0.25rem 0.5rem; }
+
 /* ---------- mini-page slots ---------- */
 .slots { display: grid; gap: 0.5rem; }
 .slot-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }

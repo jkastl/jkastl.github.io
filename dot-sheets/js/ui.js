@@ -20,7 +20,7 @@
     format: 'full',
     full: { colors: 8, dotSize: 'medium', letters: 'flowart' },
     mini: { colors: 5, dotSize: 'fine', letters: 'mini' },
-    detail: 35, boost: 45, lines: 50, paper: false, background: 'keep', bgColor: 'auto',
+    detail: 35, boost: 45, texture: 50, lines: 50, paper: false, background: 'keep', bgColor: 'auto', bgZoom: true,
     source: 'markers', choose: 'best',
     mode: 'dots', paperSize: 'letter', orientation: 'auto',
     printer: 'mono', ink: '#3c3c3c', margin: '12.7', title: '', guides: false, rings: false, footer: true,
@@ -375,18 +375,37 @@
     detail: v => (v < 25 ? 'Poster' : v < 50 ? 'Bold' : v < 75 ? 'Balanced' : 'Detailed'),
     colors: v => v,
     boost: v => (v < 15 ? 'True to photo' : v < 50 ? 'Some' : v < 80 ? 'Lots' : 'Wild'),
+    texture: v => (v === 0 ? 'Off' : v < 35 ? 'A little' : v < 70 ? 'Some' : 'Lots'),
     lines: v => (v === 0 ? 'None' : v < 35 ? 'Few' : v < 70 ? 'Bold' : 'Lots'),
   };
   const controls = []; // [{el, key, kind}] so a format switch can refresh them
+  // Each slider gets - / + buttons that move it one step (arrow keys do the same once it's
+  // focused; Page Up / Down take bigger steps).
   function bindRange(key, stage) {
     const el = $(key), out = $(key + '-out');
-    const show = () => { out.textContent = fmtRange[key](+el.value); };
+    const name = document.querySelector(`label[for="${key}"]`).textContent.trim().toLowerCase();
+    const btn = (txt, dir) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'step-btn'; b.textContent = txt;
+      b.setAttribute('aria-label', `${dir < 0 ? 'Less' : 'More'} ${name}`);
+      b.addEventListener('click', () => { dir < 0 ? el.stepDown() : el.stepUp(); el.dispatchEvent(new Event('input')); });
+      return b;
+    };
+    const minus = btn('−', -1), plus = btn('+', 1), row = document.createElement('div');
+    row.className = 'stepper';
+    el.replaceWith(row);
+    row.append(minus, el, plus);
+    const show = () => {
+      out.textContent = fmtRange[key](+el.value);
+      minus.disabled = +el.value <= +el.min; plus.disabled = +el.value >= +el.max;
+    };
     el.addEventListener('input', () => { set(key, +el.value); show(); changed(stage, 250); });
     controls.push({ sync: () => { el.value = get(key); show(); } });
   }
   bindRange('detail', 'simplify');
   bindRange('colors', 'simplify');
   bindRange('boost', 'simplify');
+  bindRange('texture', 'simplify');
   bindRange('lines', 'simplify');
 
   function bindCheck(id, key, stage) {
@@ -395,6 +414,7 @@
     controls.push({ sync: () => { el.checked = !!get(key); } });
   }
   bindCheck('blank-white', 'paper', 'simplify');
+  bindCheck('bg-zoom', 'bgZoom', 'simplify');
   bindCheck('guides', 'guides', 'layout');
   bindCheck('rings', 'rings', 'render');
   bindCheck('footer', 'footer', 'layout');
@@ -490,6 +510,7 @@
   function syncBackground() {
     const on = S.background !== 'keep';
     $('bg-color-row').hidden = S.background !== 'color';
+    $('bg-zoom-row').hidden = S.background !== 'remove';
     if (S.background === 'color') renderBgColors();
     $('flat-canvas').classList.toggle('pickable', on);
     syncBgNote();
@@ -515,9 +536,12 @@
     const y = Math.max(0, Math.min(0.9999, (e.clientY - r.top) / r.height));
     const w = sl.seg.width, h = sl.seg.height;
     const isSubject = sl.seg.subject[Math.floor(y * h) * w + Math.floor(x * w)] === 1;
+    // Hints are in the coordinates of the whole (cropped) picture; a zoomed preview shows part of it.
+    const z = sl.seg.zoom || { x: 0, y: 0, w: 1, h: 1 };
+    const hx = z.x + x * z.w, hy = z.y + y * z.h;
     // A new click near an old one replaces it.
-    sl.hints = sl.hints.filter(hn => Math.hypot(hn.x - x, hn.y - y) > 0.03);
-    sl.hints.push({ x, y, fg: !isSubject });
+    sl.hints = sl.hints.filter(hn => Math.hypot(hn.x - hx, hn.y - hy) > 0.03);
+    sl.hints.push({ x: hx, y: hy, fg: !isSubject });
     changed('simplify', 0, [active]);
   });
   flatCv.addEventListener('mouseenter', () => { const sl = cur(); if (sl.segE && S.background !== 'keep') drawFlat(sl, true); });
@@ -615,7 +639,8 @@
         img: srcPixels(sl),
         opts: {
           maxSide: MAX_SIDE, colors: get('colors'), detail: S.detail / 100, boost: S.boost / 100,
-          lines: S.lines / 100, featurePx: featurePx(sl, i),
+          texture: S.texture / 100, lines: S.lines / 100, featurePx: featurePx(sl, i),
+          zoom: S.bgZoom, featurePxByAspect: S.background === 'remove' && S.bgZoom ? featurePxTable(i) : null,
           paper: S.paper, pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
           choose: S.choose, seed: 7,
           ...bgOpts(), bgHints: sl.hints,
@@ -673,11 +698,22 @@
   function featurePx(sl, i) {
     const c = sl.crop || { w: sl.src.width, h: sl.src.height };
     const aspect = c.w / c.h;
-    const segW = Math.min(Math.round(c.w), aspect >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * aspect));
+    return featurePxAt(i, aspect, Math.min(Math.round(c.w), aspect >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * aspect)));
+  }
+  function featurePxAt(i, aspect, segW) {
     const g = geometryFor(i, aspect, get('colors'));
     const mmPerPx = g.image.w / Math.max(1, segW);
     const sizes = S.mode === 'dots' ? DOT_SIZES[get('dotSize')] : [1.6];
     return Math.max(2, (2 * sizes[0] + 0.35) / mmPerPx);
+  }
+  // The same for a range of shapes, for a picture that zooms in on its subject: [[aspect, px]].
+  function featurePxTable(i) {
+    const out = [];
+    for (let k = -8; k <= 8; k++) {
+      const a = Math.pow(4, k / 8);
+      out.push([a, featurePxAt(i, a, a >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * a))]);
+    }
+    return out;
   }
 
   // The layout only needs the maps and palette, not the preview pixels.
@@ -955,6 +991,38 @@
     };
     img.onerror = () => { URL.revokeObjectURL(url); status('Couldn’t make the PNG in this browser. Try SVG or Print.'); };
     img.src = url;
+  });
+
+  // ---------- reset ----------
+  // Every setting back to its default, except what's really an inventory or a choice of format:
+  // the kits ticked, skipped and added markers, and full page vs minis. Pictures, crops and key
+  // edits stay. For a few seconds the button offers to undo.
+  const KEEP_ON_RESET = ['owned', 'off', 'custom', 'format', 'kitsVersion'];
+  let undoState = null, undoTimer = null;
+  function applySettings(next) {
+    for (const k of Object.keys(S)) delete S[k];
+    Object.assign(S, next);
+    controls.forEach(c => c.sync());
+    syncSource(); syncBackground(); syncMode(); syncFormat();
+    renderSets();
+    showSlot();
+    changed('simplify');
+  }
+  $('reset').addEventListener('click', () => {
+    const btn = $('reset');
+    if (undoState) {
+      applySettings(undoState);
+      undoState = null; clearTimeout(undoTimer);
+      btn.textContent = 'Reset settings to defaults';
+      return;
+    }
+    undoState = JSON.parse(JSON.stringify(S));
+    const fresh = JSON.parse(JSON.stringify(DEFAULTS));
+    for (const k of KEEP_ON_RESET) fresh[k] = JSON.parse(JSON.stringify(S[k]));
+    fresh.view = S.view;
+    applySettings(fresh);
+    btn.textContent = 'Undo reset';
+    undoTimer = setTimeout(() => { undoState = null; btn.textContent = 'Reset settings to defaults'; }, 8000);
   });
 
   renderSets();

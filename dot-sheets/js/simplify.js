@@ -4,24 +4,29 @@
  *   DotSimplify.simplify({width, height, data: RGBA}, opts) -> seg
  *
  * opts: maxSide (480), colors (8, 2..16 inks, paper not counted, outline color included),
- * detail (0.35, 0 poster .. 1 detailed), boost (0.45, caricature punch), lines (0.5, 0 = off:
- * dark cartoon outlines around features), featurePx (6: dot + gap in working pixels; nothing
+ * detail (0.35, 0 poster .. 1 detailed), boost (0.45, caricature punch), texture (0, 0 off .. 1:
+ * fine texture such as grass, leaf litter or fur flattened to its average color), lines (0.5,
+ * 0 = off: dark cartoon outlines around features), featurePx (6: dot + gap in working pixels; nothing
  * thinner survives), paper (false: every area gets a marker; true: very light neutral areas stay
  * blank paper), pool ([{id, hex}] markers the user owns, or null to pick colors from the photo),
  * choose ('best' subset of at most `colors` | 'all'), seed (1), background ('keep' | 'simplify': the
  * background in its two or three main colors, in big shapes | 'color': one flat color, bgHex or,
  * if null, the closest to the background's own; it takes one of `colors` | 'remove': blank
- * paper), bgHex, bgPoolId (the marker bgHex came from), bgHints ([{x, y in 0..1, fg}] clicks
- * that move a part to the subject or the background).
+ * paper), bgHex, bgPoolId (the marker bgHex came from), bgHints ([{x, y in 0..1 of the input
+ * picture, fg}] clicks that move a part to the subject or the background), zoom (false: with
+ * 'remove', redo the picture cropped to the subject so it fills the page), featurePxByAspect
+ * ([[aspect, featurePx]]: the dot size for the zoomed picture's shape; else featurePx is kept).
  * seg: {width, height, index, region, regions: [{id, index, area}], palette: [{hex, rgb, lab, area,
  * paper, poolId}] (by area, paper last), preview: RGBA, subject: Uint8Array, 1 = subject (only
- * when background isn't 'keep' and a subject was found)}.
+ * when background isn't 'keep' and a subject was found), zoom: {x, y, w, h} 0..1, the part of the
+ * input picture shown (only when zoomed)}.
  *
  * Steps: area-average downscale -> Lab -> "boost" (levels, S-curve, chroma, local contrast) ->
- * iterated bilateral filter (flattens texture, keeps edges) -> saliency (not-background-colored,
- * central, busy) -> k-means++ in Lab on samples weighted toward the subject and skin, near-equal
- * colors merged -> (pool mode: fit tones to the pool, pick markers, map clusters to markers
- * keeping touching shapes apart) -> label smoothing (blurred one-hot argmax, round boundaries) ->
+ * texture flattening (rolling guidance filter where edges are dense) -> iterated bilateral filter
+ * (flattens texture, keeps edges) -> saliency (not-background-colored, central, busy) ->
+ * k-means++ in Lab on samples weighted toward the subject and skin, near-equal colors merged ->
+ * (pool mode: fit tones to the pool, pick markers, map clusters to markers keeping touching
+ * shapes apart) -> label smoothing (blurred one-hot argmax, round boundaries) ->
  * merge small regions (saliency- and contrast-aware) -> burn in outlines (difference of
  * Gaussians on lightness) -> morphological opening at featurePx (no slivers) -> merge again ->
  * connected regions + palette. With a background option, a subject mask (SLIC superpixels,
@@ -220,6 +225,103 @@
         dst[o] = sL / sW; dst[o + 1] = sa / sW; dst[o + 2] = sb / sW;
       }
     }
+  }
+
+  /* ---------------------------------------------------------------- texture */
+
+  // How textured each pixel's neighborhood is, 0..1: the share of pixels within radius r that sit
+  // on a strong fine-scale edge. Grass, leaves, gravel and fur are dense with tiny edges; an eye
+  // or a mouth is one shape with a clean outline, so it scores low and is left alone.
+  function textureWeight(lab, w, h, r, lo, hi) {
+    const n = w * h, e = new Float32Array(n), tmp = new Float32Array(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const p = y * w + x, o = p * 3;
+      const ox = (x < w - 1 ? p + 1 : p) * 3, oy = (y < h - 1 ? p + w : p) * 3;
+      const g = Math.max(
+        Math.hypot(lab[ox] - lab[o], 0.6 * (lab[ox + 1] - lab[o + 1]), 0.6 * (lab[ox + 2] - lab[o + 2])),
+        Math.hypot(lab[oy] - lab[o], 0.6 * (lab[oy + 1] - lab[o + 1]), 0.6 * (lab[oy + 2] - lab[o + 2])));
+      e[p] = g > 7 ? 1 : 0;
+    }
+    boxBlur(e, w, h, r, tmp); boxBlur(e, w, h, r, tmp);
+    // Faces are busy too (eyes, brows, mouth), but those details are the point: skin, and
+    // whatever sits inside a patch of skin, is mostly spared.
+    const skin = new Float32Array(n);
+    for (let p = 0; p < n; p++) {
+      const o = p * 3, L = lab[o], a = lab[o + 1], b = lab[o + 2];
+      const C = Math.hypot(a, b), hue = Math.atan2(b, a) * 57.29578;
+      if (L > 30 && L < 92 && C > 8 && C < 60 && hue > 15 && hue < 85) {
+        skin[p] = Math.max(0, Math.min(1, (hue - 15) / 15, (85 - hue) / 15, (C - 8) / 8, (L - 30) / 15));
+      }
+    }
+    boxBlur(skin, w, h, r, tmp); boxBlur(skin, w, h, r, tmp);
+    for (let p = 0; p < n; p++) {
+      const t = clamp((e[p] - lo) / (hi - lo), 0, 1);
+      e[p] = t * t * (3 - 2 * t) * (1 - 0.9 * Math.min(1, 2 * skin[p]));
+    }
+    return e;
+  }
+
+  // Bilateral filter of src steered by a separate guide image (interleaved Lab), sampling the
+  // window on a sparse grid so large radii stay cheap.
+  function jointBilateral(src, guide, dst, w, h, sigmaS, sigmaR) {
+    // At most 9 x 9 samples, however big the window.
+    const R = Math.max(1, Math.ceil(2 * sigmaS)), step = Math.max(1, Math.ceil((2 * R + 1) / 9));
+    const offs = [], sw = [];
+    for (let dy = -R; dy <= R; dy += step) for (let dx = -R; dx <= R; dx += step) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 > R * R + R) continue;
+      offs.push(dx, dy); sw.push(Math.exp(-d2 / (2 * sigmaS * sigmaS)));
+    }
+    const nt = sw.length, ir = 1 / (2 * sigmaR * sigmaR), cut = 9 * sigmaR * sigmaR;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const o = (y * w + x) * 3, gL = guide[o], ga = guide[o + 1], gb = guide[o + 2];
+      let sL = 0, sa = 0, sb = 0, sW = 0;
+      const inner = x >= R && x < w - R && y >= R && y < h - R;
+      for (let t = 0; t < nt; t++) {
+        const xx = x + offs[2 * t], yy = y + offs[2 * t + 1];
+        if (!inner && (xx < 0 || xx >= w || yy < 0 || yy >= h)) continue;
+        const q = (yy * w + xx) * 3;
+        const dL = guide[q] - gL, da = guide[q + 1] - ga, db = guide[q + 2] - gb;
+        const d2 = dL * dL + da * da + db * db;
+        if (d2 >= cut) continue;
+        const wt = sw[t] * Math.exp(-d2 * ir);
+        sL += wt * src[q]; sa += wt * src[q + 1]; sb += wt * src[q + 2]; sW += wt;
+      }
+      if (sW > 0) { dst[o] = sL / sW; dst[o + 1] = sa / sW; dst[o + 2] = sb / sW; }
+      else { dst[o] = src[o]; dst[o + 1] = src[o + 1]; dst[o + 2] = src[o + 2]; }
+    }
+  }
+
+  // Flatten fine texture (blades of grass, leaf litter, gravel, fur) into its average color while
+  // keeping the big edges: a rolling guidance filter (Zhang et al. 2014). A blur wipes out
+  // everything smaller than sigmaS, then joint bilateral passes guided by the blurred image bring
+  // the large edges back. Blended in only where the picture is textured. amount 0..1.
+  // Returns {lab, t}: the flattened picture and the texture weight (null when nothing changed).
+  function flattenTexture(lab, w, h, amount, sizeK) {
+    if (amount <= 0) return { lab, t: null };
+    const n = w * h;
+    const sigmaS = Math.max(1, (1.5 + 4.5 * amount) * sizeK);
+    const t = textureWeight(lab, w, h, Math.max(2, Math.round(2 * sigmaS)), lerp(0.3, 0.12, amount), lerp(0.55, 0.35, amount));
+    let any = false;
+    for (let p = 0; p < n && !any; p++) if (t[p] > 0.01) any = true;
+    if (!any) return { lab, t: null };
+    // Gaussian-ish blur: three box passes per channel.
+    const plane = new Float32Array(n), tmp = new Float32Array(n);
+    let G = new Float32Array(n * 3);
+    const rb = Math.max(1, Math.round(sigmaS - 0.5));
+    for (let c = 0; c < 3; c++) {
+      for (let p = 0; p < n; p++) plane[p] = lab[p * 3 + c];
+      boxBlur(plane, w, h, rb, tmp); boxBlur(plane, w, h, rb, tmp); boxBlur(plane, w, h, rb, tmp);
+      for (let p = 0; p < n; p++) G[p * 3 + c] = plane[p];
+    }
+    let G2 = new Float32Array(n * 3);
+    for (let it = 0; it < 3; it++) { jointBilateral(lab, G, G2, w, h, sigmaS, 12); const s = G; G = G2; G2 = s; }
+    const out = new Float32Array(n * 3);
+    for (let p = 0; p < n; p++) {
+      const k = t[p], o = p * 3;
+      out[o] = lab[o] + k * (G[o] - lab[o]); out[o + 1] = lab[o + 1] + k * (G[o + 1] - lab[o + 1]); out[o + 2] = lab[o + 2] + k * (G[o + 2] - lab[o + 2]);
+    }
+    return { lab: out, t };
   }
 
   /* ---------------------------------------------------------------- k-means */
@@ -847,7 +949,7 @@
   // difference of box-Gaussians, thresholded (lower threshold on the subject), thickened to about
   // featurePx and cleaned of crumbs. Catches eyes, mouths, nostrils, hairlines and the dark side of
   // strong contours. Returns a Uint8Array mask.
-  function lineMask(lab, w, h, fp, lines, sal) {
+  function lineMask(lab, w, h, fp, lines, sal, tex) {
     const n = w * h;
     const sm = new Float32Array(n), lg = new Float32Array(n), tmp = new Float32Array(n);
     for (let p = 0; p < n; p++) sm[p] = lg[p] = lab[p * 3];
@@ -857,7 +959,9 @@
     const T0 = lerp(20, 5, lines);
     const mask = new Uint8Array(n);
     for (let p = 0; p < n; p++) {
-      const T = T0 * lerp(1.6, 0.7, sal[p]);
+      // Inside flattened texture away from the subject, only strong dark lines count (not the
+      // shadows between blades of grass).
+      const T = T0 * lerp(1.6, 0.7, sal[p]) * (tex ? 1 + 2 * tex[p] * (1 - sal[p]) : 1);
       if (lg[p] - sm[p] > T) mask[p] = 1;
     }
     // Thicken: everything within rd of the detected core.
@@ -994,14 +1098,29 @@
   // Geodesic color distance between every pair of patches: the cheapest path through touching
   // patches, each step costing their color difference. A background is one connected stretch
   // of similar colors (cheap to cross), the subject sits behind a strong edge. Float32Array(N*N).
-  function geodesics(sp) {
+  // Patches whose centres are this close (in patch widths) are linked even when they don't
+  // touch, so a background split by thin lines (fence planks and their gaps, blinds, railings,
+  // branches) still reads as one connected stretch. The subject's outline still costs its full
+  // color difference.
+  const HOP = 2.2;
+  // Step costs have some slack, so smooth gradients (sky, a lit wall) cost nothing. Between two
+  // textured patches (a lawn, leaf litter) the slack is bigger: their averages wobble even after
+  // flattening, and that shouldn't wall a lawn off from the border. tex: per patch, 0..1, or null.
+  function geodesics(sp, w, h, tex) {
     const N = sp.N, mean = sp.mean, G = new Float32Array(N * N).fill(Infinity);
-    const wts = sp.adj.map((list, i) => list.map(({ j }) => {
-      const d = Math.hypot(mean[i * 3] - mean[j * 3], mean[i * 3 + 1] - mean[j * 3 + 1], mean[i * 3 + 2] - mean[j * 3 + 2]);
-      return Math.max(0, d - 2); // a little slack: smooth gradients (sky, a lit wall) cost nothing
-    }));
+    const dC = (i, j) => Math.hypot(mean[i * 3] - mean[j * 3], mean[i * 3 + 1] - mean[j * 3 + 1], mean[i * 3 + 2] - mean[j * 3 + 2]);
+    const cost = (i, j) => Math.max(0, dC(i, j) - (tex ? 2 + 7 * Math.min(tex[i], tex[j]) : 2));
+    const links = sp.adj.map(list => list.map(({ j }) => j));
+    const wts = sp.adj.map((list, i) => list.map(({ j }) => cost(i, j)));
+    const reach = HOP * sp.S;
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const dx = (sp.cx[i] - sp.cx[j]) * w, dy = (sp.cy[i] - sp.cy[j]) * h;
+      if (dx * dx + dy * dy > reach * reach || links[i].includes(j)) continue;
+      const c = cost(i, j) + 2;
+      links[i].push(j); wts[i].push(c); links[j].push(i); wts[j].push(c);
+    }
     // Binary heap Dijkstra from every patch.
-    const heapK = new Float64Array(N * 16 + 16), heapV = new Int32Array(N * 16 + 16);
+    const heapK = new Float64Array(N * 64 + 16), heapV = new Int32Array(N * 64 + 16);
     const dist = new Float64Array(N);
     for (let s = 0; s < N; s++) {
       const row = s * N;
@@ -1030,9 +1149,9 @@
       while (hs) {
         const u = pop(), du = popped;
         if (du > dist[u]) continue;
-        const list = sp.adj[u], wl = wts[u];
+        const list = links[u], wl = wts[u];
         for (let e = 0; e < list.length; e++) {
-          const v = list[e].j, nd = du + wl[e];
+          const v = list[e], nd = du + wl[e];
           if (nd < dist[v]) { dist[v] = nd; if (hs < heapK.length) push(nd, v); }
         }
       }
@@ -1048,12 +1167,19 @@
    * that stand out in color from nearby background are foreground cues; a smoothness term over
    * touching patches spreads both, and the result is thresholded and cleaned up.
    * hints: [{x, y (0..1), fg: bool}] clicks that force a patch, and every patch connected to it
-   * by similar colors (a magic wand), to subject or background. Later hints win.
+   * by similar colors (a magic wand), to subject or background. Later hints win. texMap: optional
+   * per-pixel texture weight (textureWeight), so textured backgrounds hang together.
    * Returns {fg: Uint8Array(n) 1 = subject, sp, score: Float64Array(N)}. */
-  function subjectMask(lab, w, h, hints) {
+  function subjectMask(lab, w, h, hints, texMap) {
     const n = w * h;
     const sp = superpixels(lab, w, h, clamp(Math.round(n / 300), 60, 600));
-    const N = sp.N, G = geodesics(sp), mean = sp.mean;
+    let spTex = null;
+    if (texMap) {
+      spTex = new Float64Array(sp.N);
+      for (let p = 0; p < n; p++) spTex[sp.label[p]] += texMap[p];
+      for (let k = 0; k < sp.N; k++) spTex[k] /= sp.area[k];
+    }
+    const N = sp.N, G = geodesics(sp, w, h, spTex), mean = sp.mean;
     const unit = Math.max(w, h), sideLen = [w, w, h, h];
     const dApp = (i, j) => Math.hypot(mean[i * 3] - mean[j * 3], mean[i * 3 + 1] - mean[j * 3 + 1], mean[i * 3 + 2] - mean[j * 3 + 2]);
     // Each patch's share of the picture's border, in units of the longer side (so aspect doesn't
@@ -1262,7 +1388,8 @@
     const detail = clamp(opts.detail == null ? 0.35 : +opts.detail, 0, 1);
     const boost = clamp(opts.boost == null ? 0.45 : +opts.boost, 0, 1);
     const lines = clamp(opts.lines == null ? 0.5 : +opts.lines || 0, 0, 1);
-    const fp = clamp(opts.featurePx == null ? 6 : +opts.featurePx || 6, 1, 64);
+    let fp = clamp(opts.featurePx == null ? 6 : +opts.featurePx || 6, 1, 64);
+    const texture = clamp(opts.texture == null ? 0 : +opts.texture || 0, 0, 1);
     const paper = opts.paper == null ? false : !!opts.paper;
     const pool = Array.isArray(opts.pool) && opts.pool.length ? opts.pool : null;
     const choose = opts.choose === 'all' ? 'all' : 'best';
@@ -1273,35 +1400,86 @@
     const bgPoolId = bgHex && opts.bgPoolId != null ? opts.bgPoolId : null;
     const rand = DC.rng(seed);
 
-    const ds = downscale(img, maxSide);
-    const w = ds.w, h = ds.h, n = w * h;
-    let lab = rgbToLabArray(ds.rgb, n);
+    // Downscale, boost, flatten texture, edge-preserving filter.
+    const prep = (im) => {
+      const ds = downscale(im, maxSide);
+      const w = ds.w, h = ds.h, n = w * h;
+      let lab = rgbToLabArray(ds.rgb, n);
+      // 1. Caricature punch.
+      boostLab(lab, w, h, boost);
+      // 2. Flatten fine texture (grass, leaves, fur), then edge-preserving flattening. Scale with
+      //    the working size so detail means the same at any size.
+      const sizeK = Math.max(w, h) / 480;
+      // How textured each spot is, before any flattening (for finding the subject).
+      const texMap = n > 16 && bgMode !== 'keep' ? textureWeight(lab, w, h, Math.max(2, Math.round(7 * sizeK)), 0.2, 0.45) : null;
+      let tex = null;
+      if (n > 16) ({ lab, t: tex } = flattenTexture(lab, w, h, texture, sizeK));
+      const br = Math.max(1, Math.round(lerp(4, 2, detail) * sizeK));
+      const iters = Math.round(lerp(6, 2, detail));
+      const sigmaR = lerp(20, 8, detail);
+      if (n > 4) {
+        let tmp = new Float32Array(n * 3);
+        for (let it = 0; it < iters; it++) { bilateral(lab, tmp, w, h, br, sigmaR); const t = lab; lab = tmp; tmp = t; }
+      }
+      return { w, h, n, lab, sizeK, tex, texMap };
+    };
+    let { w, h, n, lab, sizeK, tex, texMap } = prep(img);
 
-    // 1. Caricature punch.
-    boostLab(lab, w, h, boost);
-
-    // 2. Edge-preserving flattening. Scale with the working size so detail means the same at any size.
-    const side = Math.max(w, h);
-    const sizeK = side / 480;
-    const br = Math.max(1, Math.round(lerp(4, 2, detail) * sizeK));
-    const iters = Math.round(lerp(6, 2, detail));
-    const sigmaR = lerp(20, 8, detail);
-    if (n > 4) {
-      let tmp = new Float32Array(n * 3);
-      for (let it = 0; it < iters; it++) { bilateral(lab, tmp, w, h, br, sigmaR); const t = lab; lab = tmp; tmp = t; }
-    }
-
-    // 3. Quantize, sampling mostly the subject (salient, busy, skin).
-    const sal = saliency(lab, w, h, rand);
-    const weight = busyWeight(lab, w, h);
-    // Background handling: find the subject, and spend the colors on it.
-    let fg = null;
+    // Background handling: find the subject.
+    let fg = null, zoom = null;
     if (bgMode !== 'keep' && n > 16) {
-      fg = subjectMask(lab, w, h, Array.isArray(opts.bgHints) ? opts.bgHints : []).fg;
+      fg = subjectMask(lab, w, h, Array.isArray(opts.bgHints) ? opts.bgHints : [], texMap).fg;
       let nf = 0;
       for (let p = 0; p < n; p++) nf += fg[p];
       if (nf === 0 || nf === n) fg = null; // no subject found (or nothing else): keep it all
     }
+    // Zoom: with the background gone, the subject alone fills the page. Redo the picture from the
+    // source pixels around it (full working resolution for the subject), and carry the mask over.
+    if (fg && bgMode === 'remove' && opts.zoom) {
+      let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (fg[y * w + x]) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+      const pad = Math.round(0.03 * Math.max(w, h));
+      x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w - 1, x1 + pad); y1 = Math.min(h - 1, y1 + pad);
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+      if (bw * bh < 0.85 * n && bw >= 8 && bh >= 8) {
+        const sx = img.width / w, sy = img.height / h;
+        const cx0 = Math.floor(x0 * sx), cy0 = Math.floor(y0 * sy);
+        const cw = Math.max(1, Math.min(img.width - cx0, Math.round(bw * sx))), ch = Math.max(1, Math.min(img.height - cy0, Math.round(bh * sy)));
+        const sub = { width: cw, height: ch, data: new Uint8ClampedArray(cw * ch * 4) };
+        for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+          const o = ((cy0 + y) * img.width + cx0 + x) * 4, d = (y * cw + x) * 4;
+          sub.data[d] = img.data[o]; sub.data[d + 1] = img.data[o + 1]; sub.data[d + 2] = img.data[o + 2]; sub.data[d + 3] = img.data[o + 3];
+        }
+        const P = prep(sub);
+        // Mask: nearest sample from the old grid, then smoothed so its blocky steps round off.
+        const m2 = new Float32Array(P.n), tmp = new Float32Array(P.n);
+        for (let y = 0; y < P.h; y++) for (let x = 0; x < P.w; x++) {
+          const ox = clamp(Math.floor((cx0 + (x + 0.5) * cw / P.w) / sx), 0, w - 1);
+          const oy = clamp(Math.floor((cy0 + (y + 0.5) * ch / P.h) / sy), 0, h - 1);
+          m2[y * P.w + x] = fg[oy * w + ox];
+        }
+        const rs = Math.max(1, Math.round(P.w / bw));
+        boxBlur(m2, P.w, P.h, rs, tmp);
+        fg = new Uint8Array(P.n);
+        for (let p = 0; p < P.n; p++) fg[p] = m2[p] >= 0.5 ? 1 : 0;
+        ({ w, h, n, lab, sizeK, tex } = P);
+        zoom = { x: cx0 / img.width, y: cy0 / img.height, w: cw / img.width, h: ch / img.height };
+        // The page is laid out for the new shape: use its dot size in working pixels.
+        const tab = Array.isArray(opts.featurePxByAspect) ? opts.featurePxByAspect : null;
+        if (tab && tab.length) {
+          const a = Math.log(w / h);
+          let best = tab[0];
+          for (const e of tab) if (Math.abs(Math.log(e[0]) - a) < Math.abs(Math.log(best[0]) - a)) best = e;
+          fp = clamp(+best[1] || fp, 1, 64);
+        }
+      }
+    }
+
+    // 3. Quantize, sampling mostly the subject (salient, busy, skin), and the colors go to it.
+    const sal = saliency(lab, w, h, rand);
+    const weight = busyWeight(lab, w, h);
     if (fg) {
       const bgW = bgMode === 'simplify' ? 0.4 : 0.02;
       for (let p = 0; p < n; p++) {
@@ -1449,7 +1627,7 @@
     mergeSmall(idx, w, h, labs, thr, region);
     let lmask = null;
     if (lines > 0 && lineIdx >= 0 && n > 4) {
-      lmask = lineMask(lab, w, h, fp, lines, sal);
+      lmask = lineMask(lab, w, h, fp, lines, sal, tex);
       if (fg) {
         // No outlines in the background, and around a cut-out subject a dark outline of its own.
         const d = new Float32Array(n);
@@ -1503,6 +1681,7 @@
     }
     const out = { width: w, height: h, index: idx, region, regions, palette, preview };
     if (fg) out.subject = fg;
+    if (zoom) out.zoom = zoom;
     return out;
   }
 

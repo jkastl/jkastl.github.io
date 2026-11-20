@@ -26,12 +26,17 @@ Then:
 1. **Picture.** Upload, drop, or paste a picture (or try one of the three painted samples), and
    drag on the thumbnail to crop. The picture gets cut down to a few flat, bold shapes, like a
    cartoon of it. **Detail** runs from a poster of a few big shapes to a busier page. **Colors** caps
-   the number of letters, **Cartoon punch** pushes saturation and contrast first, and **Outlines**
-   draws eyes, noses and edges as a single row of dark dots, the way kit pages outline a pet.
+   the number of letters, **Cartoon punch** pushes saturation and contrast first, **Smooth
+   textures** flattens fine, busy texture (blades of grass, leaf litter, gravel, fur) into flat
+   color while keeping the big edges, and **Outlines** draws eyes, noses and edges as a single row
+   of dark dots, the way kit pages outline a pet. Every slider has − / + buttons, and once one is
+   focused the arrow keys step it (Page Up / Down, Home and End too).
    **Background** handles a messy backdrop (a fence, leaves, a cluttered room): **Keep** it,
    **Simplify** it to its two or three main colors in big shapes, fill it with **One color** (your
    marker closest to it, any marker you own, or any color), or **Remove** it so it stays blank
-   paper and the subject gets an outline of its own. The subject is found automatically. If it
+   paper and the subject gets an outline of its own. With **Remove**, **Zoom in on the subject**
+   (on by default) redoes the picture cropped to the subject, so it fills the page at full
+   detail instead of floating in white space. The subject is found automatically. If it
    guesses wrong, click the simplified thumbnail to move that part (and everything like it that
    it touches) between subject and background. Hover the thumbnail to see which is which.
 2. **Colors.** Either
@@ -52,6 +57,10 @@ Then:
    paint-by-number page with one letter per shape, for regular markers or pencils. Paper size,
    orientation, dot size, margin, letter shade, a title, faint shape outlines and dot-size rings
    are all settings.
+
+**Reset settings to defaults** (under the settings) puts every setting back, but keeps your
+pictures, crops and key edits, the kits you ticked and your own markers. For a few seconds it
+turns into **Undo reset**.
 
 **Finished look** previews the page fully dotted. **Print…** always prints the printable page.
 **SVG** and **PNG** (300 dpi) save whichever view is showing.
@@ -76,27 +85,36 @@ The page is built for a desktop and a basic USB printer:
 
 `simplify.js` turns the picture into a segmentation: a palette index and a region id per pixel.
 It area-averages the picture down to at most 480 px, converts to CIELAB, boosts chroma and contrast,
-and flattens texture with an edge-preserving filter. A saliency map (how far each pixel is from
+and flattens texture with an edge-preserving filter. **Smooth textures** runs first: a *rolling
+guidance filter* (Zhang et al., 2014) blurs away everything smaller than a few pixels, then joint
+bilateral passes guided by the blurred picture bring the large edges back. It is blended in only
+where the picture is dense with tiny edges (grass, leaves, fur), and skin, plus whatever sits
+inside a patch of skin, is mostly spared, so a face keeps its eyes and mouth. Outlines in textured
+background need more contrast, so the shadows between blades of grass don't become dark specks. A saliency map (how far each pixel is from
 the border colors, a center bias, edge density) marks the subject, so the subject gets most of the
 colors and keeps smaller details while the background is simplified harder. Colors are clustered
 with seeded k-means++. In marker mode the clusters are then mapped onto the owned markers. The
 picture's lightness range is first stretched onto the markers', and neighboring shapes that clearly
 differ are kept on different markers. Dark feature lines (a difference-of-Gaussians filter) are
 burned in with the darkest ink. Finally every region thinner than one dot, or smaller than the
-Detail threshold, is merged into a neighbor, which leaves only flat, bold shapes.
+Detail threshold, is merged into a neighbor, which leaves only flat, bold shapes. The page tells it
+how big one dot is in picture pixels, so it never keeps a shape too thin to dot.
 
 The **Background** option first finds the subject. The filtered picture is cut into a few hundred
 SLIC superpixels, and each one gets a background score from *boundary connectivity* (Zhu et al.,
 2014): how much of the picture's border lies in its neighborhood of similar, connected colors,
 over the square root of that neighborhood's area. A background is one big connected stretch that
-runs along the border. The bottom edge and the lower sides count for less, since pets and
+runs along the border. Patches close to each other are linked even when they don't touch, so a
+fence's planks connect across the dark gaps between them, and steps between two textured patches
+(a lawn) get extra slack, so a lawn under a pet reads as one stretch of background. The bottom edge and the lower sides count for less, since pets and
 people are usually cut off there. Color contrast against nearby background is the foreground
 score, and a smoothness term over touching superpixels spreads both. A second pass learns the
 subject's colors from the middle of the picture. Border patches that look like the subject (fur
 running off the edge) then stop counting as border, and colors found almost only in the
 background (planks walled off by dark gaps) lean toward background. Clicks on the thumbnail pin
-a superpixel, and every superpixel connected to it by similar colors, to subject or background. The page tells it
-how big one dot is in picture pixels, so it never keeps a shape too thin to dot.
+a superpixel, and every superpixel connected to it by similar colors, to subject or background.
+With **Zoom in on the subject**, the source pixels around the subject's bounding box are run
+through the whole pipeline again at full working resolution, and the mask is carried over.
 
 `layout.js` places the letters in millimetres on the page. Each region gets an exact Euclidean
 distance transform. Rows of dots follow iso-lines of that distance, so they run parallel to the

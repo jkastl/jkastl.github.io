@@ -76,14 +76,16 @@
           </figure>
         </div>
         <div class="ctls one">
-          <label class="ctl">Detail <output id="detail-out"></output>
-            <input type="range" id="detail" min="0" max="100" value="35"></label>
-          <label class="ctl">Colors <output id="colors-out"></output>
-            <input type="range" id="colors" min="2" max="16" value="8"></label>
-          <label class="ctl">Cartoon punch <output id="boost-out"></output>
-            <input type="range" id="boost" min="0" max="100" value="45"></label>
-          <label class="ctl">Outlines <output id="lines-out"></output>
-            <input type="range" id="lines" min="0" max="100" value="50"></label>
+          <div class="ctl"><label for="detail">Detail</label> <output id="detail-out" for="detail"></output>
+            <input type="range" id="detail" min="0" max="100" value="35" step="5"></div>
+          <div class="ctl"><label for="colors">Colors</label> <output id="colors-out" for="colors"></output>
+            <input type="range" id="colors" min="2" max="16" value="8" step="1"></div>
+          <div class="ctl"><label for="boost">Cartoon punch</label> <output id="boost-out" for="boost"></output>
+            <input type="range" id="boost" min="0" max="100" value="45" step="5"></div>
+          <div class="ctl"><label for="texture">Smooth textures</label> <output id="texture-out" for="texture"></output>
+            <input type="range" id="texture" min="0" max="100" value="50" step="5"></div>
+          <div class="ctl"><label for="lines">Outlines</label> <output id="lines-out" for="lines"></output>
+            <input type="range" id="lines" min="0" max="100" value="50" step="5"></div>
         </div>
         <div class="bg-ctl">
           <span class="lbl" id="bg-h">Background</span>
@@ -98,6 +100,7 @@
             <select id="bg-color"></select>
             <input type="color" id="bg-custom" value="#95daf4" aria-label="Background color" hidden>
           </div>
+          <label class="check" id="bg-zoom-row" hidden><input type="checkbox" id="bg-zoom" checked> Zoom in on the subject</label>
           <p class="lbl bg-note" id="bg-note" hidden></p>
         </div>
         <label class="check"><input type="checkbox" id="blank-white"> Leave white areas blank (no dots)</label>
@@ -211,6 +214,11 @@
           <label class="check"><input type="checkbox" id="footer" checked> Scale-check ruler</label>
         </div>
       </section>
+
+      <div class="reset-row">
+        <button type="button" class="btn ghost" id="reset">Reset settings to defaults</button>
+        <span class="lbl">Keeps your pictures and the kits you ticked.</span>
+      </div>
     </aside>
 
     <section class="stage-area" aria-label="Preview">
@@ -246,7 +254,7 @@
       </div>
       <div>
         <h3>From photo to cartoon</h3>
-        <p>The picture is shrunk, its colors are pushed a little brighter, and an edge-preserving filter flattens texture while keeping outlines. The subject gets most of the colors and keeps its small details, and the background is simplified harder. Eyes, noses and edges become a row of dark dots, like the outline of a pet on a kit page. Anything thinner than one dot is merged away, which leaves a handful of flat, bold shapes. A messy background can be simplified, filled with one color, or left blank: the subject is found automatically, and a click on the simplified picture fixes a wrong guess.</p>
+        <p>The picture is shrunk, its colors are pushed a little brighter, and an edge-preserving filter flattens texture while keeping outlines. The subject gets most of the colors and keeps its small details, and the background is simplified harder. Eyes, noses and edges become a row of dark dots, like the outline of a pet on a kit page. Anything thinner than one dot is merged away, which leaves a handful of flat, bold shapes. <strong>Smooth textures</strong> flattens grass, leaves and fur into flat color. A messy background can be simplified, filled with one color, or left blank (the page then zooms in on the subject): the subject is found automatically, and a click on the simplified picture fixes a wrong guess.</p>
       </div>
       <div>
         <h3>Your markers or the picture's</h3>
@@ -268,7 +276,7 @@
   </section>
 
   <footer class="site">
-    Dot Sheets is not made by or affiliated with Lifelines. FlowArt is their trademark. · v1.1.0 · 2026-11-19 · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/dot-sheets">Source</a>
+    Dot Sheets is not made by or affiliated with Lifelines. FlowArt is their trademark. · v1.2.0 · 2026-11-20 · <a href="https://github.com/jkastl/jkastl.github.io/tree/main/dot-sheets">Source</a>
   </footer>
 
   <div id="print-root" aria-hidden="true"></div>
