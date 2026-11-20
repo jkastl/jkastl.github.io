@@ -46,8 +46,29 @@
   } catch (e) { /* private mode or bad JSON: defaults */ }
   S.view = 'print';
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { /* ignore */ } };
-  const get = k => (PER_FORMAT.includes(k) ? S[S.format][k] : S[k]);
-  const set = (k, v) => { if (PER_FORMAT.includes(k)) S[S.format][k] = v; else S[k] = v; };
+  // Picture settings belong to each picture (each mini page has its own). S holds the values the
+  // next new picture starts with: the last ones used, remembered between visits. Colors are kept
+  // per format too, so a picture moved from a full page to a mini keeps a sensible count.
+  const PER_PICTURE = ['detail', 'colors', 'boost', 'texture', 'lines', 'paper', 'background', 'bgColor', 'bgZoom'];
+  const picTemplate = () => {
+    const o = {};
+    for (const k of PER_PICTURE) o[k] = k === 'colors' ? { full: S.full.colors, mini: S.mini.colors } : S[k];
+    return o;
+  };
+  const picOf = (sl, k) => {
+    if (!sl || !sl.pic) return k === 'colors' ? S[S.format].colors : S[k];
+    return k === 'colors' ? sl.pic.colors[S.format] : sl.pic[k];
+  };
+  const get = k => (PER_PICTURE.includes(k) ? picOf(cur(), k) : PER_FORMAT.includes(k) ? S[S.format][k] : S[k]);
+  const set = (k, v) => {
+    if (PER_PICTURE.includes(k)) {
+      const sl = cur();
+      if (sl.pic) { if (k === 'colors') sl.pic.colors[S.format] = v; else sl.pic[k] = v; }
+    }
+    if (PER_FORMAT.includes(k)) S[S.format][k] = v; else S[k] = v;
+  };
+  // A picture setting changes only the picture on screen; anything else, every page.
+  const scope = k => (PER_PICTURE.includes(k) ? [active] : undefined);
   const mini = () => S.format === 'mini';
 
   // Dot radii (mm) per size level. "Medium" matches the full-size kits: about 2.5 to 4.5 mm dots.
@@ -100,7 +121,8 @@
   // ---------- slots ----------
   const LEVEL = { render: 1, layout: 2, edits: 3, simplify: 4 };
   // hints: clicks on the simplified picture that move a part to the subject or the background.
-  const newSlot = () => ({ src: null, crop: null, name: '', edits: {}, hints: [], seg: null, segE: null, lay: null, geo: null, dirty: 0 });
+  // pic: this picture's own settings (see PER_PICTURE), null while the page is empty.
+  const newSlot = () => ({ src: null, crop: null, name: '', pic: null, edits: {}, hints: [], seg: null, segE: null, lay: null, geo: null, dirty: 0 });
   const slots = [newSlot(), newSlot(), newSlot(), newSlot()];
   let active = 0;
   const cur = () => slots[active];
@@ -174,7 +196,7 @@
     }
     const n = pool().length;
     $('sets-count').textContent = `· ${S.owned.length} kit${S.owned.length === 1 ? '' : 's'}, ${n} color${n === 1 ? '' : 's'}`;
-    if (S.background === 'color') renderBgColors();
+    if (get('background') === 'color') renderBgColors();
     renderCustom();
   }
 
@@ -220,7 +242,7 @@
   }
   function loadCanvas(cv, name) {
     const sl = cur();
-    Object.assign(sl, newSlot(), { src: toSrcCanvas(cv), name: name || '' });
+    Object.assign(sl, newSlot(), { src: toSrcCanvas(cv), name: name || '', pic: picTemplate() });
     showSlot();
     $('empty').hidden = true;
     changed('simplify', 0, [active]);
@@ -268,7 +290,10 @@
       srcCv.getContext('2d').drawImage(sl.src, 0, 0, srcCv.width, srcCv.height);
       showCrop();
     }
-    if (sl.segE) { drawFlat(sl, flatCv.matches(':hover') && S.background !== 'keep'); renderKeyEditor(); }
+    // The picture settings on screen are this picture's.
+    controls.forEach(c => { if (PER_PICTURE.includes(c.key)) c.sync(); });
+    syncBackground();
+    if (sl.segE) { drawFlat(sl, flatCv.matches(':hover') && get('background') !== 'keep'); renderKeyEditor(); }
     else { const f = $('flat-canvas'); f.width = 1; f.height = 1; }
     syncBgNote();
     renderSlotBar();
@@ -350,6 +375,7 @@
       btns.append(b);
     });
     $('slot-fill').disabled = !cur().src;
+    $('slot-settings').disabled = !cur().src || !slots.some(sl => sl !== cur() && sl.src);
     $('slot-clear').disabled = !cur().src;
   }
   $('slot-fill').addEventListener('click', () => {
@@ -358,11 +384,22 @@
     const targets = [];
     slots.forEach((sl, i) => {
       if (sl === from) return;
-      Object.assign(sl, newSlot(), { src: from.src, crop: from.crop && Object.assign({}, from.crop), name: from.name, edits: JSON.parse(JSON.stringify(from.edits)), hints: from.hints.map(h => Object.assign({}, h)) });
+      Object.assign(sl, newSlot(), { src: from.src, crop: from.crop && Object.assign({}, from.crop), name: from.name, pic: JSON.parse(JSON.stringify(from.pic)), edits: JSON.parse(JSON.stringify(from.edits)), hints: from.hints.map(h => Object.assign({}, h)) });
       targets.push(i);
     });
     renderSlotBar();
     changed('simplify', 0, targets);
+  });
+  $('slot-settings').addEventListener('click', () => {
+    const from = cur();
+    if (!from.pic) return;
+    const targets = [];
+    slots.forEach((sl, i) => {
+      if (sl === from || !sl.src) return;
+      sl.pic = JSON.parse(JSON.stringify(from.pic));
+      targets.push(i);
+    });
+    if (targets.length) changed('simplify', 0, targets);
   });
   $('slot-clear').addEventListener('click', () => {
     Object.assign(cur(), newSlot());
@@ -399,8 +436,8 @@
       out.textContent = fmtRange[key](+el.value);
       minus.disabled = +el.value <= +el.min; plus.disabled = +el.value >= +el.max;
     };
-    el.addEventListener('input', () => { set(key, +el.value); show(); changed(stage, 250); });
-    controls.push({ sync: () => { el.value = get(key); show(); } });
+    el.addEventListener('input', () => { set(key, +el.value); show(); changed(stage, 250, scope(key)); });
+    controls.push({ key, sync: () => { el.value = get(key); show(); } });
   }
   bindRange('detail', 'simplify');
   bindRange('colors', 'simplify');
@@ -410,8 +447,8 @@
 
   function bindCheck(id, key, stage) {
     const el = $(id);
-    el.addEventListener('change', () => { set(key, el.checked); changed(stage); });
-    controls.push({ sync: () => { el.checked = !!get(key); } });
+    el.addEventListener('change', () => { set(key, el.checked); changed(stage, 0, scope(key)); });
+    controls.push({ key, sync: () => { el.checked = !!get(key); } });
   }
   bindCheck('blank-white', 'paper', 'simplify');
   bindCheck('bg-zoom', 'bgZoom', 'simplify');
@@ -452,9 +489,9 @@
       set(key, b.dataset.v);
       sync();
       if (after) after();
-      changed(stage);
+      changed(stage, 0, scope(key));
     });
-    controls.push({ sync });
+    controls.push({ key, sync });
   }
   bindSeg('format', 'format', 'simplify', onFormat);
   bindSeg('source', 'source', 'simplify', syncSource);
@@ -465,14 +502,14 @@
 
   function syncSource() {
     const m = S.source === 'markers';
-    if (S.background === 'color') renderBgColors();
+    if (get('background') === 'color') renderBgColors();
     $('markers-ui').hidden = !m;
     $('source-note').textContent = m
       ? 'Tick the kits you have. The page uses the best of their colors for this picture.'
       : 'Uses whatever colors suit the picture. The key suggests your closest marker for each.';
   }
   // ---------- background ----------
-  // S.bgColor: 'auto' (from the picture), 'm:<marker id>', or a '#rrggbb' of the user's choosing.
+  // bgColor (a picture setting): 'auto' (from the picture), 'm:<marker id>', or a '#rrggbb'.
   function renderBgColors() {
     const sel = $('bg-color'), markers = pool();
     sel.textContent = '';
@@ -484,7 +521,7 @@
       sel.append(g);
     }
     opt('custom', 'Any color…');
-    const v = S.bgColor;
+    const v = get('bgColor');
     sel.value = v.startsWith('#') ? 'custom' : v;
     if (sel.value !== (v.startsWith('#') ? 'custom' : v)) sel.value = 'auto'; // a marker no longer owned
     $('bg-custom').hidden = sel.value !== 'custom';
@@ -492,31 +529,32 @@
   }
   $('bg-color').addEventListener('change', () => {
     const v = $('bg-color').value;
-    S.bgColor = v === 'custom' ? $('bg-custom').value : v;
+    set('bgColor', v === 'custom' ? $('bg-custom').value : v);
     $('bg-custom').hidden = v !== 'custom';
-    changed('simplify');
+    changed('simplify', 0, [active]);
   });
-  $('bg-custom').addEventListener('change', () => { S.bgColor = $('bg-custom').value; changed('simplify'); });
-  function bgOpts() {
-    const o = { background: S.background, bgHex: null, bgPoolId: null };
-    if (S.background !== 'color') return o;
-    if (S.bgColor.startsWith('#')) o.bgHex = S.bgColor;
-    else if (S.bgColor.startsWith('m:')) {
-      const m = pool().find(x => x.id === S.bgColor.slice(2));
+  $('bg-custom').addEventListener('change', () => { set('bgColor', $('bg-custom').value); changed('simplify', 0, [active]); });
+  function bgOpts(sl) {
+    const mode = picOf(sl, 'background'), color = picOf(sl, 'bgColor');
+    const o = { background: mode, bgHex: null, bgPoolId: null };
+    if (mode !== 'color') return o;
+    if (color.startsWith('#')) o.bgHex = color;
+    else if (color.startsWith('m:')) {
+      const m = pool().find(x => x.id === color.slice(2));
       if (m) { o.bgHex = m.hex; o.bgPoolId = m.id; }
     }
     return o;
   }
   function syncBackground() {
-    const on = S.background !== 'keep';
-    $('bg-color-row').hidden = S.background !== 'color';
-    $('bg-zoom-row').hidden = S.background !== 'remove';
-    if (S.background === 'color') renderBgColors();
+    const mode = get('background'), on = mode !== 'keep';
+    $('bg-color-row').hidden = mode !== 'color';
+    $('bg-zoom-row').hidden = mode !== 'remove';
+    if (get('background') === 'color') renderBgColors();
     $('flat-canvas').classList.toggle('pickable', on);
     syncBgNote();
   }
   function syncBgNote() {
-    const sl = cur(), on = S.background !== 'keep', note = $('bg-note');
+    const sl = cur(), on = get('background') !== 'keep', note = $('bg-note');
     note.hidden = !on;
     $('hints-reset').hidden = !on || !sl.hints.length;
     if (!on) return;
@@ -530,7 +568,7 @@
   const flatCv = $('flat-canvas');
   flatCv.addEventListener('click', e => {
     const sl = cur();
-    if (S.background === 'keep' || !sl.seg || !sl.seg.subject) return;
+    if (get('background') === 'keep' || !sl.seg || !sl.seg.subject) return;
     const r = flatCv.getBoundingClientRect();
     const x = Math.max(0, Math.min(0.9999, (e.clientX - r.left) / r.width));
     const y = Math.max(0, Math.min(0.9999, (e.clientY - r.top) / r.height));
@@ -544,7 +582,7 @@
     sl.hints.push({ x: hx, y: hy, fg: !isSubject });
     changed('simplify', 0, [active]);
   });
-  flatCv.addEventListener('mouseenter', () => { const sl = cur(); if (sl.segE && S.background !== 'keep') drawFlat(sl, true); });
+  flatCv.addEventListener('mouseenter', () => { const sl = cur(); if (sl.segE && get('background') !== 'keep') drawFlat(sl, true); });
   flatCv.addEventListener('mouseleave', () => { const sl = cur(); if (sl.segE) drawFlat(sl, false); });
   $('hints-reset').addEventListener('click', () => { cur().hints = []; changed('simplify', 0, [active]); });
 
@@ -558,7 +596,7 @@
   function syncFormat() {
     document.querySelectorAll('[data-for="full"]').forEach(el => { el.hidden = mini(); });
     $('format-note').textContent = mini()
-      ? 'Four 4¼ × 5½ in pages on one Letter sheet, with cut marks. Use one picture four times or up to four pictures.'
+      ? 'Four 4¼ × 5½ in pages on one Letter sheet, with cut marks. Use one picture four times or up to four pictures. Each page keeps its own picture settings.'
       : 'One picture on a full 8½ × 11 in page, like the full-size kits.';
   }
   function onFormat() {
@@ -638,12 +676,13 @@
       const res = await call('simplify', {
         img: srcPixels(sl),
         opts: {
-          maxSide: MAX_SIDE, colors: get('colors'), detail: S.detail / 100, boost: S.boost / 100,
-          texture: S.texture / 100, lines: S.lines / 100, featurePx: featurePx(sl, i),
-          zoom: S.bgZoom, featurePxByAspect: S.background === 'remove' && S.bgZoom ? featurePxTable(i) : null,
-          paper: S.paper, pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
+          maxSide: MAX_SIDE, colors: picOf(sl, 'colors'), detail: picOf(sl, 'detail') / 100,
+          boost: picOf(sl, 'boost') / 100, texture: picOf(sl, 'texture') / 100, lines: picOf(sl, 'lines') / 100,
+          featurePx: featurePx(sl, i), zoom: picOf(sl, 'bgZoom'),
+          featurePxByAspect: picOf(sl, 'background') === 'remove' && picOf(sl, 'bgZoom') ? featurePxTable(i, picOf(sl, 'colors')) : null,
+          paper: picOf(sl, 'paper'), pool: p ? p.map(({ id, hex }) => ({ id, hex })) : null,
           choose: S.choose, seed: 7,
-          ...bgOpts(), bgHints: sl.hints,
+          ...bgOpts(sl), bgHints: sl.hints,
         },
       });
       if (my !== gen) return false;
@@ -698,20 +737,20 @@
   function featurePx(sl, i) {
     const c = sl.crop || { w: sl.src.width, h: sl.src.height };
     const aspect = c.w / c.h;
-    return featurePxAt(i, aspect, Math.min(Math.round(c.w), aspect >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * aspect)));
+    return featurePxAt(i, aspect, Math.min(Math.round(c.w), aspect >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * aspect)), picOf(sl, 'colors'));
   }
-  function featurePxAt(i, aspect, segW) {
-    const g = geometryFor(i, aspect, get('colors'));
+  function featurePxAt(i, aspect, segW, colors) {
+    const g = geometryFor(i, aspect, colors);
     const mmPerPx = g.image.w / Math.max(1, segW);
     const sizes = S.mode === 'dots' ? DOT_SIZES[get('dotSize')] : [1.6];
     return Math.max(2, (2 * sizes[0] + 0.35) / mmPerPx);
   }
   // The same for a range of shapes, for a picture that zooms in on its subject: [[aspect, px]].
-  function featurePxTable(i) {
+  function featurePxTable(i, colors) {
     const out = [];
     for (let k = -8; k <= 8; k++) {
       const a = Math.pow(4, k / 8);
-      out.push([a, featurePxAt(i, a, a >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * a))]);
+      out.push([a, featurePxAt(i, a, a >= 1 ? MAX_SIDE : Math.round(MAX_SIDE * a), colors)]);
     }
     return out;
   }
@@ -994,14 +1033,15 @@
   });
 
   // ---------- reset ----------
-  // Every setting back to its default, except what's really an inventory or a choice of format:
-  // the kits ticked, skipped and added markers, and full page vs minis. Pictures, crops and key
-  // edits stay. For a few seconds the button offers to undo.
+  // Every setting back to its default, every picture's own settings included, except what's
+  // really an inventory or a choice of format: the kits ticked, skipped and added markers, and full
+  // page vs minis. Pictures, crops and key edits stay. For a few seconds the button offers to undo.
   const KEEP_ON_RESET = ['owned', 'off', 'custom', 'format', 'kitsVersion'];
   let undoState = null, undoTimer = null;
-  function applySettings(next) {
+  function applySettings(next, pics) {
     for (const k of Object.keys(S)) delete S[k];
     Object.assign(S, next);
+    slots.forEach((sl, i) => { if (sl.src) sl.pic = pics ? pics[i] : picTemplate(); });
     controls.forEach(c => c.sync());
     syncSource(); syncBackground(); syncMode(); syncFormat();
     renderSets();
@@ -1011,12 +1051,12 @@
   $('reset').addEventListener('click', () => {
     const btn = $('reset');
     if (undoState) {
-      applySettings(undoState);
+      applySettings(undoState.S, undoState.pics);
       undoState = null; clearTimeout(undoTimer);
       btn.textContent = 'Reset settings to defaults';
       return;
     }
-    undoState = JSON.parse(JSON.stringify(S));
+    undoState = JSON.parse(JSON.stringify({ S, pics: slots.map(sl => sl.pic) }));
     const fresh = JSON.parse(JSON.stringify(DEFAULTS));
     for (const k of KEEP_ON_RESET) fresh[k] = JSON.parse(JSON.stringify(S[k]));
     fresh.view = S.view;
